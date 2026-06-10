@@ -1,77 +1,179 @@
-<<<<<<< HEAD
-# React + TypeScript + Vite
+# Frontend React Vite
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+## Giới thiệu
 
-Currently, two official plugins are available:
+Đây là project frontend dùng `React + Vite`.
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+Hiện tại project đã có sẵn:
 
-## React Compiler
+- Trang landing
+- Trang home
+- Trang đăng nhập
+- Trang đăng ký
+- Trang quên mật khẩu
+- Trang nhập OTP
+- Header có mock user dropdown và nút đăng xuất để backend có thể nối vào sau
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+Project đang dùng dữ liệu mock ở frontend, chưa gọi API backend thật.
 
-## Expanding the ESLint configuration
+## Yêu cầu trước khi chạy
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+Máy cần cài sẵn:
 
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
+- `Node.js`
+- `npm`
 
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
+Nên dùng:
 
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+- `Node.js 18+`
+
+Kiểm tra nhanh:
+
+```bash
+node -v
+npm -v
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+## Cách chạy project
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
+### 1. Mở đúng thư mục project
 
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+Quan trọng: phải chạy lệnh bên trong thư mục `frontend`, vì file `package.json` nằm ở đây.
+
+```bash
+cd D:\frontend\frontend
 ```
-=======
-# SEP490_fe
->>>>>>> 52e17dd03ac117cfb39b79abd8e9593cd7c69b57
+
+### 2. Cài thư viện
+
+```bash
+npm install
+```
+
+### 3. Chạy môi trường dev
+
+```bash
+npm run dev
+```
+
+Sau khi chạy xong, terminal sẽ hiện link local, ví dụ:
+
+```bash
+http://localhost:5173
+```
+
+Nếu cổng `5173` đang bận, Vite sẽ tự đổi sang `5174`, `5175`, ...
+
+## Các lệnh thường dùng
+
+### Chạy dev
+
+```bash
+npm run dev
+```
+
+### Build production
+
+```bash
+npm run build
+```
+
+### Xem bản build
+
+```bash
+npm run preview
+```
+
+### Kiểm tra lint
+
+```bash
+npm run lint
+```
+
+## Các route hiện có
+
+| Route | Mô tả |
+|---|---|
+| `/` | Landing page |
+| `/home` | Home page |
+| `/login` | Đăng nhập |
+| `/register` | Đăng ký |
+| `/forgot-password` | Quên mật khẩu |
+| `/forgot-password/sent` | Màn hình đã gửi link reset |
+| `/verify-otp` | Màn hình nhập OTP |
+
+## Luồng test nhanh
+
+### Đăng ký và OTP
+
+1. Vào `/register`
+2. Nhập thông tin tài khoản
+3. Bấm tạo tài khoản
+4. Hệ thống sẽ chuyển sang trang nhập OTP
+5. Nhập đủ 6 số OTP mock
+6. Hệ thống quay về trang đăng nhập
+
+### Đăng nhập
+
+1. Vào `/login`
+2. Nhập email
+3. Bấm `Đăng nhập`
+4. Sau khi đăng nhập, header sẽ hiện tên user và menu dropdown
+
+### Đăng xuất
+
+1. Bấm vào khu vực user trên header
+2. Chọn `Đăng xuất`
+
+## Lưu ý cho team backend
+
+- Phần auth hiện tại đang là mock ở frontend
+- User login đang được lưu tạm bằng `localStorage`
+- Có thể thay phần mock này bằng API thật sau
+- Header đã có sẵn dropdown user để tiện test tích hợp
+
+## Cấu trúc thư mục chính
+
+```text
+src/
+  components/   -> component dùng chung
+  context/      -> auth mock context
+  data/         -> dữ liệu mock
+  pages/        -> các trang
+  lib/          -> hàm tiện ích
+```
+
+## Một số lỗi thường gặp
+
+### Lỗi `Could not read package.json`
+
+Nguyên nhân:
+
+- Đang chạy lệnh sai thư mục
+
+Cách sửa:
+
+```bash
+cd D:\frontend\frontend
+```
+
+Rồi chạy lại:
+
+```bash
+npm install
+npm run dev
+```
+
+### Chạy `npm run dev` nhưng không vào được trang
+
+Kiểm tra:
+
+- Terminal có báo link local chưa
+- Có đang mở đúng cổng không
+- Có app khác đang chiếm cổng `5173` không
+
+## Ghi chú
+
+- Không cần backend để chạy giao diện
+- Có thể chạy độc lập chỉ với `npm install` và `npm run dev`
+- Nếu team muốn nối backend, nên giữ nguyên cấu trúc route hiện tại để dễ tích hợp
