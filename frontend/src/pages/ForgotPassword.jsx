@@ -1,20 +1,28 @@
 import { ArrowLeft, Mail } from 'lucide-react'
+import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import AuthCardLayout from '../components/AuthCardLayout.jsx'
 import { Button } from '../components/ui/Button.jsx'
 import { Input } from '../components/ui/Input.jsx'
 import { Label } from '../components/ui/Label.jsx'
-import { useState } from 'react'
+import { useAuth } from '../context/AuthContext.jsx'
 
 export default function ForgotPassword() {
   const navigate = useNavigate()
+  const { forgotPassword, loading } = useAuth()
   const [email, setEmail] = useState('')
+  const [errorMsg, setErrorMsg] = useState('')
 
-  const handleSubmit = (event) => {
+  const handleSubmit = async (event) => {
     event.preventDefault()
-    navigate('/forgot-password/sent', {
-      state: { email: email || 'minhtan050804@gmail.com' },
-    })
+    setErrorMsg('')
+    const result = await forgotPassword(email)
+    // Server luôn trả 200 để không lộ user tồn tại
+    if (result.success) {
+      navigate('/forgot-password/sent', { state: { email } })
+    } else {
+      setErrorMsg(result.message)
+    }
   }
 
   return (
@@ -40,6 +48,12 @@ export default function ForgotPassword() {
         </p>
       </div>
 
+      {errorMsg && (
+        <div className="mt-6 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+          {errorMsg}
+        </div>
+      )}
+
       <form onSubmit={handleSubmit} className="mt-10 space-y-8">
         <div className="space-y-3">
           <Label htmlFor="reset-email" className="text-base text-slate-950">
@@ -59,8 +73,8 @@ export default function ForgotPassword() {
           </div>
         </div>
 
-        <Button type="submit" className="h-14 w-full rounded-2xl text-base">
-          Gửi liên kết đặt lại
+        <Button type="submit" className="h-14 w-full rounded-2xl text-base" disabled={loading}>
+          {loading ? 'Đang gửi...' : 'Gửi liên kết đặt lại'}
         </Button>
       </form>
 

@@ -9,7 +9,7 @@ import { Label } from '../components/ui/Label.jsx'
 
 export default function Register() {
   const navigate = useNavigate()
-  const { savePendingRegistration } = useAuth()
+  const { register, loading } = useAuth()
   const [formData, setFormData] = useState({
     fullName: '',
     email: '',
@@ -17,25 +17,32 @@ export default function Register() {
     password: '',
     confirmPassword: '',
   })
+  const [errorMsg, setErrorMsg] = useState('')
 
   const handleChange = (field, value) => {
     setFormData((current) => ({ ...current, [field]: value }))
   }
 
-  const handleSubmit = (event) => {
+  const handleSubmit = async (event) => {
     event.preventDefault()
-    savePendingRegistration({
-      fullName: formData.fullName,
-      email: formData.email,
-      phone: formData.phone,
-    })
-    console.log('Đăng ký mock:', formData)
-    navigate('/verify-otp', {
-      state: {
-        email: formData.email,
-        fullName: formData.fullName,
-      },
-    })
+    setErrorMsg('')
+
+    if (formData.password !== formData.confirmPassword) {
+      setErrorMsg('Mật khẩu xác nhận không khớp.')
+      return
+    }
+
+    const result = await register(formData)
+    if (result.success) {
+      navigate('/verify-otp', {
+        state: {
+          email: formData.email,
+          fullName: formData.fullName,
+        },
+      })
+    } else {
+      setErrorMsg(result.message)
+    }
   }
 
   return (
@@ -76,6 +83,12 @@ export default function Register() {
             <h2 className="mb-2 text-3xl font-bold text-gray-900">Tạo tài khoản</h2>
             <p className="text-gray-600">Điền thông tin để bắt đầu và xác thực bằng mã OTP.</p>
           </div>
+
+          {errorMsg && (
+            <div className="mb-6 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+              {errorMsg}
+            </div>
+          )}
 
           <form onSubmit={handleSubmit} className="space-y-5">
             <div className="space-y-2">
@@ -138,6 +151,7 @@ export default function Register() {
                   onChange={(event) => handleChange('password', event.target.value)}
                   className="h-12 pl-11"
                   required
+                  minLength={6}
                 />
               </div>
             </div>
@@ -170,8 +184,8 @@ export default function Register() {
               .
             </p>
 
-            <Button type="submit" className="h-12 w-full">
-              Tạo tài khoản và nhận OTP
+            <Button type="submit" className="h-12 w-full" disabled={loading}>
+              {loading ? 'Đang xử lý...' : 'Tạo tài khoản và nhận OTP'}
             </Button>
 
             <div className="relative">

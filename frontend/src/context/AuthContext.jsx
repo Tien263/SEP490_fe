@@ -1,13 +1,15 @@
-import { createContext, useContext, useEffect, useMemo, useState } from 'react'
+import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react'
+import * as authService from '../services/authService.js'
 
-const AUTH_STORAGE_KEY = 'frontend-auth-user'
-const PENDING_REGISTRATION_KEY = 'frontend-pending-registration'
+// ─── Storage keys ──────────────────────────────────────────────────────────────
+const ACCESS_TOKEN_KEY = 'accessToken'
+const REFRESH_TOKEN_KEY = 'refreshToken'
+const USER_KEY = 'authUser'
 
-const AuthContext = createContext(null)
-
+// ─── Helpers ───────────────────────────────────────────────────────────────────
 function readJson(key) {
   try {
-    const raw = window.localStorage.getItem(key)
+    const raw = localStorage.getItem(key)
     return raw ? JSON.parse(raw) : null
   } catch {
     return null
@@ -16,78 +18,193 @@ function readJson(key) {
 
 function writeJson(key, value) {
   if (value == null) {
-    window.localStorage.removeItem(key)
-    return
+    localStorage.removeItem(key)
+  } else {
+    localStorage.setItem(key, JSON.stringify(value))
   }
-
-  window.localStorage.setItem(key, JSON.stringify(value))
 }
 
-function deriveNameFromEmail(email) {
-  const localPart = email.split('@')[0] || 'nguoi-dung'
-  return localPart
-    .split(/[._-]/g)
-    .filter(Boolean)
-    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
-    .join(' ')
+function clearSession() {
+  localStorage.removeItem(ACCESS_TOKEN_KEY)
+  localStorage.removeItem(REFRESH_TOKEN_KEY)
+  localStorage.removeItem(USER_KEY)
 }
+
+function saveSession({ accessToken, refreshToken, user }) {
+  localStorage.setItem(ACCESS_TOKEN_KEY, accessToken)
+  localStorage.setItem(REFRESH_TOKEN_KEY, refreshToken)
+  writeJson(USER_KEY, user)
+}
+
+// ─── Context ───────────────────────────────────────────────────────────────────
+const AuthContext = createContext(null)
 
 export function AuthProvider({ children }) {
-  const [user, setUser] = useState(null)
+  const [user, setUser] = useState(() => readJson(USER_KEY))
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState(null)
 
+  // Khôi phục session từ localStorage khi app khởi động
   useEffect(() => {
-    setUser(readJson(AUTH_STORAGE_KEY))
+    setUser(readJson(USER_KEY))
   }, [])
 
-  const value = useMemo(() => {
-    return {
-      user,
-      isAuthenticated: Boolean(user),
-      login(email) {
-        const pendingRegistration = readJson(PENDING_REGISTRATION_KEY)
-        const fullName =
-          pendingRegistration?.email === email
-            ? pendingRegistration.fullName
-            : deriveNameFromEmail(email)
-
-        const nextUser = {
-          id: 'mock-user-1',
-          fullName,
-          email,
-        }
-
-        writeJson(AUTH_STORAGE_KEY, nextUser)
-        if (pendingRegistration?.email === email) {
-          writeJson(PENDING_REGISTRATION_KEY, null)
-        }
-        setUser(nextUser)
-        return nextUser
-      },
-      logout() {
-        writeJson(AUTH_STORAGE_KEY, null)
-        setUser(null)
-      },
-      savePendingRegistration(payload) {
-        writeJson(PENDING_REGISTRATION_KEY, payload)
-      },
-      getPendingRegistration() {
-        return readJson(PENDING_REGISTRATION_KEY)
-      },
-      clearPendingRegistration() {
-        writeJson(PENDING_REGISTRATION_KEY, null)
-      },
+  // ─── Login ──────────────────────────────────────────────────────────────────
+  const login = useCallback(async (email, password) => {
+    setLoading(true)
+    setError(null)
+    try {
+      const res = await authService.login({ email, password })
+      const { accessToken, refreshToken, user: userData } = res.data
+      saveSession({ accessToken, refreshToken, user: userData })
+      setUser(userData)
+      return { success: true, user: userData }
+    } catch (err) {
+      setError(err.message)
+      return { success: false, message: err.message }
+    } finally {
+      setLoading(false)
     }
-  }, [user])
+  }, [])
+
+  // ─── Login with Google ───────────────────────────────────────────────────────
+  const loginWithGoogle = useCallback(async (idToken) => {
+    setLoading(true)
+    setError(null)
+    try {
+      const res = await authService.loginWithGoogle({ idToken })
+      const { accessToken, refreshToken, user: userData } = res.data
+      saveSession({ accessToken, refreshToken, user: userData })
+      setUser(userData)
+      return { success: true, user: userData }
+    } catch (err) {
+      setError(err.message)
+      return { success: false, message: err.message }
+    } finally {
+      setLoading(false)
+    }
+  }, [])
+
+  // ─── Complete Profile ────────────────────────────────────────────────────────
+  const completeProfile = useCallback(async (fullName, phoneNumber, password, confirmPassword) => {
+    setLoading(true)
+    setError(null)
+    try {
+      await authService.completeProfile({ fullName, phoneNumber, password, confirmPassword })
+      // Cập nhật thông tin user trong localStorage
+      const currentUser = readJson(USER_KEY)
+      if (currentUser) {
+        const updated = { ...currentUser, fullName, phoneNumber }
+        writeJson(USER_KEY, updated)
+        setUser(updated)
+      }
+      return { success: true }
+    } catch (err) {
+      setError(err.message)
+      return { success: false, message: err.message }
+    } finally {
+      setLoading(false)
+    }
+  }, [])
+
+  // ─── Logout ─────────────────────────────────────────────────────────────────
+  const logout = useCallback(async () => {
+    try {
+      await authService.logout()
+    } catch {
+      // Dù server lỗi vẫn xoá session local
+    } finally {
+      clearSession()
+      setUser(null)
+    }
+  }, [])
+
+  // ─── Register ───────────────────────────────────────────────────────────────
+  const register = useCallback(async (formData) => {
+    setLoading(true)
+    setError(null)
+    try {
+      await authService.register({
+        fullName: formData.fullName,
+        email: formData.email,
+        phoneNumber: formData.phone,
+        password: formData.password,
+        confirmPassword: formData.confirmPassword,
+      })
+      return { success: true }
+    } catch (err) {
+      setError(err.message)
+      return { success: false, message: err.message }
+    } finally {
+      setLoading(false)
+    }
+  }, [])
+
+  // ─── Verify OTP ─────────────────────────────────────────────────────────────
+  const verifyOtp = useCallback(async (email, otpCode) => {
+    setLoading(true)
+    setError(null)
+    try {
+      await authService.verifyOtp({ email, otpCode })
+      return { success: true }
+    } catch (err) {
+      setError(err.message)
+      return { success: false, message: err.message }
+    } finally {
+      setLoading(false)
+    }
+  }, [])
+
+  // ─── Forgot Password ────────────────────────────────────────────────────────
+  const forgotPassword = useCallback(async (email) => {
+    setLoading(true)
+    setError(null)
+    try {
+      await authService.forgotPassword({ email })
+      return { success: true }
+    } catch (err) {
+      setError(err.message)
+      return { success: false, message: err.message }
+    } finally {
+      setLoading(false)
+    }
+  }, [])
+
+  // ─── Reset Password ─────────────────────────────────────────────────────────
+  const resetPassword = useCallback(async (token, email, newPassword, confirmPassword) => {
+    setLoading(true)
+    setError(null)
+    try {
+      await authService.resetPassword({ token, email, newPassword, confirmPassword })
+      return { success: true }
+    } catch (err) {
+      setError(err.message)
+      return { success: false, message: err.message }
+    } finally {
+      setLoading(false)
+    }
+  }, [])
+
+  const value = useMemo(() => ({
+    user,
+    loading,
+    error,
+    isAuthenticated: Boolean(user),
+    login,
+    loginWithGoogle,
+    logout,
+    register,
+    verifyOtp,
+    forgotPassword,
+    resetPassword,
+    completeProfile,
+  }), [user, loading, error, login, loginWithGoogle, logout, register, verifyOtp, forgotPassword, resetPassword, completeProfile])
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
 }
 
 export function useAuth() {
   const context = useContext(AuthContext)
-
-  if (!context) {
-    throw new Error('useAuth must be used within an AuthProvider')
-  }
-
+  if (!context) throw new Error('useAuth must be used within an AuthProvider')
   return context
 }

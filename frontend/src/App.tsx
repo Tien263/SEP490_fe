@@ -1,6 +1,7 @@
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom'
 import ForgotPassword from './pages/ForgotPassword.jsx'
 import ForgotPasswordSent from './pages/ForgotPasswordSent.jsx'
+import ResetPassword from './pages/ResetPassword.jsx'
 import { AuthProvider } from './context/AuthContext.jsx'
 import Landing from './pages/Landing.jsx'
 import Home from './pages/Home.jsx'
@@ -20,6 +21,7 @@ function App() {
           <Route path="/forgot-password" element={<ForgotPassword />} />
           <Route path="/forgot-password/sent" element={<ForgotPasswordSent />} />
           <Route path="/verify-otp" element={<VerifyOtp />} />
+          <Route path="/reset-password" element={<ResetPassword />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </AuthProvider>
