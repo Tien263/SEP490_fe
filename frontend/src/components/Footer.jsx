@@ -3,7 +3,7 @@ import { Facebook, Instagram, Linkedin, Mail, MapPin, Phone } from 'lucide-react
 
 const footerLinks = [
   { label: 'Về chúng tôi', to: '/' },
-  { label: 'Sản phẩm', to: '/home' },
+  { label: 'Sản phẩm', to: '/products' },
   { label: 'Đăng nhập', to: '/login' },
   { label: 'Đăng ký', to: '/register' },
 ]
@@ -21,8 +21,8 @@ export default function Footer() {
               Giải pháp văn phòng phẩm và bao bì cao cấp cho doanh nghiệp hiện đại.
             </p>
             <div className="flex gap-4">
-              {[Facebook, Instagram, Linkedin].map((Icon, index) => (
-                <a key={index} href="#" className="text-gray-400 transition hover:text-white" aria-label="Mạng xã hội">
+              {[Facebook, Instagram, Linkedin].map((Icon) => (
+                <a key={Icon.name} href="#" className="text-gray-400 transition hover:text-white" aria-label="Mạng xã hội">
                   <Icon className="h-5 w-5" />
                 </a>
               ))}

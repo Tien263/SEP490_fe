@@ -21,6 +21,7 @@ import { useAuth } from '../context/AuthContext.jsx'
 const navigation = [
   { to: '/', label: 'Giới thiệu' },
   { to: '/home', label: 'Trang chủ' },
+  { to: '/products', label: 'Sản phẩm' },
 ]
 
 const dropdownItems = [
@@ -123,12 +124,12 @@ export default function Header() {
           )}
 
           <Link
-            to="/home"
+            to="/cart"
             className="relative rounded-full p-2 text-slate-500 transition hover:text-slate-900"
             aria-label="Giỏ hàng"
           >
             <ShoppingCart className="h-5 w-5 stroke-[1.8]" />
-            <span className="absolute -right-0.5 top-0 flex h-4.5 min-w-4.5 items-center justify-center rounded-full bg-slate-900 px-1 text-[10px] font-semibold leading-none text-white">
+            <span className="absolute -right-0.5 top-0 flex min-w-4.5 items-center justify-center rounded-full bg-slate-900 px-1 text-[10px] font-semibold leading-none text-white">
               3
             </span>
           </Link>
@@ -243,9 +244,11 @@ export default function Header() {
                 <Button variant="outline" className="w-full rounded-2xl">
                   Thông báo
                 </Button>
-                <Button variant="outline" className="w-full rounded-2xl">
-                  Giỏ hàng
-                </Button>
+                <Link to="/cart" onClick={() => setMobileOpen(false)}>
+                  <Button variant="outline" className="w-full rounded-2xl">
+                    Giỏ hàng
+                  </Button>
+                </Link>
                 <Button className="w-full rounded-2xl bg-red-500 hover:bg-red-600" onClick={handleLogout}>
                   Đăng xuất
                 </Button>
@@ -257,7 +260,7 @@ export default function Header() {
                     {authLink.label}
                   </Button>
                 </Link>
-                <Link to="/home" onClick={() => setMobileOpen(false)}>
+                <Link to="/cart" onClick={() => setMobileOpen(false)}>
                   <Button className="w-full rounded-2xl">Giỏ hàng</Button>
                 </Link>
               </>
