@@ -25,7 +25,7 @@ const navigation = [
 ]
 
 const dropdownItems = [
-  { icon: User, label: 'Hồ sơ cá nhân', href: '#' },
+  { icon: User, label: 'Hồ sơ cá nhân', href: '/profile' },
   { icon: Package, label: 'Lịch sử đơn hàng', href: '#' },
   { icon: MapPin, label: 'Theo dõi đơn hàng', href: '#' },
   { icon: BarChart3, label: 'Thống kê cá nhân', href: '#' },
@@ -163,16 +163,28 @@ export default function Header() {
                   </div>
 
                   <div className="px-2.5 py-2.5">
-                    {dropdownItems.map((item) => (
-                      <a
-                        key={item.label}
-                        href={item.href}
-                        className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-base text-slate-600 transition hover:bg-slate-50 hover:text-slate-900"
-                      >
-                        <item.icon className="h-4 w-4 shrink-0 text-slate-400" />
-                        <span>{item.label}</span>
-                      </a>
-                    ))}
+                    {dropdownItems.map((item) =>
+                      item.href.startsWith('/') ? (
+                        <Link
+                          key={item.label}
+                          to={item.href}
+                          onClick={() => setDropdownOpen(false)}
+                          className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-base text-slate-600 transition hover:bg-slate-50 hover:text-slate-900"
+                        >
+                          <item.icon className="h-4 w-4 shrink-0 text-slate-400" />
+                          <span>{item.label}</span>
+                        </Link>
+                      ) : (
+                        <a
+                          key={item.label}
+                          href={item.href}
+                          className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-base text-slate-600 transition hover:bg-slate-50 hover:text-slate-900"
+                        >
+                          <item.icon className="h-4 w-4 shrink-0 text-slate-400" />
+                          <span>{item.label}</span>
+                        </a>
+                      ),
+                    )}
                   </div>
 
                   <div className="border-t border-slate-100 px-2.5 py-2.5">
@@ -247,6 +259,11 @@ export default function Header() {
                 <Link to="/cart" onClick={() => setMobileOpen(false)}>
                   <Button variant="outline" className="w-full rounded-2xl">
                     Giỏ hàng
+                  </Button>
+                </Link>
+                <Link to="/profile" onClick={() => setMobileOpen(false)}>
+                  <Button variant="outline" className="w-full rounded-2xl">
+                    Hồ sơ cá nhân
                   </Button>
                 </Link>
                 <Button className="w-full rounded-2xl bg-red-500 hover:bg-red-600" onClick={handleLogout}>
