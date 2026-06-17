@@ -12,11 +12,14 @@ export function Badge({
   as: Component = 'span',
   ...props
 }) {
+  const hasCustomTone = /\b(?:bg|text|border)-/.test(className)
+  const resolvedVariant = variant === 'default' && hasCustomTone ? '' : badgeVariants[variant] ?? badgeVariants.default
+
   return (
     <Component
       className={cn(
         'inline-flex items-center justify-center rounded-full px-3 py-1 text-xs font-semibold transition-colors',
-        badgeVariants[variant] ?? badgeVariants.default,
+        resolvedVariant,
         className,
       )}
       {...props}

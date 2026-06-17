@@ -19,8 +19,10 @@ import {
   XCircle,
 } from 'lucide-react'
 import { Link, useLocation } from 'react-router-dom'
+import AddressModal, { buildFullAddress, emptyAddressForm } from '../components/AddressModal.jsx'
 import Footer from '../components/Footer.jsx'
 import Header from '../components/Header.jsx'
+import SuccessToast from '../components/SuccessToast.jsx'
 import { Badge } from '../components/ui/Badge.jsx'
 import { Button } from '../components/ui/Button.jsx'
 import { Input } from '../components/ui/Input.jsx'
@@ -37,6 +39,10 @@ const defaultAddresses = [
     id: '1',
     name: 'Nguyễn Văn A',
     phone: '0901 234 567',
+    city: 'TP. Hồ Chí Minh',
+    district: 'Quận 1',
+    ward: 'Phường Bến Nghé',
+    addressLine: '123 Nguyễn Huệ',
     address: '123 Nguyễn Huệ, Phường Bến Nghé, Quận 1, TP. Hồ Chí Minh',
     type: 'Công ty',
     isDefault: true,
@@ -45,6 +51,10 @@ const defaultAddresses = [
     id: '2',
     name: 'Nguyễn Văn A',
     phone: '0901 234 567',
+    city: 'TP. Hồ Chí Minh',
+    district: 'Quận Gò Vấp',
+    ward: 'Phường 2',
+    addressLine: '456 Lê Lợi',
     address: '456 Lê Lợi, Phường 2, Quận Gò Vấp, TP. Hồ Chí Minh',
     type: 'Nhà riêng',
     isDefault: false,
@@ -81,6 +91,8 @@ export default function Checkout() {
   const [addresses, setAddresses] = useState(defaultAddresses)
   const [selectedAddressId, setSelectedAddressId] = useState('1')
   const [showAddressModal, setShowAddressModal] = useState(false)
+  const [editingAddressId, setEditingAddressId] = useState(null)
+  const [successToast, setSuccessToast] = useState(null)
   const [paymentMethod, setPaymentMethod] = useState('cod')
   const [paymentStatus, setPaymentStatus] = useState('pending')
   const [vatRequested, setVatRequested] = useState(false)
@@ -89,12 +101,7 @@ export default function Checkout() {
   const [isEditingVat, setIsEditingVat] = useState(false)
   const [vatInfo, setVatInfo] = useState(defaultVatInfo)
   const [vatForm, setVatForm] = useState(defaultVatInfo)
-  const [addressForm, setAddressForm] = useState({
-    name: '',
-    phone: '',
-    address: '',
-    type: 'Nhà riêng',
-  })
+  const [addressForm, setAddressForm] = useState(emptyAddressForm)
 
   const cartProducts = useMemo(
     () =>
@@ -115,25 +122,70 @@ export default function Checkout() {
   const paymentStatusInfo = paymentStatusConfig[paymentStatus]
   const PaymentStatusIcon = paymentStatusInfo.icon
 
+  function showSuccess(message) {
+    setSuccessToast({ id: Date.now(), message })
+  }
+
   function handleConfirmOrder() {
     setCurrentStep(4)
     setOrderConfirmed(true)
     setPaymentStatus(paymentMethod === 'sepay' ? 'pending' : 'confirmed')
   }
 
+  function handleAddressFormChange(key, value) {
+    setAddressForm((current) => ({ ...current, [key]: value }))
+  }
+
+  function openCreateAddressModal() {
+    setEditingAddressId(null)
+    setAddressForm({ ...emptyAddressForm })
+    setShowAddressModal(true)
+  }
+
+  function openEditAddressModal(address) {
+    setEditingAddressId(address.id)
+    setAddressForm({
+      id: address.id,
+      name: address.name,
+      phone: address.phone,
+      city: address.city,
+      district: address.district,
+      ward: address.ward,
+      addressLine: address.addressLine,
+      type: address.type,
+      isDefault: address.isDefault,
+    })
+    setShowAddressModal(true)
+  }
+
+  function closeAddressModal() {
+    setShowAddressModal(false)
+    setEditingAddressId(null)
+    setAddressForm({ ...emptyAddressForm })
+  }
+
   function handleAddAddress(event) {
     event.preventDefault()
 
     const nextAddress = {
-      id: `${Date.now()}`,
       ...addressForm,
-      isDefault: false,
+      id: editingAddressId || `${Date.now()}`,
+      type: editingAddressId ? addressForm.type : 'Nhà riêng',
+      address: buildFullAddress(addressForm),
     }
 
-    setAddresses((items) => [...items, nextAddress])
+    setAddresses((items) => {
+      const normalizedItems = addressForm.isDefault ? items.map((item) => ({ ...item, isDefault: false })) : items
+
+      if (editingAddressId) {
+        return normalizedItems.map((item) => (item.id === editingAddressId ? nextAddress : item))
+      }
+
+      return [...normalizedItems, nextAddress]
+    })
     setSelectedAddressId(nextAddress.id)
-    setAddressForm({ name: '', phone: '', address: '', type: 'Nhà riêng' })
-    setShowAddressModal(false)
+    closeAddressModal()
+    showSuccess('Lưu địa chỉ thành công')
   }
 
   function handleEditVatInfo() {
@@ -145,11 +197,18 @@ export default function Checkout() {
     event.preventDefault()
     setVatInfo(vatForm)
     setIsEditingVat(false)
+    showSuccess('Cập nhật thông tin MST thành công')
   }
 
   return (
     <div className="min-h-screen bg-white">
       <Header />
+
+      <AnimatePresence>
+        {successToast && (
+          <SuccessToast key={successToast.id} message={successToast.message} onClose={() => setSuccessToast(null)} />
+        )}
+      </AnimatePresence>
 
       <div className="pt-20">
         <div className="border-b border-gray-100">
@@ -217,7 +276,7 @@ export default function Checkout() {
                     <MapPin className="h-5 w-5 text-gray-700" />
                     <h2 className="text-lg font-semibold text-gray-900">Địa chỉ giao hàng</h2>
                   </div>
-                  <Button variant="outline" size="sm" className="rounded-full text-xs" onClick={() => setShowAddressModal(true)}>
+                  <Button variant="outline" size="sm" className="rounded-full text-xs" onClick={openCreateAddressModal}>
                     <Plus className="h-3 w-3" />
                     Thêm địa chỉ
                   </Button>
@@ -243,12 +302,28 @@ export default function Checkout() {
                         <div className="mb-1 flex flex-wrap items-center gap-2">
                           <span className="font-semibold text-gray-900">{address.name}</span>
                           <span className="text-sm text-gray-500">{address.phone}</span>
-                          <Badge className="bg-gray-100 text-[10px] text-gray-600 hover:bg-gray-100">{address.type}</Badge>
+                          <Badge
+                            className={`px-2.5 py-1 text-[11px] font-medium hover:opacity-90 ${
+                              address.type === 'Công ty'
+                                ? 'bg-blue-50 text-blue-700'
+                                : address.type === 'Nhà riêng'
+                                  ? 'bg-green-100 text-green-700'
+                                  : address.type === 'Kho hàng'
+                                    ? 'bg-orange-100 text-orange-700'
+                                    : 'bg-gray-100 text-gray-600'
+                            }`}
+                          >
+                            {address.type}
+                          </Badge>
                           {address.isDefault && <Badge className="bg-gray-900 text-[10px] text-white hover:bg-gray-900">Mặc định</Badge>}
                         </div>
                         <p className="text-sm text-gray-600">{address.address}</p>
                       </div>
-                      <button type="button" className="self-start text-gray-400 hover:text-gray-700">
+                      <button
+                        type="button"
+                        onClick={() => openEditAddressModal(address)}
+                        className="self-start text-gray-400 hover:text-gray-700"
+                      >
                         <Edit2 className="h-4 w-4" />
                       </button>
                     </label>
@@ -550,70 +625,14 @@ export default function Checkout() {
 
       <AnimatePresence>
         {showAddressModal && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 z-[60] flex items-center justify-center bg-black/40 p-4"
-            onClick={() => setShowAddressModal(false)}
-          >
-            <motion.div
-              initial={{ opacity: 0, y: 16, scale: 0.98 }}
-              animate={{ opacity: 1, y: 0, scale: 1 }}
-              exit={{ opacity: 0, y: 16, scale: 0.98 }}
-              className="w-full max-w-xl rounded-[1.75rem] bg-white p-6 shadow-2xl"
-              onClick={(event) => event.stopPropagation()}
-            >
-              <div className="mb-5 flex items-center justify-between">
-                <h3 className="text-xl font-semibold text-gray-900">Thêm địa chỉ giao hàng</h3>
-                <button onClick={() => setShowAddressModal(false)} className="text-sm text-gray-500 hover:text-gray-900">
-                  Đóng
-                </button>
-              </div>
-
-              <form onSubmit={handleAddAddress} className="space-y-4">
-                <div className="grid gap-4 sm:grid-cols-2">
-                  <Input
-                    placeholder="Họ và tên"
-                    value={addressForm.name}
-                    onChange={(event) => setAddressForm((value) => ({ ...value, name: event.target.value }))}
-                    required
-                  />
-                  <Input
-                    placeholder="Số điện thoại"
-                    value={addressForm.phone}
-                    onChange={(event) => setAddressForm((value) => ({ ...value, phone: event.target.value }))}
-                    required
-                  />
-                </div>
-
-                <Input
-                  placeholder="Địa chỉ nhận hàng"
-                  value={addressForm.address}
-                  onChange={(event) => setAddressForm((value) => ({ ...value, address: event.target.value }))}
-                  required
-                />
-
-                <select
-                  value={addressForm.type}
-                  onChange={(event) => setAddressForm((value) => ({ ...value, type: event.target.value }))}
-                  className="h-11 w-full rounded-xl border border-gray-200 bg-white px-4 text-sm text-gray-900 outline-none focus:border-gray-900 focus:ring-2 focus:ring-gray-900/10"
-                >
-                  <option value="Nhà riêng">Nhà riêng</option>
-                  <option value="Công ty">Công ty</option>
-                </select>
-
-                <div className="flex gap-3 pt-2">
-                  <Button type="button" variant="outline" className="flex-1" onClick={() => setShowAddressModal(false)}>
-                    Hủy
-                  </Button>
-                  <Button type="submit" className="flex-1 bg-gray-900 text-white hover:bg-gray-800">
-                    Lưu địa chỉ
-                  </Button>
-                </div>
-              </form>
-            </motion.div>
-          </motion.div>
+          <AddressModal
+            title={editingAddressId ? 'Cập nhật địa chỉ giao hàng' : 'Thêm địa chỉ giao hàng'}
+            form={addressForm}
+            onChange={handleAddressFormChange}
+            onClose={closeAddressModal}
+            onSubmit={handleAddAddress}
+            submitLabel={editingAddressId ? 'Lưu thay đổi' : 'Lưu địa chỉ'}
+          />
         )}
       </AnimatePresence>
 
