@@ -109,3 +109,18 @@ export async function completeProfile(data) {
 export async function logout() {
   return request('POST', '/auth/logout')
 }
+
+/**
+ * Lấy thông tin thuế (CustomerProfile) của người dùng hiện tại.
+ */
+export async function getCustomerProfile() {
+  return request('GET', '/customer-profile')
+}
+
+/**
+ * Cập nhật thông tin thuế (CustomerProfile) của người dùng hiện tại.
+ * @param {{ taxCode, companyName, companyAddress, invoiceEmail, representative, companyPhone }} data
+ */
+export async function updateCustomerProfile(data) {
+  return request('PUT', '/customer-profile', data)
+}
