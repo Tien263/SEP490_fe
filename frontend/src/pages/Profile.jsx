@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useMemo, useState } from 'react'
 import {
   AlertCircle,
   Building2,
@@ -29,7 +29,6 @@ import { Input } from '../components/ui/Input.jsx'
 import { useAuth } from '../context/AuthContext.jsx'
 import { isVatExpired, orders, paymentStatusMeta, shippingStatusMeta } from '../data/orders.js'
 import { formatPrice } from '../data/products.js'
-import { getCustomerProfile, updateCustomerProfile } from '../services/authService.js'
 
 const profileTabs = [
   { id: 'info', label: 'Thông tin cá nhân', icon: User },
@@ -389,152 +388,55 @@ function AddressesTab({ onSuccess }) {
   )
 }
 
-function TaxInfoTab({ userName, userEmail, userPhone, onSuccess }) {
-  const [loading, setLoading] = useState(true)
+function TaxInfoTab({ onSuccess }) {
   const [editing, setEditing] = useState(false)
-  const [taxInfo, setTaxInfo] = useState({
-    taxCode: '',
-    companyName: '',
-    companyAddress: '',
-    invoiceEmail: '',
-    representative: '',
-    companyPhone: '',
-  })
-  const [taxForm, setTaxForm] = useState({
-    taxCode: '',
-    companyName: '',
-    companyAddress: '',
-    invoiceEmail: '',
-    representative: '',
-    companyPhone: '',
-  })
-  const [searchingMst, setSearchingMst] = useState(false)
+  const [taxInfo, setTaxInfo] = useState(defaultTaxInfo)
+  const [taxForm, setTaxForm] = useState(defaultTaxInfo)
 
   const fields = [
-    { key: 'taxCode', label: 'Mã số thuế', placeholder: 'Nhập mã số thuế (10 hoặc 13 số)' },
-    { key: 'companyName', label: 'Tên công ty', placeholder: 'Tên công ty sẽ tự động điền khi tra cứu' },
-    { key: 'companyAddress', label: 'Địa chỉ công ty', placeholder: 'Địa chỉ công ty sẽ tự động điền khi tra cứu' },
+    { key: 'taxCode', label: 'Mã số thuế', placeholder: '0123456789' },
+    { key: 'companyName', label: 'Tên công ty', placeholder: 'Công ty TNHH Văn Phòng ABC' },
+    { key: 'companyAddress', label: 'Địa chỉ công ty', placeholder: '123 Nguyễn Huệ, Q.1, TP.HCM' },
     { key: 'invoiceEmail', label: 'Email nhận hóa đơn', placeholder: 'invoice@company.com' },
     { key: 'representative', label: 'Người đại diện', placeholder: 'Nguyễn Văn A' },
     { key: 'companyPhone', label: 'Số điện thoại công ty', placeholder: '028 3822 1234' },
   ]
 
-  useEffect(() => {
-    async function fetchTaxInfo() {
-      try {
-        setLoading(true)
-        const data = await getCustomerProfile()
-        const info = {
-          taxCode: data.taxCode || '',
-          companyName: data.companyName || '',
-          companyAddress: data.companyAddress || '',
-          invoiceEmail: data.invoiceEmail || '',
-          representative: data.representative || '',
-          companyPhone: data.companyPhone || '',
-        }
-        setTaxInfo(info)
-        setTaxForm(info)
-      } catch (err) {
-        console.error("Lỗi khi tải thông tin thuế:", err)
-      } finally {
-        setLoading(false)
-      }
-    }
-    fetchTaxInfo()
-  }, [])
-
   function startEditing() {
-    setTaxForm({ ...taxInfo })
+    setTaxForm(taxInfo)
     setEditing(true)
   }
 
   function cancelEditing() {
-    setTaxForm({ ...taxInfo })
+    setTaxForm(taxInfo)
     setEditing(false)
   }
 
-  async function saveTaxInfo() {
-    try {
-      await updateCustomerProfile(taxForm)
-      setTaxInfo(taxForm)
-      setEditing(false)
-      onSuccess('Lưu thông tin MST thành công')
-    } catch (err) {
-      alert(err.message || 'Lỗi khi lưu thông tin thuế')
-    }
+  function saveTaxInfo() {
+    setTaxInfo(taxForm)
+    setEditing(false)
+    onSuccess('Lưu thông tin MST thành công')
   }
 
-  async function removeTaxInfo() {
-    const emptyForm = {
+  function removeTaxInfo() {
+    setTaxInfo({
       taxCode: '',
       companyName: '',
       companyAddress: '',
       invoiceEmail: '',
       representative: '',
       companyPhone: '',
-    }
-    try {
-      await updateCustomerProfile(emptyForm)
-      setTaxInfo(emptyForm)
-      setTaxForm(emptyForm)
-      setEditing(false)
-      onSuccess('Xóa thông tin MST thành công')
-    } catch (err) {
-      alert(err.message || 'Lỗi khi xóa thông tin thuế')
-    }
-  }
-
-  async function handleMstLookup() {
-    const code = taxForm.taxCode?.trim()
-    if (!code) {
-      alert('Vui lòng nhập mã số thuế để tra cứu.')
-      return
-    }
-
-    const cleanedCode = code.replace(/[\s-]/g, '')
-    if (cleanedCode.length !== 10 && cleanedCode.length !== 13) {
-      alert('Mã số thuế của doanh nghiệp phải có độ dài 10 hoặc 13 số.')
-      return
-    }
-
-    try {
-      setSearchingMst(true)
-      const res = await fetch(`https://api.vietqr.io/v2/business/${cleanedCode}`)
-      const json = await res.json()
-
-      if (json && json.code === '00' && json.data) {
-        const businessName = json.data.name
-        const businessAddress = json.data.address
-
-        setTaxForm(prev => ({
-          ...prev,
-          taxCode: cleanedCode,
-          companyName: businessName || prev.companyName,
-          companyAddress: businessAddress || prev.companyAddress,
-          // Autofill email/representative/phone with profile info if they are empty
-          invoiceEmail: prev.invoiceEmail || userEmail || '',
-          representative: prev.representative || userName || '',
-          companyPhone: prev.companyPhone || userPhone || '',
-        }))
-        onSuccess(`Tìm thấy doanh nghiệp: ${businessName}`)
-      } else {
-        alert(json.desc || 'Không tìm thấy doanh nghiệp tương ứng với mã số thuế này. Vui lòng kiểm tra lại.')
-      }
-    } catch (err) {
-      console.error(err)
-      alert('Không thể kết nối đến hệ thống tra cứu. Vui lòng thử lại sau.')
-    } finally {
-      setSearchingMst(false)
-    }
-  }
-
-  if (loading) {
-    return (
-      <section className="rounded-2xl border border-gray-100 bg-white p-6 flex flex-col items-center justify-center min-h-[300px]">
-        <div className="h-8 w-8 animate-spin rounded-full border-2 border-gray-200 border-t-gray-950" />
-        <p className="mt-4 text-sm text-gray-500">Đang tải thông tin thuế...</p>
-      </section>
-    )
+    })
+    setTaxForm({
+      taxCode: '',
+      companyName: '',
+      companyAddress: '',
+      invoiceEmail: '',
+      representative: '',
+      companyPhone: '',
+    })
+    setEditing(false)
+    onSuccess('Xóa thông tin MST thành công')
   }
 
   return (
@@ -585,43 +487,12 @@ function TaxInfoTab({ userName, userEmail, userPhone, onSuccess }) {
           <div key={field.key}>
             <label className="mb-1 block text-xs text-gray-500">{field.label}</label>
             {editing ? (
-              field.key === 'taxCode' ? (
-                <div className="flex gap-2">
-                  <Input
-                    placeholder={field.placeholder}
-                    value={taxForm[field.key]}
-                    className="flex-1 rounded-xl text-sm"
-                    onChange={(event) => setTaxForm((value) => ({ ...value, [field.key]: event.target.value }))}
-                  />
-                  <Button
-                    type="button"
-                    variant="outline"
-                    className="h-11 rounded-xl px-4 text-xs font-semibold hover:bg-gray-100 flex items-center gap-1.5 border-gray-200"
-                    onClick={handleMstLookup}
-                    disabled={searchingMst}
-                  >
-                    {searchingMst ? (
-                      <>
-                        <span className="h-3 w-3 animate-spin rounded-full border border-gray-300 border-t-gray-800" />
-                        Đang tìm...
-                      </>
-                    ) : (
-                      <>
-                        <Search className="h-3.5 w-3.5" />
-                        Tra cứu
-                      </>
-                    )}
-                  </Button>
-                </div>
-              ) : (
-                <Input
-                  placeholder={field.placeholder}
-                  value={taxForm[field.key]}
-                  className="rounded-xl text-sm"
-                  onChange={(event) => setTaxForm((value) => ({ ...value, [field.key]: event.target.value }))}
-                  disabled={field.key === 'companyName' || field.key === 'companyAddress'}
-                />
-              )
+              <Input
+                placeholder={field.placeholder}
+                value={taxForm[field.key]}
+                className="rounded-xl text-sm"
+                onChange={(event) => setTaxForm((value) => ({ ...value, [field.key]: event.target.value }))}
+              />
             ) : (
               <p className="rounded-xl bg-gray-50 px-3 py-3 text-sm font-medium text-gray-900">
                 {taxInfo[field.key] || 'Chưa cập nhật'}
@@ -792,14 +663,7 @@ export default function Profile() {
       />
     ),
     addresses: <AddressesTab onSuccess={showSuccess} />,
-    tax: (
-      <TaxInfoTab
-        userName={userName}
-        userEmail={userEmail}
-        userPhone={userPhone}
-        onSuccess={showSuccess}
-      />
-    ),
+    tax: <TaxInfoTab onSuccess={showSuccess} />,
     orders: <OrderHistoryTab onSuccess={showSuccess} />,
   }
 
