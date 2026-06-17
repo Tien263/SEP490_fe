@@ -8,6 +8,7 @@ import Checkout from './pages/Checkout.jsx'
 import Landing from './pages/Landing.jsx'
 import Home from './pages/Home.jsx'
 import Login from './pages/Login.jsx'
+import OrderDetail from './pages/OrderDetail.jsx'
 import ProductDetail from './pages/ProductDetail.jsx'
 import Profile from './pages/Profile.jsx'
 import Products from './pages/Products.jsx'
@@ -24,6 +25,7 @@ function App() {
           <Route path="/products" element={<Products />} />
           <Route path="/products/:id" element={<ProductDetail />} />
           <Route path="/profile" element={<Profile />} />
+          <Route path="/profile/orders/:orderId" element={<OrderDetail />} />
           <Route path="/cart" element={<Cart />} />
           <Route path="/checkout" element={<Checkout />} />
           <Route path="/login" element={<Login />} />
