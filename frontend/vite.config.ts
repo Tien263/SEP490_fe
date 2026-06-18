@@ -1,10 +1,6 @@
 import { defineConfig } from 'vitest/config'
 import react from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
-import dns from 'node:dns'
-
-dns.setDefaultResultOrder('ipv4first')
-
 
 // https://vite.dev/config/
 export default defineConfig({
