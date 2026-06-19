@@ -58,7 +58,7 @@ export default function Cart() {
 
   function handleSubmitQuotation() {
     setShowQuotationModal(false)
-    setQuotationSent(true)
+    navigate('/negotiation')
   }
 
   const cartProducts = useMemo(
