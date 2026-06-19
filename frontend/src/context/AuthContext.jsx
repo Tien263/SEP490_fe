@@ -107,6 +107,16 @@ export function AuthProvider({ children }) {
     }
   }, [])
 
+  // ─── Update User state locally ───────────────────────────────────────────────
+  const updateUser = useCallback((updatedFields) => {
+    setUser((prev) => {
+      if (!prev) return null
+      const updated = { ...prev, ...updatedFields }
+      writeJson(USER_KEY, updated)
+      return updated
+    })
+  }, [])
+
   // ─── Logout ─────────────────────────────────────────────────────────────────
   const logout = useCallback(async () => {
     try {
@@ -198,7 +208,8 @@ export function AuthProvider({ children }) {
     forgotPassword,
     resetPassword,
     completeProfile,
-  }), [user, loading, error, login, loginWithGoogle, logout, register, verifyOtp, forgotPassword, resetPassword, completeProfile])
+    updateUser,
+  }), [user, loading, error, login, loginWithGoogle, logout, register, verifyOtp, forgotPassword, resetPassword, completeProfile, updateUser])
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
 }
