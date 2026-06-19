@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { motion } from "motion/react";
 import {
@@ -65,8 +65,9 @@ export default function Negotiation() {
         .then(data => {
           setQuotation(data);
           setIsLoading(false);
-          // If status is "SalesResponded" or "Negotiating", we can open chat by default
-          if (data.status === "SalesResponded") {
+          // Normalize status to lowercase for comparison
+          const status = (data.status || "").toLowerCase().replace(/_/g, "");
+          if (status === "salesresponded" || status === "sales_responded") {
             setShowChat(true);
           }
         })
@@ -149,9 +150,12 @@ export default function Negotiation() {
     );
   }
 
+  // Normalize status to handle both PascalCase (API) and snake_case (mock)
+  const normalizedStatus = (quotation.status || "").toLowerCase().replace(/_/g, "");
+
   const statusBadge = {
     pending: "bg-yellow-100 text-yellow-700",
-    sales_responded: "bg-blue-100 text-blue-700",
+    salesresponded: "bg-blue-100 text-blue-700",
     negotiating: "bg-purple-100 text-purple-700",
     accepted: "bg-green-100 text-green-700",
     rejected: "bg-red-100 text-red-700",
@@ -159,7 +163,7 @@ export default function Negotiation() {
 
   const statusLabel = {
     pending: "Đang chờ Sales phản hồi",
-    sales_responded: "Sales đã gửi bảng giá",
+    salesresponded: "Sales đã gửi bảng giá",
     negotiating: "Đang trao đổi",
     accepted: "Đã chấp nhận",
     rejected: "Đã hủy",
@@ -238,9 +242,9 @@ export default function Negotiation() {
                 </div>
               </div>
               <Badge
-                className={`${statusBadge[quotation.status]} hover:opacity-90`}
+                className={`${statusBadge[normalizedStatus] || "bg-gray-100 text-gray-700"} hover:opacity-90`}
               >
-                {statusLabel[quotation.status]}
+                {statusLabel[normalizedStatus] || quotation.status}
               </Badge>
             </div>
           </div>
@@ -348,11 +352,13 @@ export default function Negotiation() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-50">
-                  {quotation.products.map((product, index) => {
-                    const finalPrice = product.salesProposedPrice || product.originalPrice;
+                  {(quotation.items || quotation.products || []).map((product, index) => {
+                    const originalPrice = product.originalUnitPrice ?? product.originalPrice;
+                    const salesProposedPrice = product.salesProposedUnitPrice ?? product.salesProposedPrice;
+                    const finalPrice = salesProposedPrice || originalPrice;
                     const totalPrice = finalPrice * product.quantity;
-                    const savingsPerUnit = product.salesProposedPrice
-                      ? product.originalPrice - product.salesProposedPrice
+                    const savingsPerUnit = salesProposedPrice
+                      ? originalPrice - salesProposedPrice
                       : 0;
                     const totalSavings = savingsPerUnit * product.quantity;
 
@@ -367,7 +373,7 @@ export default function Negotiation() {
                               {product.productName}
                             </p>
                             <p className="text-xs text-gray-500">
-                              Mã: {product.productId.padStart(6, "0")}
+                              Mã: {String(product.productId).padStart(6, "0")}
                             </p>
                           </div>
                         </td>
@@ -375,17 +381,17 @@ export default function Negotiation() {
                           {product.quantity.toLocaleString()}
                         </td>
                         <td className="px-6 py-4">
-                          <p className={`text-sm font-medium ${product.salesProposedPrice ? 'text-gray-500 line-through' : 'text-gray-900'}`}>
-                            {formatPrice(product.originalPrice)}
+                          <p className={`text-sm font-medium ${salesProposedPrice ? 'text-gray-500 line-through' : 'text-gray-900'}`}>
+                            {formatPrice(originalPrice)}
                           </p>
                         </td>
                         {quotation.salesProposedTotal && (
                           <>
                             <td className="px-6 py-4">
                               <p className="text-sm font-semibold text-green-600">
-                                {product.salesProposedPrice
-                                  ? formatPrice(product.salesProposedPrice)
-                                  : formatPrice(product.originalPrice)}
+                                {salesProposedPrice
+                                  ? formatPrice(salesProposedPrice)
+                                  : formatPrice(originalPrice)}
                               </p>
                             </td>
                             <td className="px-6 py-4">
@@ -428,7 +434,7 @@ export default function Negotiation() {
           )}
 
           {/* Action Buttons */}
-          {quotation.status === "sales_responded" && (
+          {(normalizedStatus === "salesresponded" || normalizedStatus === "negotiating") && (
             <div className="bg-white rounded-2xl border border-gray-100 p-6">
               <div className="flex items-center justify-between gap-4">
                 <div>
@@ -468,7 +474,7 @@ export default function Negotiation() {
             </div>
           )}
 
-          {quotation.status === "pending" && (
+          {normalizedStatus === "pending" && (
             <div className="bg-yellow-50 rounded-2xl border border-yellow-200 p-6">
               <div className="flex items-center gap-3">
                 <AlertCircle className="w-6 h-6 text-yellow-600" />
@@ -484,7 +490,7 @@ export default function Negotiation() {
             </div>
           )}
 
-          {quotation.status === "accepted" && (
+          {normalizedStatus === "accepted" && (
             <div className="bg-green-50 rounded-2xl border border-green-200 p-6">
               <div className="flex items-center gap-3">
                 <Check className="w-6 h-6 text-green-600" />
@@ -500,7 +506,7 @@ export default function Negotiation() {
             </div>
           )}
 
-          {quotation.status === "rejected" && (
+          {normalizedStatus === "rejected" && (
             <div className="bg-red-50 rounded-2xl border border-red-200 p-6">
               <div className="flex items-center gap-3">
                 <X className="w-6 h-6 text-red-600" />

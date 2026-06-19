@@ -99,10 +99,12 @@ export default function ChatInterface({
                 Sản phẩm đang đàm phán
               </h3>
               <div className="space-y-4">
-                {quotation.products.map((product, index) => {
-                  const finalPrice = product.salesProposedPrice || product.originalPrice;
-                  const savings = product.salesProposedPrice
-                    ? (product.originalPrice - product.salesProposedPrice) * product.quantity
+                {(quotation.items || quotation.products || []).map((product, index) => {
+                  const originalPrice = product.originalUnitPrice ?? product.originalPrice;
+                  const salesProposedPrice = product.salesProposedUnitPrice ?? product.salesProposedPrice;
+                  const finalPrice = salesProposedPrice || originalPrice;
+                  const savings = salesProposedPrice
+                    ? (originalPrice - salesProposedPrice) * product.quantity
                     : 0;
 
                   return (
@@ -122,15 +124,15 @@ export default function ChatInterface({
                         </div>
                         <div className="flex justify-between">
                           <span className="text-gray-500">Giá gốc:</span>
-                          <span className={`${product.salesProposedPrice ? 'text-gray-500 line-through' : 'text-gray-900 font-medium'}`}>
-                            {formatPrice(product.originalPrice)}
+                          <span className={`${salesProposedPrice ? 'text-gray-500 line-through' : 'text-gray-900 font-medium'}`}>
+                            {formatPrice(originalPrice)}
                           </span>
                         </div>
-                        {product.salesProposedPrice && (
+                        {salesProposedPrice && (
                           <div className="flex justify-between">
                             <span className="text-gray-500">Giá mới:</span>
                             <span className="font-semibold text-green-600">
-                              {formatPrice(product.salesProposedPrice)}
+                              {formatPrice(salesProposedPrice)}
                             </span>
                           </div>
                         )}
@@ -183,8 +185,10 @@ export default function ChatInterface({
               {/* Messages */}
               <div className="flex-1 p-6 overflow-y-auto max-h-[600px]">
                 <div className="space-y-4">
-                  {messages.map((message) => {
-                    const isMine = message.senderId === user?.id;
+              {messages.map((message) => {
+                    const isMine = (message.senderId || message.SenderId) === user?.id;
+                    const msgText = message.messageText ?? message.content ?? '';
+                    const msgTime = message.sentAt ?? message.SentAt ?? message.createdAt;
                     return (
                       <div
                         key={message.id}
@@ -218,7 +222,7 @@ export default function ChatInterface({
                                   : "bg-gray-100 text-gray-900"
                               }`}
                             >
-                              <p className="text-sm">{message.content}</p>
+                              <p className="text-sm">{msgText}</p>
                             </div>
                             <p
                               className={`text-xs text-gray-400 mt-1 ${
@@ -227,10 +231,12 @@ export default function ChatInterface({
                                   : "text-left"
                               }`}
                             >
-                              {new Date(message.createdAt).toLocaleTimeString("vi-VN", {
-                                hour: "2-digit",
-                                minute: "2-digit",
-                              })}
+                              {msgTime
+                                ? new Date(msgTime).toLocaleTimeString("vi-VN", {
+                                    hour: "2-digit",
+                                    minute: "2-digit",
+                                  })
+                                : ""}
                             </p>
                           </div>
                         </div>

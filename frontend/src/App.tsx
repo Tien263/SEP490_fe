@@ -16,6 +16,7 @@ import Products from './pages/Products.jsx'
 import Register from './pages/Register.jsx'
 import VerifyOtp from './pages/VerifyOtp.jsx'
 import Negotiation from './pages/Negotiation.jsx'
+import NegotiationList from './pages/NegotiationList.jsx'
 import SalesPortal from './pages/sales/SalesPortal.tsx'
 import AdminPortal from './pages/admin/AdminPortal.tsx'
 import ProtectedRoute from './components/ProtectedRoute.jsx'
@@ -44,6 +45,7 @@ function App() {
             <Route path="/cart" element={<ProtectedRoute allowedRoles={['Customer']}><Cart /></ProtectedRoute>} />
             <Route path="/checkout" element={<ProtectedRoute allowedRoles={['Customer']}><Checkout /></ProtectedRoute>} />
             <Route path="/negotiation/:id" element={<ProtectedRoute allowedRoles={['Customer']}><Negotiation /></ProtectedRoute>} />
+            <Route path="/negotiations" element={<ProtectedRoute allowedRoles={['Customer']}><NegotiationList /></ProtectedRoute>} />
 
             {/* Sales Routes */}
             <Route path="/sales/*" element={<ProtectedRoute allowedRoles={['SalesStaff', 'Admin']}><SalesPortal /></ProtectedRoute>} />
