@@ -17,13 +17,13 @@ const tabs = [
 export default function ProductDetail() {
   const { id } = useParams()
 
-  const [product, setProduct]               = useState(null)
+  const [product, setProduct] = useState(null)
   const [relatedProducts, setRelatedProducts] = useState([])
-  const [loading, setLoading]               = useState(true)
-  const [error, setError]                   = useState(null)
-  const [quantity, setQuantity]             = useState(1)
-  const [selectedImage, setSelectedImage]   = useState(0)
-  const [activeTab, setActiveTab]           = useState('description')
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState(null)
+  const [quantity, setQuantity] = useState(1)
+  const [selectedImage, setSelectedImage] = useState(0)
+  const [activeTab, setActiveTab] = useState('description')
 
   // ─── Fetch product detail ──────────────────────────────────────────────────
   useEffect(() => {
@@ -132,9 +132,8 @@ export default function ProductDetail() {
                   <button
                     key={index}
                     onClick={() => setSelectedImage(index)}
-                    className={`aspect-square overflow-hidden rounded-[1.25rem] border-2 bg-gray-100 transition-all ${
-                      selectedImage === index ? 'border-gray-900 shadow-lg' : 'border-transparent hover:border-gray-300'
-                    }`}
+                    className={`aspect-square overflow-hidden rounded-[1.25rem] border-2 bg-gray-100 transition-all ${selectedImage === index ? 'border-gray-900 shadow-lg' : 'border-transparent hover:border-gray-300'
+                      }`}
                   >
                     <img src={image} alt={`${product.name} ${index + 1}`} className="h-full w-full object-cover" />
                   </button>
@@ -203,10 +202,10 @@ export default function ProductDetail() {
               {/* Features */}
               <div className="grid grid-cols-1 gap-4 pt-6 sm:grid-cols-2">
                 {[
-                  { icon: Truck,     title: 'Miễn Phí Vận Chuyển', description: 'Đơn hàng trên 500.000 đ' },
-                  { icon: RotateCcw, title: 'Đổi Trả Dễ Dàng',     description: 'Chính sách 30 ngày' },
-                  { icon: Package,   title: 'Đóng Gói Cẩn Thận',    description: 'Xử lý cẩn trọng' },
-                  { icon: Shield,    title: 'Bảo Hành Chất Lượng',  description: 'Sản phẩm cao cấp' },
+                  { icon: Truck, title: 'Miễn Phí Vận Chuyển', description: 'Đơn hàng trên 500.000 đ' },
+                  { icon: RotateCcw, title: 'Đổi Trả Dễ Dàng', description: 'Chính sách 30 ngày' },
+                  { icon: Package, title: 'Đóng Gói Cẩn Thận', description: 'Xử lý cẩn trọng' },
+                  { icon: Shield, title: 'Bảo Hành Chất Lượng', description: 'Sản phẩm cao cấp' },
                 ].map((feature) => (
                   <div key={feature.title} className="flex items-start gap-3">
                     <div className="rounded-lg bg-gray-100 p-2">
@@ -229,11 +228,10 @@ export default function ProductDetail() {
                 <button
                   key={tab.id}
                   onClick={() => setActiveTab(tab.id)}
-                  className={`border-b-2 px-8 py-4 text-sm font-medium transition-colors ${
-                    activeTab === tab.id
+                  className={`border-b-2 px-8 py-4 text-sm font-medium transition-colors ${activeTab === tab.id
                       ? 'border-gray-900 text-gray-900'
                       : 'border-transparent text-gray-500 hover:text-gray-900'
-                  }`}
+                    }`}
                 >
                   {tab.label}
                 </button>
@@ -257,9 +255,9 @@ export default function ProductDetail() {
                   ['Tồn Kho Thực Tế', product.physicalStock != null ? `${product.physicalStock} sản phẩm` : 'N/A'],
                   ...(product.specifications
                     ? product.specifications.split('\n').map((line) => {
-                        const [k, ...v] = line.split(':')
-                        return [k?.trim(), v.join(':').trim()]
-                      }).filter(([k]) => k)
+                      const [k, ...v] = line.split(':')
+                      return [k?.trim(), v.join(':').trim()]
+                    }).filter(([k]) => k)
                     : []),
                 ].map(([label, value]) => (
                   <div key={label} className="flex justify-between border-b border-gray-100 pb-3">

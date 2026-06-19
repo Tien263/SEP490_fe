@@ -14,6 +14,9 @@ import Profile from './pages/Profile.jsx'
 import Products from './pages/Products.jsx'
 import Register from './pages/Register.jsx'
 import VerifyOtp from './pages/VerifyOtp.jsx'
+import Negotiation from './pages/Negotiation.jsx'
+import SalesPortal from './pages/sales/SalesPortal.tsx'
+import AdminPortal from './pages/admin/AdminPortal.tsx'
 
 function App() {
   return (
@@ -34,6 +37,9 @@ function App() {
           <Route path="/forgot-password/sent" element={<ForgotPasswordSent />} />
           <Route path="/verify-otp" element={<VerifyOtp />} />
           <Route path="/reset-password" element={<ResetPassword />} />
+          <Route path="/negotiation" element={<Negotiation />} />
+          <Route path="/sales/*" element={<SalesPortal />} />
+          <Route path="/admin/*" element={<AdminPortal />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </AuthProvider>
