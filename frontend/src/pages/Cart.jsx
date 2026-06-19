@@ -6,7 +6,9 @@ import Footer from '../components/Footer.jsx'
 import Header from '../components/Header.jsx'
 import { Badge } from '../components/ui/Badge.jsx'
 import { Button } from '../components/ui/Button.jsx'
-import { formatPrice, products } from '../data/products.js'
+import { formatPrice } from '../services/productService.js'
+import { useCart } from '../context/CartContext.jsx'
+import { useAuth } from '../context/AuthContext.jsx'
 
 function getAutomaticDiscount(total) {
   if (total >= 100000000) return 0
@@ -23,30 +25,32 @@ function getDiscountBadgeText(total) {
 
 export default function Cart() {
   const navigate = useNavigate()
-  const [cartItems, setCartItems] = useState([
-    { productId: '1', quantity: 2000 },
-    { productId: '2', quantity: 1000 },
-    { productId: '6', quantity: 500 },
-  ])
+  const { isAuthenticated } = useAuth()
+  const { items: cartItems, updateQuantity, removeFromCart, totalItems } = useCart()
   const [showQuotationModal, setShowQuotationModal] = useState(false)
   const [quotationSent, setQuotationSent] = useState(false)
 
-  function handleQuantityChange(productId, delta) {
-    setCartItems((items) =>
-      items.map((item) =>
-        item.productId === productId ? { ...item, quantity: Math.max(1, item.quantity + delta) } : item,
-      ),
-    )
+  function handleQuantityChange(cartItemId, delta, currentQuantity) {
+    const newQty = currentQuantity + delta
+    if (newQty < 1) return
+    updateQuantity(cartItemId, newQty).catch((err) => {
+      alert(err.message || 'Lỗi khi cập nhật số lượng')
+    })
   }
 
-  function handleRemoveItem(productId) {
-    setCartItems((items) => items.filter((item) => item.productId !== productId))
+  function handleRemoveItem(cartItemId) {
+    removeFromCart(cartItemId).catch((err) => {
+      alert(err.message || 'Lỗi khi xóa sản phẩm')
+    })
   }
 
   function goToCheckout() {
     navigate('/checkout', {
       state: {
-        cartItems,
+        cartItems: cartItems.map(item => ({
+          productId: item.productId,
+          quantity: item.quantity
+        })),
       },
     })
   }
@@ -56,27 +60,54 @@ export default function Cart() {
     setShowQuotationModal(true)
   }
 
-  function handleSubmitQuotation() {
-    setShowQuotationModal(false)
-    navigate('/negotiation')
+  const [quotationNote, setQuotationNote] = useState('')
+  const [isSubmittingQuotation, setIsSubmittingQuotation] = useState(false)
+
+  async function handleSubmitQuotation() {
+    setIsSubmittingQuotation(true)
+    try {
+      const { createFromCart } = await import('../services/quotationService.js');
+      const newQuotation = await createFromCart(quotationNote);
+      setShowQuotationModal(false);
+      setQuotationNote('');
+      navigate(`/negotiation/${newQuotation.id}`);
+    } catch (err) {
+      alert(err.message || 'Lỗi khi gửi báo giá');
+    } finally {
+      setIsSubmittingQuotation(false)
+    }
   }
 
-  const cartProducts = useMemo(
-    () =>
-      cartItems
-        .map((item) => ({
-          ...item,
-          product: products.find((product) => product.id === item.productId),
-        }))
-        .filter((item) => item.product),
-    [cartItems],
-  )
+  const subtotal = useMemo(() => {
+    return cartItems.reduce((sum, item) => sum + item.unitPrice * item.quantity, 0)
+  }, [cartItems])
 
-  const subtotal = cartProducts.reduce((sum, item) => sum + item.product.price * item.quantity, 0)
   const automaticDiscountRate = getAutomaticDiscount(subtotal)
   const automaticDiscountAmount = subtotal * automaticDiscountRate
   const shippingFee = subtotal >= 500000 ? 0 : 30000
   const total = subtotal + shippingFee - automaticDiscountAmount
+
+  if (!isAuthenticated) {
+    return (
+      <div className="min-h-screen bg-white">
+        <Header />
+        <div className="flex min-h-[60vh] items-center justify-center pt-20">
+          <div className="text-center">
+            <ShoppingBag className="mx-auto mb-6 h-20 w-20 text-gray-300" />
+            <h2 className="mb-4 text-3xl font-bold text-gray-900">Vui lòng đăng nhập</h2>
+            <p className="mb-8 text-gray-600">Đăng nhập để xem và quản lý giỏ hàng của bạn.</p>
+            <Link to="/login">
+              <Button size="lg" className="rounded-full bg-gray-900 hover:bg-gray-800">
+                Đăng Nhập Ngay
+                <ArrowRight className="h-4 w-4" />
+              </Button>
+            </Link>
+          </div>
+        </div>
+        <Footer />
+      </div>
+    )
+  }
 
   if (cartItems.length === 0) {
     return (
@@ -119,73 +150,91 @@ export default function Cart() {
 
         <div className="mx-auto max-w-7xl px-6 py-8 lg:px-8">
           <h1 className="text-4xl font-bold text-gray-900">Giỏ Hàng</h1>
-          <p className="mt-2 text-gray-600">{cartItems.length} sản phẩm trong giỏ hàng</p>
+          <p className="mt-2 text-gray-600">{totalItems} sản phẩm trong giỏ hàng</p>
         </div>
 
         <div className="mx-auto max-w-7xl px-6 pb-20 lg:px-8">
           <div className="grid grid-cols-1 gap-12 lg:grid-cols-3">
             <div className="space-y-6 lg:col-span-2">
-              {cartProducts.map(({ product, productId, quantity }) => (
-                <motion.div
-                  key={productId}
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  className="flex flex-col gap-6 rounded-[1.5rem] border border-gray-100 bg-white p-6 transition-shadow hover:shadow-lg sm:flex-row"
-                >
-                  <Link
-                    to={`/products/${productId}`}
-                    className="h-32 w-full flex-shrink-0 overflow-hidden rounded-[1.25rem] bg-gray-100 sm:w-32"
+              {cartItems.map((item) => {
+                const placeholderImg = `https://placehold.co/600x600/f3f4f6/9ca3af?text=${encodeURIComponent(item.productName)}`
+                const imageUrl = item.imageUrl || placeholderImg
+
+                return (
+                  <motion.div
+                    key={item.id}
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="flex flex-col gap-6 rounded-[1.5rem] border border-gray-100 bg-white p-6 transition-shadow hover:shadow-lg sm:flex-row"
                   >
-                    <img
-                      src={product.image}
-                      alt={product.name}
-                      className="h-full w-full object-cover transition-transform duration-500 hover:scale-110"
-                    />
-                  </Link>
+                    <Link
+                      to={`/products/${item.productId}`}
+                      className="h-32 w-full flex-shrink-0 overflow-hidden rounded-[1.25rem] bg-gray-100 sm:w-32"
+                    >
+                      <img
+                        src={imageUrl}
+                        alt={item.productName}
+                        className="h-full w-full object-cover transition-transform duration-500 hover:scale-110"
+                      />
+                    </Link>
 
-                  <div className="flex flex-1 flex-col">
-                    <div className="mb-2 flex items-start justify-between gap-4">
-                      <div>
-                        <p className="mb-1 text-xs uppercase tracking-[0.3em] text-gray-500">{product.category}</p>
-                        <Link to={`/products/${productId}`} className="text-lg font-semibold text-gray-900 hover:text-gray-600">
-                          {product.name}
-                        </Link>
-                      </div>
-                      <button
-                        onClick={() => handleRemoveItem(productId)}
-                        className="text-gray-400 transition-colors hover:text-gray-900"
-                      >
-                        <X className="h-5 w-5" />
-                      </button>
-                    </div>
-
-                    <p className="mb-4 text-sm leading-6 text-gray-600">{product.description}</p>
-
-                    <div className="mt-auto flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-                      <div className="flex items-center rounded-full border border-gray-300">
+                    <div className="flex flex-1 flex-col">
+                      <div className="mb-2 flex items-start justify-between gap-4">
+                        <div>
+                          <p className="mb-1 text-xs uppercase tracking-[0.3em] text-gray-500">Sản phẩm cao cấp</p>
+                          <Link to={`/products/${item.productId}`} className="text-lg font-semibold text-gray-900 hover:text-gray-600">
+                            {item.productName}
+                          </Link>
+                        </div>
                         <button
-                          onClick={() => handleQuantityChange(productId, -1)}
-                          className="rounded-l-full p-2 transition-colors hover:bg-gray-100"
+                          onClick={() => handleRemoveItem(item.id)}
+                          className="text-gray-400 transition-colors hover:text-gray-900"
                         >
-                          <Minus className="h-4 w-4" />
-                        </button>
-                        <span className="w-14 text-center font-medium">{quantity}</span>
-                        <button
-                          onClick={() => handleQuantityChange(productId, 1)}
-                          className="rounded-r-full p-2 transition-colors hover:bg-gray-100"
-                        >
-                          <Plus className="h-4 w-4" />
+                          <X className="h-5 w-5" />
                         </button>
                       </div>
 
-                      <div className="text-right">
-                        <div className="text-xl font-bold text-gray-900">{formatPrice(product.price * quantity)}</div>
-                        <div className="text-sm text-gray-500">{formatPrice(product.price)} mỗi sản phẩm</div>
+                      <p className="mb-4 text-sm leading-6 text-gray-600">Mã sản phẩm: {item.productId.slice(0, 8)}...</p>
+
+                      <div className="mt-auto flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                        <div className="flex items-center rounded-full border border-gray-300">
+                          <button
+                            onClick={() => handleQuantityChange(item.id, -1, item.quantity)}
+                            className="rounded-l-full p-2 transition-colors hover:bg-gray-100"
+                          >
+                            <Minus className="h-4 w-4" />
+                          </button>
+                          <input
+                            type="number"
+                            min="1"
+                            value={item.quantity}
+                            onChange={(e) => {
+                              const val = parseInt(e.target.value, 10)
+                              if (!isNaN(val) && val >= 1) {
+                                updateQuantity(item.id, val).catch((err) => {
+                                  alert(err.message || 'Lỗi khi cập nhật số lượng')
+                                })
+                              }
+                            }}
+                            className="w-14 text-center font-medium bg-transparent border-none focus:outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none focus:ring-0"
+                          />
+                          <button
+                            onClick={() => handleQuantityChange(item.id, 1, item.quantity)}
+                            className="rounded-r-full p-2 transition-colors hover:bg-gray-100"
+                          >
+                            <Plus className="h-4 w-4" />
+                          </button>
+                        </div>
+
+                        <div className="text-right">
+                          <div className="text-xl font-bold text-gray-900">{formatPrice(item.unitPrice * item.quantity)}</div>
+                          <div className="text-sm text-gray-500">{formatPrice(item.unitPrice)} mỗi sản phẩm</div>
+                        </div>
                       </div>
                     </div>
-                  </div>
-                </motion.div>
-              ))}
+                  </motion.div>
+                )
+              })}
 
               <Link to="/products">
                 <Button variant="outline" className="w-full rounded-full">
@@ -347,8 +396,19 @@ export default function Cart() {
                 </div>
                 <div className="flex items-center justify-between gap-4 pt-3 text-sm">
                   <span className="text-gray-500">Số sản phẩm:</span>
-                  <span className="text-lg font-semibold text-gray-900">{cartProducts.length} loại</span>
+                  <span className="text-lg font-semibold text-gray-900">{cartItems.length} loại</span>
                 </div>
+              </div>
+
+              <div className="mb-6">
+                <label className="mb-2 block text-sm font-medium text-gray-700">Ghi chú cho Sales (Tùy chọn)</label>
+                <textarea
+                  className="w-full resize-none rounded-[1rem] border border-gray-300 p-3 text-sm outline-none transition focus:border-gray-900 focus:ring-1 focus:ring-gray-900"
+                  rows="3"
+                  placeholder="Ví dụ: Mong muốn giảm giá thêm vì mua số lượng lớn..."
+                  value={quotationNote}
+                  onChange={(e) => setQuotationNote(e.target.value)}
+                ></textarea>
               </div>
 
               <div className="flex flex-col gap-3 sm:flex-row">
@@ -362,10 +422,11 @@ export default function Cart() {
                 </Button>
                 <Button
                   type="button"
+                  disabled={isSubmittingQuotation}
                   className="h-12 flex-1 rounded-full bg-[#0f172a] text-base text-white hover:bg-[#111c34]"
                   onClick={handleSubmitQuotation}
                 >
-                  Gửi yêu cầu
+                  {isSubmittingQuotation ? 'Đang gửi...' : 'Gửi yêu cầu'}
                 </Button>
               </div>
             </motion.div>

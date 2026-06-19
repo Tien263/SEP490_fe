@@ -1,69 +1,35 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { X, Send, Paperclip, User, CheckCircle2 } from "lucide-react";
 import { Button } from "./ui/Button.jsx";
 import { Input } from "./ui/Input.jsx";
 import { formatPrice } from "../services/productService.js";
+import { getMessages } from "../services/quotationService.js";
+import { useChat } from "../hooks/useChat.js";
+import { useAuth } from "../context/AuthContext.jsx";
 import Header from "./Header.jsx";
 import Footer from "./Footer.jsx";
-
-const mockMessages = [
-  {
-    id: "1",
-    sender: "sales",
-    content: "Xin chào! Tôi là Trần Minh Tuấn từ phòng kinh doanh. Tôi đã xem qua yêu cầu đàm phán giá của bạn.",
-    timestamp: "10:30",
-  },
-  {
-    id: "2",
-    sender: "sales",
-    content: "Chúng tôi đã đề xuất mức giá đặc biệt cho đơn hàng của bạn. Với số lượng lớn như thế này, đây là mức giá tốt nhất mà chúng tôi có thể cung cấp.",
-    timestamp: "10:31",
-  },
-  {
-    id: "3",
-    sender: "customer",
-    content: "Cảm ơn anh đã phản hồi nhanh. Tôi thấy giá đã tốt hơn nhiều rồi.",
-    timestamp: "10:35",
-  },
-];
 
 export default function ChatInterface({
   quotation,
   onClose,
   onAccept,
 }) {
-  const [messages, setMessages] = useState(mockMessages);
+  const { user } = useAuth();
   const [inputMessage, setInputMessage] = useState("");
+  const { messages, setMessages, sendMessage, isConnecting } = useChat(quotation.id);
+
+  useEffect(() => {
+    if (quotation?.id) {
+      getMessages(quotation.id)
+        .then(setMessages)
+        .catch(console.error);
+    }
+  }, [quotation?.id, setMessages]);
 
   const handleSendMessage = () => {
     if (!inputMessage.trim()) return;
-
-    const newMessage = {
-      id: Date.now().toString(),
-      sender: "customer",
-      content: inputMessage,
-      timestamp: new Date().toLocaleTimeString("vi-VN", {
-        hour: "2-digit",
-        minute: "2-digit",
-      }),
-    };
-
-    setMessages([...messages, newMessage]);
+    sendMessage(inputMessage);
     setInputMessage("");
-
-    // Simulate sales response
-    setTimeout(() => {
-      const salesResponse = {
-        id: (Date.now() + 1).toString(),
-        sender: "sales",
-        content: "Cảm ơn bạn đã phản hồi. Tôi sẽ kiểm tra và trả lời bạn sớm nhất.",
-        timestamp: new Date().toLocaleTimeString("vi-VN", {
-          hour: "2-digit",
-          minute: "2-digit",
-        }),
-      };
-      setMessages((prev) => [...prev, salesResponse]);
-    }, 2000);
   };
 
   const quickReplies = [
@@ -217,54 +183,60 @@ export default function ChatInterface({
               {/* Messages */}
               <div className="flex-1 p-6 overflow-y-auto max-h-[600px]">
                 <div className="space-y-4">
-                  {messages.map((message) => (
-                    <div
-                      key={message.id}
-                      className={`flex ${
-                        message.sender === "customer"
-                          ? "justify-end"
-                          : "justify-start"
-                      }`}
-                    >
+                  {messages.map((message) => {
+                    const isMine = message.senderId === user?.id;
+                    return (
                       <div
-                        className={`flex gap-3 max-w-[70%] ${
-                          message.sender === "customer"
-                            ? "flex-row-reverse"
-                            : "flex-row"
+                        key={message.id}
+                        className={`flex ${
+                          isMine
+                            ? "justify-end"
+                            : "justify-start"
                         }`}
                       >
                         <div
-                          className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 ${
-                            message.sender === "customer"
-                              ? "bg-gray-900 text-white"
-                              : "bg-blue-100 text-blue-600"
+                          className={`flex gap-3 max-w-[70%] ${
+                            isMine
+                              ? "flex-row-reverse"
+                              : "flex-row"
                           }`}
                         >
-                          <User className="w-4 h-4" />
-                        </div>
-                        <div>
                           <div
-                            className={`rounded-2xl px-4 py-3 ${
-                              message.sender === "customer"
+                            className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 ${
+                              isMine
                                 ? "bg-gray-900 text-white"
-                                : "bg-gray-100 text-gray-900"
+                                : "bg-blue-100 text-blue-600"
                             }`}
                           >
-                            <p className="text-sm">{message.content}</p>
+                            <User className="w-4 h-4" />
                           </div>
-                          <p
-                            className={`text-xs text-gray-400 mt-1 ${
-                              message.sender === "customer"
-                                ? "text-right"
-                                : "text-left"
-                            }`}
-                          >
-                            {message.timestamp}
-                          </p>
+                          <div>
+                            <div
+                              className={`rounded-2xl px-4 py-3 ${
+                                isMine
+                                  ? "bg-gray-900 text-white"
+                                  : "bg-gray-100 text-gray-900"
+                              }`}
+                            >
+                              <p className="text-sm">{message.content}</p>
+                            </div>
+                            <p
+                              className={`text-xs text-gray-400 mt-1 ${
+                                isMine
+                                  ? "text-right"
+                                  : "text-left"
+                              }`}
+                            >
+                              {new Date(message.createdAt).toLocaleTimeString("vi-VN", {
+                                hour: "2-digit",
+                                minute: "2-digit",
+                              })}
+                            </p>
+                          </div>
                         </div>
                       </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               </div>
 
@@ -294,15 +266,17 @@ export default function ChatInterface({
                     value={inputMessage}
                     onChange={(e) => setInputMessage(e.target.value)}
                     onKeyPress={(e) => {
-                      if (e.key === "Enter") {
+                      if (e.key === "Enter" && !isConnecting) {
                         handleSendMessage();
                       }
                     }}
                     placeholder="Nhập tin nhắn..."
                     className="flex-1 rounded-full"
+                    disabled={isConnecting}
                   />
                   <Button
                     onClick={handleSendMessage}
+                    disabled={isConnecting}
                     className="bg-gray-900 hover:bg-gray-800 rounded-full gap-2 text-white"
                   >
                     <Send className="w-4 h-4" />
