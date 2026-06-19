@@ -3,9 +3,12 @@ import { Eye, Heart, ShoppingCart } from 'lucide-react'
 import { motion } from 'motion/react'
 import { Link } from 'react-router-dom'
 import { formatPrice } from '../services/productService.js'
+import { useCart } from '../context/CartContext.jsx'
 
 export default function ProductCard({ product }) {
   const [isWishlisted, setIsWishlisted] = useState(false)
+  const { addToCart } = useCart()
+  const [adding, setAdding] = useState(false)
 
   const imageUrl = product.imageUrl
     || product.image  // fallback nếu dùng data tĩnh
@@ -14,6 +17,20 @@ export default function ProductCard({ product }) {
   const price     = product.standardListedPrice ?? product.price ?? 0
   const category  = product.categoryName ?? product.category ?? ''
   const productId = product.id
+
+  async function handleAddToCartClick(e) {
+    e.preventDefault()
+    e.stopPropagation()
+    setAdding(true)
+    try {
+      await addToCart(productId, 1)
+      alert(`Đã thêm "${product.name}" vào giỏ hàng!`)
+    } catch (err) {
+      alert(err.message || 'Không thể thêm sản phẩm vào giỏ hàng')
+    } finally {
+      setAdding(false)
+    }
+  }
 
   return (
     <motion.article
@@ -66,7 +83,8 @@ export default function ProductCard({ product }) {
             type="button"
             whileHover={{ scale: 1.08 }}
             whileTap={{ scale: 0.96 }}
-            disabled={product.availableStock === 0}
+            disabled={product.availableStock === 0 || adding}
+            onClick={handleAddToCartClick}
             className="flex h-10 w-10 items-center justify-center rounded-full bg-gray-900 text-white shadow-lg transition hover:bg-gray-800 disabled:opacity-40"
             aria-label="Thêm vào giỏ"
           >

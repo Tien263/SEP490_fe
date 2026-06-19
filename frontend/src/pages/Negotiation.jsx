@@ -11,12 +11,14 @@ import {
   Calendar,
   User,
 } from "lucide-react";
+import { useParams } from "react-router-dom";
 import Header from "../components/Header.jsx";
 import Footer from "../components/Footer.jsx";
 import { Button } from "../components/ui/Button.jsx";
 import { Badge } from "../components/ui/Badge.jsx";
 import { formatPrice } from "../services/productService.js";
 import ChatInterface from "../components/ChatInterface.jsx";
+import { getQuotationById, acceptQuotation, rejectQuotation } from "../services/quotationService.js";
 
 const mockQuotation = {
   id: "QT-2026-001",
@@ -51,30 +53,59 @@ const mockQuotation = {
 };
 
 export default function Negotiation() {
+  const { id } = useParams();
   const navigate = useNavigate();
-  const [quotation, setQuotation] = useState(mockQuotation);
+  const [quotation, setQuotation] = useState(null);
   const [showChat, setShowChat] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    if (id) {
+      getQuotationById(id)
+        .then(data => {
+          setQuotation(data);
+          setIsLoading(false);
+          // If status is "SalesResponded" or "Negotiating", we can open chat by default
+          if (data.status === "SalesResponded") {
+            setShowChat(true);
+          }
+        })
+        .catch(err => {
+          console.error(err);
+          setIsLoading(false);
+        });
+    }
+  }, [id]);
 
   const updateQuotation = (updates) => {
-    setQuotation(prev => ({ ...prev, ...updates }));
+    setQuotation((prev) => ({ ...prev, ...updates }));
   };
 
-  const handleAccept = () => {
+  const handleAccept = async () => {
     if (!quotation) return;
-    updateQuotation({
-      status: "accepted",
-      finalTotal: quotation.salesProposedTotal,
-    });
-    alert("Bảng giá đã được chấp nhận. Giá mới đã được áp dụng vào giỏ hàng.");
-    navigate("/cart");
+    try {
+      await acceptQuotation(quotation.id);
+      updateQuotation({
+        status: "Accepted",
+        finalTotal: quotation.salesProposedTotal || quotation.originalTotal,
+      });
+      alert("Bảng giá đã được chấp nhận. Đang chờ Admin duyệt.");
+    } catch (error) {
+      alert("Có lỗi xảy ra: " + error.message);
+    }
   };
 
-  const handleReject = () => {
+  const handleReject = async () => {
     if (!quotation) return;
     const confirmed = window.confirm("Bạn có chắc muốn từ chối bảng giá này?");
     if (confirmed) {
-      updateQuotation({ status: "rejected" });
-      navigate("/cart");
+      try {
+        await rejectQuotation(quotation.id);
+        updateQuotation({ status: "Rejected" });
+        alert("Đã từ chối đàm phán.");
+      } catch (error) {
+        alert("Có lỗi xảy ra: " + error.message);
+      }
     }
   };
 
@@ -83,6 +114,18 @@ export default function Negotiation() {
     updateQuotation({ status: "negotiating" });
     setShowChat(true);
   };
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-white">
+        <Header />
+        <div className="pt-20 min-h-[60vh] flex items-center justify-center">
+          <p>Đang tải dữ liệu...</p>
+        </div>
+        <Footer />
+      </div>
+    );
+  }
 
   if (!quotation) {
     return (
@@ -96,7 +139,7 @@ export default function Negotiation() {
             </h2>
             <Link to="/cart">
               <Button className="bg-gray-900 hover:bg-gray-800 rounded-full text-white">
-                Quay lại danh sách
+                Quay lại
               </Button>
             </Link>
           </div>
