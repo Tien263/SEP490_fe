@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useState, useRef } from 'react'
 import {
   AlertCircle,
   Building2,
@@ -30,6 +30,16 @@ import { useAuth } from '../context/AuthContext.jsx'
 import { isVatExpired, orders, paymentStatusMeta, shippingStatusMeta } from '../data/orders.js'
 import { formatPrice } from '../data/products.js'
 import { getCustomerProfile, updateCustomerProfile } from '../services/authService.js'
+import {
+  uploadAvatar,
+  updateUserProfile,
+  changePassword,
+  getAddresses,
+  createAddress,
+  updateAddress,
+  deleteAddress,
+  setDefaultAddress,
+} from '../services/userService.js'
 
 const profileTabs = [
   { id: 'info', label: 'Thông tin cá nhân', icon: User },
@@ -103,10 +113,21 @@ function ToggleRow({ checked, label, onToggle }) {
   )
 }
 
-function PersonalInfoTab({ userName, userEmail, userPhone, userInitial, onSuccess }) {
+function PersonalInfoTab({ user, onSuccess }) {
+  const { updateUser } = useAuth()
+  const [fullName, setFullName] = useState(user?.fullName || '')
+  const [phoneNumber, setPhoneNumber] = useState(user?.phoneNumber || '')
+  
+  const [currentPassword, setCurrentPassword] = useState('')
+  const [newPassword, setNewPassword] = useState('')
+  const [confirmPassword, setConfirmPassword] = useState('')
+
   const [showCurrent, setShowCurrent] = useState(false)
   const [showNew, setShowNew] = useState(false)
   const [showConfirm, setShowConfirm] = useState(false)
+  const [savingInfo, setSavingInfo] = useState(false)
+  const [updatingPassword, setUpdatingPassword] = useState(false)
+
   const [notifications, setNotifications] = useState({
     orderConfirm: true,
     shipStatus: true,
@@ -114,33 +135,77 @@ function PersonalInfoTab({ userName, userEmail, userPhone, userInitial, onSucces
     promotions: true,
   })
 
-  const personalFields = useMemo(
-    () => [
-      { label: 'Họ tên', value: userName },
-      { label: 'Số điện thoại', value: userPhone },
-      { label: 'Email', value: userEmail },
-      { label: 'Địa chỉ mặc định', value: '123 Nguyễn Huệ, Q.1, TP.HCM' },
-    ],
-    [userEmail, userName, userPhone],
-  )
+  const fileInputRef = useRef(null)
 
-  const passwordFields = [
-    {
-      label: 'Mật khẩu hiện tại',
-      show: showCurrent,
-      onToggle: () => setShowCurrent((value) => !value),
-    },
-    {
-      label: 'Mật khẩu mới',
-      show: showNew,
-      onToggle: () => setShowNew((value) => !value),
-    },
-    {
-      label: 'Xác nhận mật khẩu mới',
-      show: showConfirm,
-      onToggle: () => setShowConfirm((value) => !value),
-    },
-  ]
+  const userInitial = (fullName || user?.fullName || 'U').charAt(0).toUpperCase()
+
+  const handleAvatarClick = () => {
+    fileInputRef.current?.click()
+  }
+
+  const handleFileChange = async (e) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+
+    try {
+      onSuccess('Đang tải ảnh đại diện lên...')
+      const res = await uploadAvatar(file)
+      updateUser({ avatarUrl: res.avatarUrl })
+      onSuccess('Cập nhật ảnh đại diện thành công')
+    } catch (err) {
+      alert(err.message || 'Lỗi khi tải ảnh đại diện')
+    }
+  }
+
+  const handleSaveInfo = async () => {
+    if (!fullName.trim()) {
+      alert('Họ tên không được để trống')
+      return
+    }
+    if (!phoneNumber.trim()) {
+      alert('Số điện thoại không được để trống')
+      return
+    }
+
+    try {
+      setSavingInfo(true)
+      const res = await updateUserProfile({ fullName, phoneNumber })
+      updateUser({ fullName: res.fullName, phoneNumber: res.phoneNumber })
+      onSuccess('Lưu thông tin cá nhân thành công')
+    } catch (err) {
+      alert(err.message || 'Lỗi khi cập nhật thông tin cá nhân')
+    } finally {
+      setSavingInfo(false)
+    }
+  }
+
+  const handleUpdatePassword = async () => {
+    if (!currentPassword) {
+      alert('Vui lòng nhập mật khẩu hiện tại')
+      return
+    }
+    if (!newPassword) {
+      alert('Vui lòng nhập mật khẩu mới')
+      return
+    }
+    if (newPassword !== confirmPassword) {
+      alert('Xác nhận mật khẩu mới không trùng khớp')
+      return
+    }
+
+    try {
+      setUpdatingPassword(true)
+      await changePassword({ currentPassword, newPassword, confirmPassword })
+      setCurrentPassword('')
+      setNewPassword('')
+      setConfirmPassword('')
+      onSuccess('Thay đổi mật khẩu thành công')
+    } catch (err) {
+      alert(err.message || 'Lỗi khi đổi mật khẩu')
+    } finally {
+      setUpdatingPassword(false)
+    }
+  }
 
   return (
     <div className="space-y-6">
@@ -148,11 +213,23 @@ function PersonalInfoTab({ userName, userEmail, userPhone, userInitial, onSucces
         <h3 className="mb-5 text-base font-semibold text-gray-900">Thông tin cơ bản</h3>
         <div className="mb-6 flex flex-col gap-6 sm:flex-row sm:items-start">
           <div className="relative">
-            <div className="flex h-20 w-20 items-center justify-center rounded-full bg-gray-900 text-2xl font-bold text-white">
-              {userInitial}
-            </div>
+            {user?.avatarUrl ? (
+              <img src={user.avatarUrl} alt="Avatar" className="h-20 w-20 rounded-full object-cover" />
+            ) : (
+              <div className="flex h-20 w-20 items-center justify-center rounded-full bg-gray-900 text-2xl font-bold text-white">
+                {userInitial}
+              </div>
+            )}
+            <input
+              type="file"
+              ref={fileInputRef}
+              onChange={handleFileChange}
+              accept="image/*"
+              className="hidden"
+            />
             <button
               type="button"
+              onClick={handleAvatarClick}
               className="absolute bottom-0 right-0 flex h-6 w-6 items-center justify-center rounded-full border border-gray-200 bg-white shadow-sm transition hover:bg-gray-50"
             >
               <Camera className="h-3 w-3 text-gray-600" />
@@ -160,49 +237,118 @@ function PersonalInfoTab({ userName, userEmail, userPhone, userInitial, onSucces
           </div>
 
           <div className="grid flex-1 grid-cols-1 gap-4 sm:grid-cols-2">
-            {personalFields.map((field) => (
-              <div key={field.label}>
-                <label className="mb-1 block text-xs text-gray-500">{field.label}</label>
-                <Input defaultValue={field.value} className="rounded-xl text-sm" />
-              </div>
-            ))}
+            <div>
+              <label className="mb-1 block text-xs text-gray-500">Họ tên</label>
+              <Input
+                value={fullName}
+                onChange={(e) => setFullName(e.target.value)}
+                className="rounded-xl text-sm"
+              />
+            </div>
+            <div>
+              <label className="mb-1 block text-xs text-gray-500">Số điện thoại</label>
+              <Input
+                value={phoneNumber}
+                onChange={(e) => setPhoneNumber(e.target.value)}
+                className="rounded-xl text-sm"
+              />
+            </div>
+            <div>
+              <label className="mb-1 block text-xs text-gray-500">Email</label>
+              <Input
+                value={user?.email || ''}
+                disabled
+                className="rounded-xl bg-gray-50 text-sm cursor-not-allowed"
+              />
+            </div>
+            <div>
+              <label className="mb-1 block text-xs text-gray-500">Địa chỉ mặc định</label>
+              <Input
+                value={user?.defaultAddressId ? 'Có địa chỉ mặc định' : 'Chưa thiết lập'}
+                disabled
+                className="rounded-xl bg-gray-50 text-sm cursor-not-allowed"
+              />
+            </div>
           </div>
         </div>
         <Button
           className="rounded-full bg-gray-900 text-sm text-white hover:bg-gray-800"
-          onClick={() => onSuccess('Lưu thông tin cá nhân thành công')}
+          onClick={handleSaveInfo}
+          disabled={savingInfo}
         >
-          Lưu thông tin
+          {savingInfo ? 'Đang lưu...' : 'Lưu thông tin'}
         </Button>
       </section>
 
       <section className="rounded-2xl border border-gray-100 bg-white p-6">
         <h3 className="mb-5 text-base font-semibold text-gray-900">Đổi mật khẩu</h3>
         <div className="max-w-sm space-y-4">
-          {passwordFields.map((field) => (
-            <div key={field.label}>
-              <label className="mb-1 block text-xs text-gray-500">{field.label}</label>
-              <div className="relative">
-                <Input
-                  type={field.show ? 'text' : 'password'}
-                  placeholder="••••••••"
-                  className="rounded-xl pr-10 text-sm"
-                />
-                <button
-                  type="button"
-                  onClick={field.onToggle}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 transition hover:text-gray-700"
-                >
-                  {field.show ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                </button>
-              </div>
+          <div>
+            <label className="mb-1 block text-xs text-gray-500">Mật khẩu hiện tại</label>
+            <div className="relative">
+              <Input
+                type={showCurrent ? 'text' : 'password'}
+                placeholder="••••••••"
+                value={currentPassword}
+                onChange={(e) => setCurrentPassword(e.target.value)}
+                className="rounded-xl pr-10 text-sm"
+              />
+              <button
+                type="button"
+                onClick={() => setShowCurrent(!showCurrent)}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 transition hover:text-gray-700"
+              >
+                {showCurrent ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+              </button>
             </div>
-          ))}
+          </div>
+
+          <div>
+            <label className="mb-1 block text-xs text-gray-500">Mật khẩu mới</label>
+            <div className="relative">
+              <Input
+                type={showNew ? 'text' : 'password'}
+                placeholder="••••••••"
+                value={newPassword}
+                onChange={(e) => setNewPassword(e.target.value)}
+                className="rounded-xl pr-10 text-sm"
+              />
+              <button
+                type="button"
+                onClick={() => setShowNew(!showNew)}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 transition hover:text-gray-700"
+              >
+                {showNew ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+              </button>
+            </div>
+          </div>
+
+          <div>
+            <label className="mb-1 block text-xs text-gray-500">Xác nhận mật khẩu mới</label>
+            <div className="relative">
+              <Input
+                type={showConfirm ? 'text' : 'password'}
+                placeholder="••••••••"
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+                className="rounded-xl pr-10 text-sm"
+              />
+              <button
+                type="button"
+                onClick={() => setShowConfirm(!showConfirm)}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 transition hover:text-gray-700"
+              >
+                {showConfirm ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+              </button>
+            </div>
+          </div>
+
           <Button
             className="rounded-full bg-gray-900 text-sm text-white hover:bg-gray-800"
-            onClick={() => onSuccess('Thay đổi mật khẩu thành công')}
+            onClick={handleUpdatePassword}
+            disabled={updatingPassword}
           >
-            Cập nhật mật khẩu
+            {updatingPassword ? 'Đang cập nhật...' : 'Cập nhật mật khẩu'}
           </Button>
         </div>
       </section>
@@ -240,18 +386,47 @@ function PersonalInfoTab({ userName, userEmail, userPhone, userInitial, onSucces
 }
 
 function AddressesTab({ onSuccess }) {
-  const [addresses, setAddresses] = useState(mockAddresses)
+  const [addresses, setAddresses] = useState([])
+  const [loading, setLoading] = useState(true)
   const [showModal, setShowModal] = useState(false)
   const [editingAddressId, setEditingAddressId] = useState(null)
   const [addressForm, setAddressForm] = useState(emptyAddressForm)
 
-  function setDefaultAddress(id) {
-    setAddresses((items) => items.map((item) => ({ ...item, isDefault: item.id === id })))
+  useEffect(() => {
+    async function loadAddresses() {
+      try {
+        setLoading(true)
+        const list = await getAddresses()
+        setAddresses(list || [])
+      } catch (err) {
+        console.error("Lỗi tải danh sách địa chỉ:", err)
+      } finally {
+        setLoading(false)
+      }
+    }
+    loadAddresses()
+  }, [])
+
+  async function handleSetDefaultAddress(id) {
+    try {
+      await setDefaultAddress(id)
+      setAddresses((items) =>
+        items.map((item) => ({ ...item, isDefault: item.id === id }))
+      )
+      onSuccess('Đặt địa chỉ mặc định thành công')
+    } catch (err) {
+      alert(err.message || 'Lỗi khi đặt địa chỉ mặc định')
+    }
   }
 
-  function removeAddress(id) {
-    setAddresses((items) => items.filter((item) => item.id !== id))
-    onSuccess('Xóa địa chỉ thành công')
+  async function removeAddress(id) {
+    try {
+      await deleteAddress(id)
+      setAddresses((items) => items.filter((item) => item.id !== id))
+      onSuccess('Xóa địa chỉ thành công')
+    } catch (err) {
+      alert(err.message || 'Lỗi khi xóa địa chỉ')
+    }
   }
 
   function handleAddressFormChange(key, value) {
@@ -272,7 +447,7 @@ function AddressesTab({ onSuccess }) {
       phone: address.phone,
       city: address.city,
       district: address.district,
-      ward: address.ward,
+      ward: address.ward || '',
       addressLine: address.addressLine,
       type: address.type,
       isDefault: address.isDefault,
@@ -286,34 +461,61 @@ function AddressesTab({ onSuccess }) {
     setAddressForm({ ...emptyAddressForm })
   }
 
-  function handleSubmitAddress(event) {
+  async function handleSubmitAddress(event) {
     event.preventDefault()
 
-    const nextAddress = {
-      ...addressForm,
-      id: editingAddressId || `${Date.now()}`,
-      type: editingAddressId ? addressForm.type : 'Nhà riêng',
-      address: buildFullAddress(addressForm),
+    const payload = {
+      name: addressForm.name,
+      phone: addressForm.phone,
+      city: addressForm.city,
+      district: addressForm.district,
+      ward: addressForm.ward || '',
+      addressLine: addressForm.addressLine,
+      type: addressForm.type || 'Nhà riêng',
+      isDefault: addressForm.isDefault,
     }
 
-    setAddresses((items) => {
-      const normalizedItems = addressForm.isDefault ? items.map((item) => ({ ...item, isDefault: false })) : items
-
+    try {
       if (editingAddressId) {
-        return normalizedItems.map((item) => (item.id === editingAddressId ? nextAddress : item))
+        const updated = await updateAddress(editingAddressId, payload)
+        setAddresses((items) => {
+          if (updated.isDefault) {
+            return items.map((item) =>
+              item.id === editingAddressId ? updated : { ...item, isDefault: false }
+            )
+          }
+          return items.map((item) => (item.id === editingAddressId ? updated : item))
+        })
+        onSuccess('Cập nhật địa chỉ thành công')
+      } else {
+        const created = await createAddress(payload)
+        setAddresses((items) => {
+          if (created.isDefault) {
+            return [...items.map((item) => ({ ...item, isDefault: false })), created]
+          }
+          return [...items, created]
+        })
+        onSuccess('Thêm địa chỉ thành công')
       }
-
-      return [...normalizedItems, nextAddress]
-    })
-
-    closeModal()
-    onSuccess('Lưu địa chỉ thành công')
+      closeModal()
+    } catch (err) {
+      alert(err.message || 'Lỗi khi lưu địa chỉ')
+    }
   }
 
   const typeColor = {
     'Công ty': 'bg-blue-50 text-blue-700',
     'Nhà riêng': 'bg-green-100 text-green-700',
     'Kho hàng': 'bg-orange-100 text-orange-700',
+  }
+
+  if (loading) {
+    return (
+      <section className="rounded-2xl border border-gray-100 bg-white p-6 flex flex-col items-center justify-center min-h-[200px]">
+        <div className="h-8 w-8 animate-spin rounded-full border-2 border-gray-200 border-t-gray-950" />
+        <p className="mt-4 text-sm text-gray-500">Đang tải danh sách địa chỉ...</p>
+      </section>
+    )
   }
 
   return (
@@ -340,7 +542,7 @@ function AddressesTab({ onSuccess }) {
                 </Badge>
                 {address.isDefault && <Badge className="bg-gray-900 text-[10px] text-white hover:bg-gray-900">Mặc định</Badge>}
               </div>
-              <p className="text-sm text-gray-600">{address.address}</p>
+              <p className="text-sm text-gray-600">{address.fullAddress || address.address}</p>
             </div>
 
             <div className="flex flex-shrink-0 items-center gap-2">
@@ -364,7 +566,7 @@ function AddressesTab({ onSuccess }) {
           {!address.isDefault && (
             <button
               type="button"
-              onClick={() => setDefaultAddress(address.id)}
+              onClick={() => handleSetDefaultAddress(address.id)}
               className="mt-3 text-xs text-gray-500 underline underline-offset-2 transition hover:text-gray-900"
             >
               Đặt làm mặc định
@@ -784,10 +986,7 @@ export default function Profile() {
   const tabContent = {
     info: (
       <PersonalInfoTab
-        userName={userName}
-        userEmail={userEmail}
-        userPhone={userPhone}
-        userInitial={userInitial}
+        user={user}
         onSuccess={showSuccess}
       />
     ),
@@ -836,9 +1035,13 @@ export default function Profile() {
               <div className="overflow-hidden rounded-2xl border border-gray-100 bg-white lg:sticky lg:top-24">
                 <div className="border-b border-gray-100 bg-gray-50 px-5 py-5">
                   <div className="flex items-center gap-3">
-                    <div className="flex h-10 w-10 items-center justify-center rounded-full bg-gray-900 text-sm font-bold text-white">
-                      {userInitial}
-                    </div>
+                    {user?.avatarUrl ? (
+                      <img src={user.avatarUrl} alt="Avatar" className="h-10 w-10 rounded-full object-cover" />
+                    ) : (
+                      <div className="flex h-10 w-10 items-center justify-center rounded-full bg-gray-900 text-sm font-bold text-white">
+                        {userInitial}
+                      </div>
+                    )}
                     <div className="min-w-0">
                       <p className="truncate text-sm font-semibold text-gray-900">{userName}</p>
                       <p className="truncate text-xs text-gray-500">{userEmail}</p>
