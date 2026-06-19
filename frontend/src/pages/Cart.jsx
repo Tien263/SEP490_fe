@@ -1,6 +1,6 @@
-import { useMemo, useState } from 'react'
+import { useMemo, useState, useEffect } from 'react'
 import { AnimatePresence, motion } from 'motion/react'
-import { AlertCircle, ArrowRight, Check, MessageSquare, Minus, Plus, ShoppingBag, X } from 'lucide-react'
+import { AlertCircle, ArrowRight, Check, ClipboardList, MessageSquare, Minus, Plus, ShoppingBag, X } from 'lucide-react'
 import { Link, useNavigate } from 'react-router-dom'
 import Footer from '../components/Footer.jsx'
 import Header from '../components/Header.jsx'
@@ -9,6 +9,33 @@ import { Button } from '../components/ui/Button.jsx'
 import { formatPrice } from '../services/productService.js'
 import { useCart } from '../context/CartContext.jsx'
 import { useAuth } from '../context/AuthContext.jsx'
+
+// Lấy giá đàm phán đã được chấp thuận từ quotation Accepted
+async function fetchNegotiatedPrices() {
+  try {
+    const { getQuotations, getQuotationById } = await import('../services/quotationService.js');
+    const data = await getQuotations();
+    const list = Array.isArray(data) ? data : [];
+    // Tìm quotation được Accepted (admin đã duyệt)
+    const acceptedList = list.filter(q => q.status === 'Accepted');
+    if (acceptedList.length === 0) return {};
+    // Lấy full detail của quotation mới nhất
+    const latest = acceptedList[0];
+    const full = await getQuotationById(latest.id);
+    const items = full.items || full.products || [];
+    // Build map: productId -> proposedUnitPrice
+    const map = {};
+    for (const item of items) {
+      const proposedPrice = item.salesProposedUnitPrice ?? item.salesProposedPrice;
+      if (proposedPrice) {
+        map[item.productId] = proposedPrice;
+      }
+    }
+    return map;
+  } catch {
+    return {};
+  }
+}
 
 function getAutomaticDiscount(total) {
   if (total >= 100000000) return 0
@@ -29,6 +56,12 @@ export default function Cart() {
   const { items: cartItems, updateQuantity, removeFromCart, totalItems } = useCart()
   const [showQuotationModal, setShowQuotationModal] = useState(false)
   const [quotationSent, setQuotationSent] = useState(false)
+  const [negotiatedPrices, setNegotiatedPrices] = useState({}) // productId -> negotiated price
+
+  // Fetch giá đàm phán khi cart load
+  useEffect(() => {
+    fetchNegotiatedPrices().then(setNegotiatedPrices);
+  }, []);
 
   function handleQuantityChange(cartItemId, delta, currentQuantity) {
     const newQty = currentQuantity + delta
@@ -78,9 +111,26 @@ export default function Cart() {
     }
   }
 
-  const subtotal = useMemo(() => {
+  // Tổng theo giá gốc (không đàm phán)
+  const originalSubtotal = useMemo(() => {
     return cartItems.reduce((sum, item) => sum + item.unitPrice * item.quantity, 0)
   }, [cartItems])
+
+  // Chỉ áp dụng giá đàm phán khi tổng giá GỐC >= 100 triệu
+  const applyNegotiation = originalSubtotal >= 100000000 &&
+    Object.keys(negotiatedPrices).length > 0 &&
+    cartItems.some(item => negotiatedPrices[item.productId]);
+
+  // Tính subtotal hiển thị
+  const subtotal = useMemo(() => {
+    if (!applyNegotiation) return originalSubtotal;
+    return cartItems.reduce((sum, item) => {
+      const price = negotiatedPrices[item.productId] ?? item.unitPrice;
+      return sum + price * item.quantity;
+    }, 0)
+  }, [cartItems, negotiatedPrices, applyNegotiation, originalSubtotal])
+
+  const hasNegotiatedPrices = applyNegotiation;
 
   const automaticDiscountRate = getAutomaticDiscount(subtotal)
   const automaticDiscountAmount = subtotal * automaticDiscountRate
@@ -227,8 +277,23 @@ export default function Cart() {
                         </div>
 
                         <div className="text-right">
-                          <div className="text-xl font-bold text-gray-900">{formatPrice(item.unitPrice * item.quantity)}</div>
-                          <div className="text-sm text-gray-500">{formatPrice(item.unitPrice)} mỗi sản phẩm</div>
+                          {(() => {
+                            const negotiatedPrice = negotiatedPrices[item.productId];
+                            const displayPrice = negotiatedPrice ?? item.unitPrice;
+                            return (
+                              <>
+                                <div className="text-xl font-bold text-gray-900">{formatPrice(displayPrice * item.quantity)}</div>
+                                {negotiatedPrice ? (
+                                  <>
+                                    <div className="text-sm text-gray-400 line-through">{formatPrice(item.unitPrice)} mỗi sp</div>
+                                    <div className="text-sm font-semibold text-green-600">{formatPrice(negotiatedPrice)} mỗi sp (đàm phán)</div>
+                                  </>
+                                ) : (
+                                  <div className="text-sm text-gray-500">{formatPrice(item.unitPrice)} mỗi sản phẩm</div>
+                                )}
+                              </>
+                            );
+                          })()}
                         </div>
                       </div>
                     </div>
@@ -258,7 +323,7 @@ export default function Cart() {
                   </div>
                 </div>
 
-                {subtotal >= 100000000 && (
+                {subtotal >= 100000000 && !hasNegotiatedPrices && (
                   <motion.div
                     initial={{ opacity: 0, y: 10 }}
                     animate={{ opacity: 1, y: 0 }}
@@ -276,6 +341,26 @@ export default function Cart() {
                       <MessageSquare className="h-4 w-4" />
                       Gửi yêu cầu báo giá với Sales
                     </Button>
+                  </motion.div>
+                )}
+
+                {hasNegotiatedPrices && (
+                  <motion.div
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="rounded-[1.75rem] border-2 border-green-200 bg-gradient-to-br from-green-50 to-emerald-50 p-6"
+                  >
+                    <div className="flex items-center gap-2 mb-2">
+                      <Check className="h-5 w-5 text-green-600" />
+                      <h3 className="font-bold text-green-900">Đã áp dụng giá đàm phán</h3>
+                    </div>
+                    <p className="text-sm text-green-700">
+                      Giá trong giỏ hàng đã được cập nhật theo bảng giá đàm phán được Admin phê duyệt. Bạn có thể tiến hành thanh toán.
+                    </p>
+                    <Link to="/negotiations" className="mt-3 inline-flex items-center gap-1 text-xs text-green-700 underline underline-offset-2">
+                      <ClipboardList className="h-3.5 w-3.5" />
+                      Xem chi tiết yêu cầu đàm phán
+                    </Link>
                   </motion.div>
                 )}
 
@@ -333,6 +418,17 @@ export default function Cart() {
                     Thanh Toán
                     <ArrowRight className="h-4 w-4" />
                   </Button>
+
+                  <Link to="/negotiations" className="block mb-3">
+                    <Button
+                      size="lg"
+                      variant="outline"
+                      className="w-full rounded-full border-gray-200 bg-white text-gray-700 hover:bg-gray-50 hover:border-gray-300"
+                    >
+                      <ClipboardList className="h-4 w-4" />
+                      Xem yêu cầu đàm phán giá
+                    </Button>
+                  </Link>
 
                   <p className="text-center text-xs text-gray-500">Thanh toán an toàn bởi Việt Tiến</p>
                 </div>
