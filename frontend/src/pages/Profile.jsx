@@ -3,6 +3,7 @@ import {
   AlertCircle,
   Building2,
   Camera,
+  Check,
   ChevronRight,
   Download,
   Edit2,
@@ -15,6 +16,7 @@ import {
   Plus,
   Search,
   Trash2,
+  Truck,
   User,
 } from 'lucide-react'
 import { AnimatePresence, motion } from 'motion/react'
@@ -27,7 +29,7 @@ import { Badge } from '../components/ui/Badge.jsx'
 import { Button } from '../components/ui/Button.jsx'
 import { Input } from '../components/ui/Input.jsx'
 import { useAuth } from '../context/AuthContext.jsx'
-import { isVatExpired, orders, paymentStatusMeta, shippingStatusMeta } from '../data/orders.js'
+import { getTrackingSteps, isVatExpired, orders, paymentStatusMeta, shippingStatusMeta } from '../data/orders.js'
 import { formatPrice } from '../data/products.js'
 import { getCustomerProfile, updateCustomerProfile } from '../services/authService.js'
 import {
@@ -46,6 +48,7 @@ const profileTabs = [
   { id: 'addresses', label: 'Địa chỉ giao hàng', icon: MapPin },
   { id: 'tax', label: 'Thông tin MST', icon: Building2 },
   { id: 'orders', label: 'Lịch sử đơn hàng', icon: Package },
+  { id: 'tracking', label: 'Theo dõi đơn hàng', icon: Truck },
 ]
 
 const mockAddresses = [
@@ -967,6 +970,125 @@ function OrderHistoryTab({ onSuccess }) {
   )
 }
 
+function OrderTrackingTab() {
+  const trackableOrders = useMemo(
+    () => orders.filter((order) => order.shipStatus === 'shipping' || order.shipStatus === 'pending' || order.shipStatus === 'delivered'),
+    [],
+  )
+  const defaultOrderId = trackableOrders.find((order) => order.trackingStatus === 'shipping')?.id ?? trackableOrders[0]?.id ?? ''
+  const [selectedOrderId, setSelectedOrderId] = useState(defaultOrderId)
+
+  const selectedOrder = trackableOrders.find((order) => order.id === selectedOrderId) ?? trackableOrders[0]
+
+  if (!selectedOrder) {
+    return (
+      <section className="rounded-2xl border border-gray-100 bg-white p-8 text-center text-sm text-gray-400">
+        Chưa có đơn hàng nào để theo dõi.
+      </section>
+    )
+  }
+
+  const trackingSteps = getTrackingSteps(selectedOrder)
+  const activeStepIndex = trackingSteps.findIndex((step) => step.key === selectedOrder.trackingStatus)
+
+  return (
+    <div className="space-y-5">
+      <section className="rounded-2xl border border-gray-100 bg-white p-6">
+        <div className="mb-6 flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+          <div>
+            <p className="mb-1 text-xs text-gray-500">Mã đơn hàng</p>
+            <p className="font-mono text-lg font-bold text-gray-900">{selectedOrder.id}</p>
+          </div>
+
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+            <Badge
+              className={`${shippingStatusMeta[selectedOrder.shipStatus].badgeClass} px-3 py-1.5 text-xs font-medium hover:opacity-100`}
+            >
+              {shippingStatusMeta[selectedOrder.shipStatus].label}
+            </Badge>
+            <select
+              value={selectedOrderId}
+              onChange={(event) => setSelectedOrderId(event.target.value)}
+              className="h-11 min-w-[240px] rounded-xl border border-gray-200 bg-white px-4 text-sm text-gray-700 outline-none focus:border-gray-900 focus:ring-2 focus:ring-gray-900/10"
+            >
+              {trackableOrders.map((order) => (
+                <option key={order.id} value={order.id}>
+                  {order.id} - {order.product}
+                </option>
+              ))}
+            </select>
+          </div>
+        </div>
+
+        <div className="flex items-start gap-0 overflow-x-auto pb-2">
+          {trackingSteps.map((step, index) => {
+            const isActive = index === activeStepIndex
+            const isDone = index < activeStepIndex || (selectedOrder.trackingStatus === 'delivered' && step.key === 'delivered')
+
+            return (
+              <div key={step.key} className="flex min-w-[220px] flex-1 items-start">
+                <div className="flex flex-col items-center">
+                  <div
+                    className={`flex h-10 w-10 items-center justify-center rounded-full transition-colors ${
+                      isDone
+                        ? 'bg-gray-900 text-white'
+                        : isActive
+                          ? 'bg-orange-500 text-white ring-4 ring-orange-100'
+                          : 'bg-gray-100 text-gray-400'
+                    }`}
+                  >
+                    {isDone ? <Check className="h-5 w-5" /> : <span className="text-sm font-bold">{index + 1}</span>}
+                  </div>
+                  <p
+                    className={`mt-2 max-w-[120px] text-center text-[10px] font-semibold leading-tight ${
+                      isActive ? 'text-orange-600' : isDone ? 'text-gray-700' : 'text-gray-400'
+                    }`}
+                  >
+                    {step.label}
+                  </p>
+                  <p className="mt-1 hidden max-w-[120px] text-center text-[10px] leading-tight text-gray-400 lg:block">{step.desc}</p>
+                </div>
+                {index < trackingSteps.length - 1 && (
+                  <div className={`mx-3 mt-5 h-[2px] flex-1 ${index < activeStepIndex ? 'bg-gray-900' : 'bg-gray-200'}`} />
+                )}
+              </div>
+            )
+          })}
+        </div>
+      </section>
+
+      <section className="rounded-2xl border border-gray-100 bg-white p-6">
+        <h4 className="mb-4 flex items-center gap-2 text-sm font-semibold text-gray-900">
+          <Truck className="h-4 w-4" />
+          Thông tin vận chuyển
+        </h4>
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+          {[
+            { label: 'Mã xe', value: selectedOrder.vehicle.code },
+            { label: 'Tài xế / NV giao hàng', value: selectedOrder.vehicle.driver },
+            { label: 'Ca vận chuyển', value: selectedOrder.vehicle.shift },
+            { label: 'Thời gian dự kiến giao', value: selectedOrder.vehicle.eta },
+          ].map((item) => (
+            <div key={item.label}>
+              <p className="mb-0.5 text-xs text-gray-500">{item.label}</p>
+              <p className="text-sm font-medium text-gray-900">{item.value}</p>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      <section className="rounded-2xl border border-gray-100 bg-white p-6">
+        <h4 className="mb-3 flex items-center gap-2 text-sm font-semibold text-gray-900">
+          <Package className="h-4 w-4" />
+          Sản phẩm
+        </h4>
+        <p className="text-sm text-gray-600">{selectedOrder.product}</p>
+        <p className="mt-2 text-sm font-bold text-gray-900">{formatPrice(selectedOrder.total)}</p>
+      </section>
+    </div>
+  )
+}
+
 export default function Profile() {
   const { user } = useAuth()
   const [searchParams, setSearchParams] = useSearchParams()
@@ -1000,6 +1122,7 @@ export default function Profile() {
       />
     ),
     orders: <OrderHistoryTab onSuccess={showSuccess} />,
+    tracking: <OrderTrackingTab />,
   }
 
   function setTab(tabId) {
