@@ -28,8 +28,8 @@ const navigation = [
 const dropdownItems = [
   { icon: User, label: 'Hồ sơ cá nhân', href: '/profile' },
   { icon: Package, label: 'Lịch sử đơn hàng', href: '/profile?tab=orders' },
-  { icon: MapPin, label: 'Theo dõi đơn hàng', href: '#' },
-  { icon: BarChart3, label: 'Thống kê cá nhân', href: '#' },
+  { icon: MapPin, label: 'Theo dõi đơn hàng', href: '/profile?tab=tracking' },
+  { icon: BarChart3, label: 'Thống kê cá nhân', href: '/profile?tab=stats' },
 ]
 
 export default function Header() {

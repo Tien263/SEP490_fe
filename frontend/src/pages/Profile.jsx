@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState, useRef } from 'react'
 import {
   AlertCircle,
+  BarChart3,
   Building2,
   Camera,
   Check,
@@ -10,16 +11,31 @@ import {
   Eye,
   EyeOff,
   ExternalLink,
+  FileText,
   Mail,
   MapPin,
   Package,
   Plus,
   Search,
+  ShoppingBag,
+  Star,
+  TrendingUp,
   Trash2,
   Truck,
   User,
 } from 'lucide-react'
 import { AnimatePresence, motion } from 'motion/react'
+import {
+  Area,
+  AreaChart,
+  Bar,
+  BarChart,
+  CartesianGrid,
+  ResponsiveContainer,
+  Tooltip,
+  XAxis,
+  YAxis,
+} from 'recharts'
 import { Link, useSearchParams } from 'react-router-dom'
 import AddressModal, { buildFullAddress, emptyAddressForm } from '../components/AddressModal.jsx'
 import Footer from '../components/Footer.jsx'
@@ -48,6 +64,7 @@ const profileTabs = [
   { id: 'addresses', label: 'Địa chỉ giao hàng', icon: MapPin },
   { id: 'tax', label: 'Thông tin MST', icon: Building2 },
   { id: 'orders', label: 'Lịch sử đơn hàng', icon: Package },
+  { id: 'stats', label: 'Thống kê cá nhân', icon: BarChart3 },
   { id: 'tracking', label: 'Theo dõi đơn hàng', icon: Truck },
 ]
 
@@ -970,6 +987,174 @@ function OrderHistoryTab({ onSuccess }) {
   )
 }
 
+function PersonalStatsTab() {
+  const [period, setPeriod] = useState('month')
+
+  const statsData = useMemo(() => {
+    const latestOrderDate = orders.reduce((latest, order) => {
+      const orderDate = new Date(order.date)
+      return orderDate > latest ? orderDate : latest
+    }, new Date(orders[0]?.date ?? Date.now()))
+
+    const periodDays = {
+      week: 7,
+      month: 30,
+      quarter: 90,
+      year: 365,
+    }
+
+    const days = periodDays[period] ?? periodDays.month
+    const cutoff = new Date(latestOrderDate)
+    cutoff.setDate(cutoff.getDate() - days)
+
+    const scopedOrders = orders.filter((order) => new Date(order.date) >= cutoff)
+    const relevantOrders = scopedOrders.length > 0 ? scopedOrders : orders
+    const totalSpent = relevantOrders.reduce((sum, order) => sum + order.total, 0)
+    const vatInvoices = relevantOrders.filter((order) => order.hasVat).length
+
+    const monthMap = new Map()
+    relevantOrders.forEach((order) => {
+      const orderDate = new Date(order.date)
+      const key = `${orderDate.getFullYear()}-${String(orderDate.getMonth() + 1).padStart(2, '0')}`
+      const label = `T${orderDate.getMonth() + 1}`
+      const current = monthMap.get(key) ?? { name: label, value: 0, sortValue: orderDate.getTime() }
+      current.value += order.total
+      monthMap.set(key, current)
+    })
+
+    const spendingData = Array.from(monthMap.values())
+      .sort((a, b) => a.sortValue - b.sortValue)
+      .map(({ name, value }) => ({ name, value }))
+
+    const productMap = new Map()
+    relevantOrders.forEach((order) => {
+      order.items.forEach((item) => {
+        productMap.set(item.name, (productMap.get(item.name) ?? 0) + item.quantity)
+      })
+    })
+
+    const productData = Array.from(productMap.entries())
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 5)
+      .map(([name, value]) => ({ name, value }))
+
+    const topProduct = productData[0]?.name ?? 'Chưa có dữ liệu'
+
+    return {
+      productData,
+      spendingData,
+      statCards: [
+        {
+          label: 'Tổng đơn hàng',
+          value: String(relevantOrders.length),
+          icon: ShoppingBag,
+          color: 'bg-blue-50 text-blue-600',
+        },
+        {
+          label: 'Tổng chi tiêu',
+          value: formatPrice(totalSpent),
+          icon: TrendingUp,
+          color: 'bg-green-50 text-green-600',
+        },
+        {
+          label: 'Sản phẩm đặt nhiều nhất',
+          value: topProduct,
+          icon: Star,
+          color: 'bg-yellow-50 text-yellow-600',
+        },
+        {
+          label: 'Số hóa đơn VAT',
+          value: String(vatInvoices),
+          icon: FileText,
+          color: 'bg-purple-50 text-purple-600',
+        },
+      ],
+    }
+  }, [period])
+
+  return (
+    <div className="space-y-6">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        {statsData.statCards.map(({ label, value, icon: Icon, color }) => (
+          <section key={label} className="rounded-2xl border border-gray-100 bg-white p-5">
+            <div className={`mb-3 flex h-10 w-10 items-center justify-center rounded-xl ${color}`}>
+              <Icon className="h-5 w-5" />
+            </div>
+            <p className="mb-1 text-xs text-gray-500">{label}</p>
+            <p className="truncate text-lg font-bold text-gray-900">{value}</p>
+          </section>
+        ))}
+      </div>
+
+      <div className="flex flex-wrap gap-2">
+        {[
+          { key: 'week', label: 'Tuần' },
+          { key: 'month', label: 'Tháng' },
+          { key: 'quarter', label: 'Quý' },
+          { key: 'year', label: 'Năm' },
+        ].map((item) => (
+          <button
+            key={item.key}
+            type="button"
+            onClick={() => setPeriod(item.key)}
+            className={`rounded-full px-4 py-1.5 text-sm transition-colors ${
+              period === item.key ? 'bg-gray-900 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+            }`}
+          >
+            {item.label}
+          </button>
+        ))}
+      </div>
+
+      <div className="grid grid-cols-1 gap-6 xl:grid-cols-2">
+        <section className="rounded-2xl border border-gray-100 bg-white p-5">
+          <h4 className="mb-4 text-sm font-semibold text-gray-900">Chi tiêu theo tháng</h4>
+          <ResponsiveContainer width="100%" height={220}>
+            <AreaChart data={statsData.spendingData}>
+              <defs>
+                <linearGradient id="profile-spending" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="5%" stopColor="#111827" stopOpacity={0.16} />
+                  <stop offset="95%" stopColor="#111827" stopOpacity={0} />
+                </linearGradient>
+              </defs>
+              <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
+              <XAxis dataKey="name" tick={{ fontSize: 11, fill: '#6b7280' }} axisLine={false} tickLine={false} />
+              <YAxis
+                tick={{ fontSize: 11, fill: '#6b7280' }}
+                tickFormatter={(value) => `${Math.round(value / 1000)}k`}
+                axisLine={false}
+                tickLine={false}
+              />
+              <Tooltip formatter={(value) => formatPrice(Number(value))} />
+              <Area type="monotone" dataKey="value" stroke="#111827" strokeWidth={2} fill="url(#profile-spending)" />
+            </AreaChart>
+          </ResponsiveContainer>
+        </section>
+
+        <section className="rounded-2xl border border-gray-100 bg-white p-5">
+          <h4 className="mb-4 text-sm font-semibold text-gray-900">Sản phẩm đặt nhiều nhất</h4>
+          <ResponsiveContainer width="100%" height={220}>
+            <BarChart data={statsData.productData} layout="vertical" margin={{ top: 4, right: 12, left: 12, bottom: 4 }}>
+              <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" horizontal={false} />
+              <XAxis type="number" tick={{ fontSize: 11, fill: '#6b7280' }} axisLine={false} tickLine={false} />
+              <YAxis
+                dataKey="name"
+                type="category"
+                width={140}
+                tick={{ fontSize: 10, fill: '#6b7280' }}
+                axisLine={false}
+                tickLine={false}
+              />
+              <Tooltip formatter={(value) => `${value} sản phẩm`} />
+              <Bar dataKey="value" fill="#111827" radius={[0, 6, 6, 0]} />
+            </BarChart>
+          </ResponsiveContainer>
+        </section>
+      </div>
+    </div>
+  )
+}
+
 function OrderTrackingTab() {
   const trackableOrders = useMemo(
     () => orders.filter((order) => order.shipStatus === 'shipping' || order.shipStatus === 'pending' || order.shipStatus === 'delivered'),
@@ -1122,6 +1307,7 @@ export default function Profile() {
       />
     ),
     orders: <OrderHistoryTab onSuccess={showSuccess} />,
+    stats: <PersonalStatsTab />,
     tracking: <OrderTrackingTab />,
   }
 
