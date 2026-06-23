@@ -17,6 +17,18 @@ vi.mock('../../services/authService.js', () => ({
   updateCustomerProfile: vi.fn().mockImplementation(async (payload) => payload),
 }))
 
+vi.mock('../../services/quotationService.js', () => ({
+  getQuotations: vi.fn().mockResolvedValue([
+    {
+      id: 'QT-2026-001',
+      requestDate: '2026-06-01',
+      originalTotal: 115000000,
+      salesProposedTotal: 103500000,
+      status: 'SalesResponded',
+    },
+  ]),
+}))
+
 function renderProfile(initialEntry = '/profile') {
   return render(
     <AuthProvider>
@@ -72,5 +84,12 @@ describe('Profile', () => {
     expect(screen.getByText(/Tổng đơn hàng/i)).toBeInTheDocument()
     expect(screen.getByText(/Chi tiêu theo tháng/i)).toBeInTheDocument()
     expect(screen.getAllByText(/Sản phẩm đặt nhiều nhất/i)).toHaveLength(2)
+  })
+  it('renders quotation requests tab from the profile query param', async () => {
+    renderProfile('/profile?tab=quotations')
+
+    expect(await screen.findByText('QT-2026-001')).toBeInTheDocument()
+    expect(screen.getByText(/Xem chi tiết/i)).toBeInTheDocument()
+    expect(screen.getByText(/^Chat$/i)).toBeInTheDocument()
   })
 })

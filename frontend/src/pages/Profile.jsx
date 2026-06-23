@@ -14,6 +14,7 @@ import {
   FileText,
   Mail,
   MapPin,
+  MessageSquare,
   Package,
   Plus,
   Search,
@@ -48,6 +49,7 @@ import { useAuth } from '../context/AuthContext.jsx'
 import { getTrackingSteps, isVatExpired, orders, paymentStatusMeta, shippingStatusMeta } from '../data/orders.js'
 import { formatPrice } from '../data/products.js'
 import { getCustomerProfile, updateCustomerProfile } from '../services/authService.js'
+import { getQuotations } from '../services/quotationService.js'
 import {
   uploadAvatar,
   updateUserProfile,
@@ -65,6 +67,7 @@ const profileTabs = [
   { id: 'tax', label: 'Thông tin MST', icon: Building2 },
   { id: 'orders', label: 'Lịch sử đơn hàng', icon: Package },
   { id: 'stats', label: 'Thống kê cá nhân', icon: BarChart3 },
+  { id: 'quotations', label: 'Báo giá đặc biệt', icon: MessageSquare },
   { id: 'tracking', label: 'Theo dõi đơn hàng', icon: Truck },
 ]
 
@@ -114,6 +117,10 @@ const defaultTaxInfo = {
   invoiceEmail: 'invoice@company.com',
   representative: 'Nguyễn Văn A',
   companyPhone: '028 3822 1234',
+}
+
+function normalizeQuotationStatus(status) {
+  return String(status || '').toLowerCase().replace(/_/g, '')
 }
 
 function ToggleRow({ checked, label, onToggle }) {
@@ -1155,6 +1162,158 @@ function PersonalStatsTab() {
   )
 }
 
+function QuotationRequestsTab() {
+  const [quotations, setQuotations] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState('')
+
+  useEffect(() => {
+    let cancelled = false
+
+    async function loadQuotations() {
+      try {
+        setLoading(true)
+        setError('')
+        const data = await getQuotations()
+        if (!cancelled) {
+          setQuotations(Array.isArray(data) ? data : [])
+        }
+      } catch (err) {
+        if (!cancelled) {
+          setError(err.message || 'Không thể tải danh sách báo giá')
+        }
+      } finally {
+        if (!cancelled) {
+          setLoading(false)
+        }
+      }
+    }
+
+    loadQuotations()
+    return () => {
+      cancelled = true
+    }
+  }, [])
+
+  const statusBadge = {
+    pending: 'bg-yellow-100 text-yellow-700',
+    salesresponded: 'bg-blue-100 text-blue-700',
+    negotiating: 'bg-purple-100 text-purple-700',
+    waitingforadminapproval: 'bg-orange-100 text-orange-700',
+    accepted: 'bg-green-100 text-green-700',
+    rejected: 'bg-red-100 text-red-700',
+  }
+
+  const statusLabel = {
+    pending: 'Đang chờ Sales phản hồi',
+    salesresponded: 'Sales đã gửi bảng giá',
+    negotiating: 'Đang trao đổi',
+    waitingforadminapproval: 'Chờ Admin duyệt',
+    accepted: 'Đã chấp nhận',
+    rejected: 'Đã hủy',
+  }
+
+  if (loading) {
+    return (
+      <section className="flex min-h-[220px] flex-col items-center justify-center rounded-2xl border border-gray-100 bg-white p-6">
+        <div className="h-8 w-8 animate-spin rounded-full border-2 border-gray-200 border-t-gray-950" />
+        <p className="mt-4 text-sm text-gray-500">Đang tải danh sách báo giá...</p>
+      </section>
+    )
+  }
+
+  if (error) {
+    return (
+      <section className="rounded-2xl border border-red-200 bg-red-50 p-8 text-center">
+        <AlertCircle className="mx-auto mb-3 h-10 w-10 text-red-400" />
+        <p className="font-medium text-red-700">{error}</p>
+      </section>
+    )
+  }
+
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center justify-between">
+        <p className="text-sm text-gray-500">{quotations.length} yêu cầu báo giá</p>
+      </div>
+
+      <section className="overflow-hidden rounded-2xl border border-gray-100 bg-white">
+        <div className="overflow-x-auto">
+          <table className="w-full">
+            <thead className="border-b border-gray-100 bg-gray-50">
+              <tr>
+                {['Mã yêu cầu', 'Ngày gửi', 'Tổng ban đầu', 'Tổng Sales báo giá', 'Tiết kiệm', 'Trạng thái', 'Hành động'].map((heading) => (
+                  <th key={heading} className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">
+                    {heading}
+                  </th>
+                ))}
+              </tr>
+            </thead>
+
+            <tbody className="divide-y divide-gray-50">
+              {quotations.map((quotation) => {
+                const statusKey = normalizeQuotationStatus(quotation.status)
+                const savings = quotation.salesProposedTotal ? quotation.originalTotal - quotation.salesProposedTotal : 0
+
+                return (
+                  <tr key={quotation.id} className="transition-colors hover:bg-gray-50/50">
+                    <td className="px-4 py-4">
+                      <span className="font-mono text-sm font-medium text-gray-900">{quotation.id}</span>
+                    </td>
+                    <td className="whitespace-nowrap px-4 py-4 text-sm text-gray-600">{quotation.requestDate}</td>
+                    <td className="whitespace-nowrap px-4 py-4 text-sm font-semibold text-gray-900">
+                      {formatPrice(quotation.originalTotal)}
+                    </td>
+                    <td className="whitespace-nowrap px-4 py-4 text-sm font-semibold text-green-600">
+                      {quotation.salesProposedTotal ? formatPrice(quotation.salesProposedTotal) : '-'}
+                    </td>
+                    <td className="whitespace-nowrap px-4 py-4 text-sm font-semibold text-green-600">
+                      {savings > 0 ? `- ${formatPrice(savings)}` : '-'}
+                    </td>
+                    <td className="px-4 py-4">
+                      <Badge className={`${statusBadge[statusKey] ?? 'bg-gray-100 text-gray-700'} text-[10px] hover:opacity-100`}>
+                        {statusLabel[statusKey] ?? quotation.status}
+                      </Badge>
+                    </td>
+                    <td className="px-4 py-4">
+                      <div className="flex items-center gap-3 text-xs">
+                        <Link
+                          to={`/profile/quotations/${quotation.id}`}
+                          className="inline-flex items-center gap-1 font-medium text-gray-600 transition hover:text-gray-900 hover:underline"
+                        >
+                          <ExternalLink className="h-3 w-3" />
+                          Xem chi tiết
+                        </Link>
+
+                        {statusKey !== 'accepted' && statusKey !== 'rejected' && (
+                          <Link
+                            to={`/profile/quotations/${quotation.id}?chat=1`}
+                            className="inline-flex items-center gap-1 font-medium text-blue-600 transition hover:text-blue-800 hover:underline"
+                          >
+                            <MessageSquare className="h-3 w-3" />
+                            Chat
+                          </Link>
+                        )}
+                      </div>
+                    </td>
+                  </tr>
+                )
+              })}
+            </tbody>
+          </table>
+
+          {quotations.length === 0 && (
+            <div className="py-12 text-center text-gray-400">
+              <MessageSquare className="mx-auto mb-2 h-10 w-10" />
+              <p className="text-sm">Chưa có yêu cầu báo giá nào</p>
+            </div>
+          )}
+        </div>
+      </section>
+    </div>
+  )
+}
+
 function OrderTrackingTab() {
   const trackableOrders = useMemo(
     () => orders.filter((order) => order.shipStatus === 'shipping' || order.shipStatus === 'pending' || order.shipStatus === 'delivered'),
@@ -1308,6 +1467,7 @@ export default function Profile() {
     ),
     orders: <OrderHistoryTab onSuccess={showSuccess} />,
     stats: <PersonalStatsTab />,
+    quotations: <QuotationRequestsTab />,
     tracking: <OrderTrackingTab />,
   }
 

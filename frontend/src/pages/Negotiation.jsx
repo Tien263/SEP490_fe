@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useParams, useSearchParams } from "react-router-dom";
 import { motion } from "motion/react";
 import {
   ArrowLeft,
@@ -11,7 +11,6 @@ import {
   Calendar,
   User,
 } from "lucide-react";
-import { useParams } from "react-router-dom";
 import Header from "../components/Header.jsx";
 import Footer from "../components/Footer.jsx";
 import { Button } from "../components/ui/Button.jsx";
@@ -54,21 +53,30 @@ const mockQuotation = {
 
 export default function Negotiation() {
   const { id } = useParams();
-  const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [quotation, setQuotation] = useState(null);
   const [showChat, setShowChat] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const isDemoMode = id === "demo";
 
   useEffect(() => {
     if (id) {
+      if (isDemoMode) {
+        setQuotation(mockQuotation);
+        setIsLoading(false);
+        setShowChat(searchParams.get("chat") === "1");
+        return;
+      }
+
       getQuotationById(id)
         .then(data => {
           setQuotation(data);
           setIsLoading(false);
-          // Normalize status to lowercase for comparison
           const status = (data.status || "").toLowerCase().replace(/_/g, "");
-          if (status === "salesresponded" || status === "sales_responded") {
+          if (searchParams.get("chat") === "1" || status === "negotiating") {
             setShowChat(true);
+          } else {
+            setShowChat(false);
           }
         })
         .catch(err => {
@@ -76,7 +84,7 @@ export default function Negotiation() {
           setIsLoading(false);
         });
     }
-  }, [id]);
+  }, [id, isDemoMode, searchParams]);
 
   const updateQuotation = (updates) => {
     setQuotation((prev) => ({ ...prev, ...updates }));
@@ -84,10 +92,18 @@ export default function Negotiation() {
 
   const handleAccept = async () => {
     if (!quotation) return;
+    if (isDemoMode) {
+      updateQuotation({
+        status: "WaitingForAdminApproval",
+        finalTotal: quotation.salesProposedTotal || quotation.originalTotal,
+      });
+      alert("Demo: đã chấp nhận bảng giá và chuyển sang trạng thái chờ Admin duyệt.");
+      return;
+    }
     try {
       await acceptQuotation(quotation.id);
       updateQuotation({
-        status: "Accepted",
+        status: "WaitingForAdminApproval",
         finalTotal: quotation.salesProposedTotal || quotation.originalTotal,
       });
       alert("Bảng giá đã được chấp nhận. Đang chờ Admin duyệt.");
@@ -100,6 +116,11 @@ export default function Negotiation() {
     if (!quotation) return;
     const confirmed = window.confirm("Bạn có chắc muốn từ chối bảng giá này?");
     if (confirmed) {
+      if (isDemoMode) {
+        updateQuotation({ status: "Rejected" });
+        alert("Demo: đã từ chối báo giá.");
+        return;
+      }
       try {
         await rejectQuotation(quotation.id);
         updateQuotation({ status: "Rejected" });
@@ -113,7 +134,13 @@ export default function Negotiation() {
   const handleNegotiate = () => {
     if (!quotation) return;
     updateQuotation({ status: "negotiating" });
+    setSearchParams({ chat: "1" });
     setShowChat(true);
+  };
+
+  const handleCloseChat = () => {
+    setShowChat(false);
+    setSearchParams({});
   };
 
   if (isLoading) {
@@ -138,7 +165,7 @@ export default function Negotiation() {
             <h2 className="text-3xl font-bold text-gray-900 mb-4">
               Không tìm thấy yêu cầu báo giá
             </h2>
-            <Link to="/cart">
+            <Link to="/profile?tab=quotations">
               <Button className="bg-gray-900 hover:bg-gray-800 rounded-full text-white">
                 Quay lại
               </Button>
@@ -157,6 +184,7 @@ export default function Negotiation() {
     pending: "bg-yellow-100 text-yellow-700",
     salesresponded: "bg-blue-100 text-blue-700",
     negotiating: "bg-purple-100 text-purple-700",
+    waitingforadminapproval: "bg-orange-100 text-orange-700",
     accepted: "bg-green-100 text-green-700",
     rejected: "bg-red-100 text-red-700",
   };
@@ -165,6 +193,7 @@ export default function Negotiation() {
     pending: "Đang chờ Sales phản hồi",
     salesresponded: "Sales đã gửi bảng giá",
     negotiating: "Đang trao đổi",
+    waitingforadminapproval: "Chờ Admin duyệt",
     accepted: "Đã chấp nhận",
     rejected: "Đã hủy",
   };
@@ -181,7 +210,7 @@ export default function Negotiation() {
     return (
       <ChatInterface
         quotation={quotation}
-        onClose={() => setShowChat(false)}
+        onClose={handleCloseChat}
         onAccept={handleAccept}
       />
     );
@@ -201,10 +230,10 @@ export default function Negotiation() {
               </Link>
               <span className="text-gray-400">/</span>
               <Link
-                to="/cart"
+                to="/profile?tab=quotations"
                 className="text-gray-600 hover:text-gray-900"
               >
-                Giỏ hàng
+                Báo giá đặc biệt
               </Link>
               <span className="text-gray-400">/</span>
               <span className="text-gray-900 font-medium">{quotation.id}</span>
@@ -216,11 +245,11 @@ export default function Negotiation() {
         <div className="bg-white border-b border-gray-100">
           <div className="max-w-7xl mx-auto px-6 lg:px-8 py-8">
             <Link
-              to="/cart"
+              to="/profile?tab=quotations"
               className="inline-flex items-center text-gray-600 hover:text-gray-900 mb-4 transition-colors"
             >
               <ArrowLeft className="w-4 h-4 mr-2" />
-              Quay lại
+              Quay lại danh sách báo giá
             </Link>
 
             <div className="flex items-start justify-between">

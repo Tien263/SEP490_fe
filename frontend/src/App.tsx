@@ -43,6 +43,7 @@ function App() {
             {/* Customer Routes */}
             <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
             <Route path="/profile/orders/:orderId" element={<ProtectedRoute><OrderDetail /></ProtectedRoute>} />
+            <Route path="/profile/quotations/:id" element={<ProtectedRoute allowedRoles={['Customer']}><Negotiation /></ProtectedRoute>} />
             <Route path="/cart" element={<ProtectedRoute allowedRoles={['Customer']}><Cart /></ProtectedRoute>} />
             <Route path="/checkout" element={<ProtectedRoute allowedRoles={['Customer']}><Checkout /></ProtectedRoute>} />
             <Route path="/negotiation/:id" element={<ProtectedRoute allowedRoles={['Customer']}><Negotiation /></ProtectedRoute>} />
