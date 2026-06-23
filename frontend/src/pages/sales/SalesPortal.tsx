@@ -7,10 +7,11 @@ import {
 } from '../../components/sales-ui/dropdown-menu';
 import {
   LayoutDashboard, MessageSquare, Bell, LogOut, ChevronDown,
-  Search, Settings,
+  Search, Settings, ShoppingCart
 } from 'lucide-react';
 import SalesDashboardPage from './SalesDashboardPage';
 import SalesNegotiationPage from './SalesNegotiationPage';
+import DirectPurchasePage from './DirectPurchasePage';
 import { useAuth } from '../../context/AuthContext';
 
 interface NavItem {
@@ -34,6 +35,12 @@ const NAV_ITEMS: NavItem[] = [
     icon: <MessageSquare className="w-4 h-4" />,
     path: '/sales/negotiation',
     badge: 3,
+  },
+  {
+    id: 'direct-purchase',
+    label: 'Mua hàng trực tiếp',
+    icon: <ShoppingCart className="w-4 h-4" />,
+    path: '/sales/direct-purchase',
   },
 ];
 
@@ -66,7 +73,7 @@ function NavItemRow({ item, onNavigate }: { item: NavItem; onNavigate: (path: st
 
 export default function SalesPortal() {
   const navigate = useNavigate();
-  const { user, logout } = useAuth();
+  const { user, logout } = useAuth() as any;
   const totalBadge = 5;
 
   const handleLogout = async () => {
@@ -178,6 +185,7 @@ export default function SalesPortal() {
           <Routes>
             <Route path="dashboard" element={<SalesDashboardPage />} />
             <Route path="negotiation" element={<SalesNegotiationPage />} />
+            <Route path="direct-purchase" element={<DirectPurchasePage />} />
             <Route path="*" element={<SalesDashboardPage />} />
           </Routes>
         </main>

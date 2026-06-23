@@ -19,7 +19,8 @@ import Negotiation from './pages/Negotiation.jsx'
 import NegotiationList from './pages/NegotiationList.jsx'
 import SalesPortal from './pages/sales/SalesPortal.tsx'
 import AdminPortal from './pages/admin/AdminPortal.tsx'
-import ProtectedRoute from './components/ProtectedRoute.jsx'
+import ProtectedRouteImport from './components/ProtectedRoute.jsx'
+const ProtectedRoute = ProtectedRouteImport as any;
 
 function App() {
   return (
