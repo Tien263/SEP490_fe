@@ -3,7 +3,7 @@ import { Button } from '../../components/sales-ui/button';
 import { Input } from '../../components/sales-ui/input';
 import {
   Send, Check,
-  DollarSign, Plus, User, Loader2
+  DollarSign, User, Loader2
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext.jsx';
 import { useChat } from '../../hooks/useChat.js';
@@ -19,7 +19,7 @@ const STATUS_CONFIG: Record<string, { label: string; bg: string }> = {
 };
 
 export default function SalesNegotiationPage() {
-  const { user } = useAuth();
+  const { user } = useAuth() as any;
   const [quotationsList, setQuotationsList] = useState<any[]>([]);
   const [active, setActive] = useState<any>(null);
   const [loadingDetail, setLoadingDetail] = useState(false);
