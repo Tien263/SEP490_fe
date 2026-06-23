@@ -19,6 +19,7 @@ import Negotiation from './pages/Negotiation.jsx'
 import NegotiationList from './pages/NegotiationList.jsx'
 import SalesPortal from './pages/sales/SalesPortal.tsx'
 import AdminPortal from './pages/admin/AdminPortal.tsx'
+import WarehousePortal from './pages/warehouse/WarehousePortal.tsx'
 import ProtectedRouteImport from './components/ProtectedRoute.jsx'
 const ProtectedRoute = ProtectedRouteImport as any;
 
@@ -54,6 +55,9 @@ function App() {
 
             {/* Admin Routes */}
             <Route path="/admin/*" element={<ProtectedRoute allowedRoles={['Admin']}><AdminPortal /></ProtectedRoute>} />
+
+            {/* Warehouse Routes */}
+            <Route path="/warehouse/*" element={<ProtectedRoute allowedRoles={['WarehouseStaff', 'Admin']}><WarehousePortal /></ProtectedRoute>} />
 
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
