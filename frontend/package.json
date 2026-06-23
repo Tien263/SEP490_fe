@@ -5,6 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
+    "dev:force": "powershell -ExecutionPolicy Bypass -File ./run-dev.ps1",
     "build": "tsc -b && vite build",
     "lint": "eslint .",
     "preview": "vite preview",

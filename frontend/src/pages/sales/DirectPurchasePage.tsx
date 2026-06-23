@@ -104,6 +104,102 @@ export default function DirectPurchasePage() {
   const [submitting, setSubmitting] = useState(false);
   const [successOrder, setSuccessOrder] = useState<any>(null);
   const [errorMsg, setErrorMsg] = useState('');
+  const [sepayQr, setSepayQr] = useState<{ qrImageUrl: string; transferContent: string } | null>(null);
+  const [paymentStatus, setPaymentStatus] = useState<string>('');
+  const [showRedirectSuccessModal, setShowRedirectSuccessModal] = useState(false);
+  const [confirmingCash, setConfirmingCash] = useState(false);
+
+  // Redirection when payment status becomes 'Paid'
+  useEffect(() => {
+    if (paymentStatus === 'Paid') {
+      setShowRedirectSuccessModal(true);
+      const timer = setTimeout(() => {
+        navigate('/sales/dashboard');
+      }, 2500);
+      return () => clearTimeout(timer);
+    }
+  }, [paymentStatus, navigate]);
+
+  const handleConfirmCashPayment = async () => {
+    if (!successOrder) return;
+    setConfirmingCash(true);
+    setErrorMsg('');
+    try {
+      const response = await fetch(`/api/orders/${successOrder.orderId}/confirm-payment`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('accessToken')}`,
+          'Content-Type': 'application/json'
+        }
+      });
+      if (response.ok) {
+        setPaymentStatus('Paid');
+      } else {
+        const errData = await response.json();
+        setErrorMsg(errData.message || 'Lỗi xác nhận thanh toán.');
+      }
+    } catch (err) {
+      console.error(err);
+      setErrorMsg('Lỗi hệ thống khi kết nối server.');
+    } finally {
+      setConfirmingCash(false);
+    }
+  };
+
+  // Polling for SePay payment status
+  useEffect(() => {
+    if (!successOrder || successOrder.paymentMethod !== 'SePay' || paymentStatus === 'Paid') {
+      return;
+    }
+
+    let isMounted = true;
+    let intervalId: any = null;
+
+    const fetchSePayQr = async () => {
+      try {
+        const response = await fetch(`/api/orders/${successOrder.orderId}/sepay-qr`, {
+          headers: {
+            'Authorization': `Bearer ${localStorage.getItem('accessToken')}`
+          }
+        });
+        if (response.ok && isMounted) {
+          const qrData = await response.json();
+          setSepayQr(qrData);
+        }
+      } catch (err) {
+        console.error('Error fetching SePay QR:', err);
+      }
+    };
+
+    fetchSePayQr();
+
+    const checkPaymentStatus = async () => {
+      try {
+        const response = await fetch(`/api/orders/${successOrder.orderId}/payment-status`, {
+          headers: {
+            'Authorization': `Bearer ${localStorage.getItem('accessToken')}`
+          }
+        });
+        if (response.ok && isMounted) {
+          const statusData = await response.json();
+          if (statusData.status === 'Paid') {
+            setPaymentStatus('Paid');
+            clearInterval(intervalId);
+          }
+        }
+      } catch (err) {
+        console.error('Error checking payment status:', err);
+      }
+    };
+
+    // Poll every 3 seconds
+    intervalId = setInterval(checkPaymentStatus, 3000);
+
+    return () => {
+      isMounted = false;
+      if (intervalId) clearInterval(intervalId);
+    };
+  }, [successOrder, paymentStatus]);
 
   // ─── Validation / Concurrency / Highlights (NAC-01, NAC-02, NAC-04) ───────
   const [phoneError, setPhoneError] = useState('');
@@ -434,7 +530,7 @@ export default function DirectPurchasePage() {
       // 3. Post to API (Atomic inventory deduction AC-03, NAC-03)
       const result = await placeDirectOrder(payload);
       
-      setSuccessOrder(result);
+      setSuccessOrder({ ...result, paymentMethod: backendPaymentMethod });
 
       // 4. Open generated PDF in a new tab immediately (AC-04)
       if (previewRef.current) {
@@ -557,6 +653,41 @@ export default function DirectPurchasePage() {
               </div>
               <p>Mã đơn hàng: <strong className="text-blue-900">{successOrder.orderCode}</strong></p>
               <p>Tổng tiền thanh toán: <strong>{formatPrice(successOrder.finalPayment)} đ</strong></p>
+              
+              {successOrder.paymentMethod === 'SePay' && (
+                <div className="mt-3 p-3 bg-white rounded-lg border border-slate-200 flex flex-col items-center gap-2">
+                  <span className="font-bold text-slate-700 text-[11px] uppercase tracking-wide">Mã QR Quét Thanh Toán SePay</span>
+                  {sepayQr ? (
+                    <>
+                      <img src={sepayQr.qrImageUrl} alt="SePay QR Code" className="w-48 h-48 border border-slate-100" />
+                      <div className="text-center text-[10px] text-slate-500 leading-tight">
+                        <p>Nội dung CK: <strong className="text-blue-900">{sepayQr.transferContent}</strong></p>
+                        <p>Số tiền: <strong>{formatPrice(successOrder.finalPayment)} đ</strong></p>
+                      </div>
+                    </>
+                  ) : (
+                    <div className="flex items-center gap-1.5 text-slate-400 py-6">
+                      <Loader2 className="w-4 h-4 animate-spin text-slate-400" />
+                      <span>Đang tải mã QR...</span>
+                    </div>
+                  )}
+                  
+                  <div className="mt-2 flex items-center justify-center">
+                    {paymentStatus === 'Paid' ? (
+                      <span className="px-3 py-1 bg-green-100 text-green-700 rounded-full font-bold text-[10px] flex items-center gap-1.5 animate-pulse">
+                        <span className="w-2 h-2 rounded-full bg-green-600"></span>
+                        ĐÃ THANH TOÁN THÀNH CÔNG!
+                      </span>
+                    ) : (
+                      <span className="px-3 py-1 bg-amber-100 text-amber-700 rounded-full font-semibold text-[10px] flex items-center gap-1.5">
+                        <Loader2 className="w-3.5 h-3.5 animate-spin text-amber-600" />
+                        Chờ quét mã thanh toán...
+                      </span>
+                    )}
+                  </div>
+                </div>
+              )}
+
               {successOrder.invoicePdfUrl && (
                 <a 
                   href={`/api${successOrder.invoicePdfUrl}`} 
@@ -567,9 +698,49 @@ export default function DirectPurchasePage() {
                   Xem tệp PDF hóa đơn đã lưu trên hệ thống
                 </a>
               )}
+
+              {successOrder.paymentMethod === 'Cash' && (
+                <div className="mt-3 p-3 bg-white rounded-lg border border-slate-200 flex flex-col gap-2">
+                  <span className="font-bold text-slate-700 text-[11px] uppercase tracking-wide">Thanh toán tiền mặt</span>
+                  {paymentStatus === 'Paid' ? (
+                    <div className="flex items-center justify-center py-2">
+                      <span className="px-3 py-1 bg-green-100 text-green-700 rounded-full font-bold text-[10px] flex items-center gap-1.5 animate-pulse">
+                        <span className="w-2 h-2 rounded-full bg-green-600"></span>
+                        ĐÃ NHẬN TIỀN MẶT & HOÀN TẤT!
+                      </span>
+                    </div>
+                  ) : (
+                    <>
+                      <p className="text-[10px] text-amber-600 font-semibold bg-amber-50 p-2 rounded border border-amber-100">
+                        Vui lòng thu tiền mặt số tiền <strong>{formatPrice(successOrder.finalPayment)}đ</strong> từ khách hàng trước khi xác nhận.
+                      </p>
+                      <button
+                        onClick={handleConfirmCashPayment}
+                        disabled={confirmingCash}
+                        className="mt-1 w-full py-2 bg-green-600 hover:bg-green-700 text-white rounded font-bold text-[11px] flex items-center justify-center gap-1.5 shadow transition-colors disabled:bg-slate-300 disabled:text-slate-500 cursor-pointer"
+                      >
+                        {confirmingCash ? (
+                          <>
+                            <Loader2 className="w-3.5 h-3.5 animate-spin" /> Đang xác nhận...
+                          </>
+                        ) : (
+                          <>
+                            <Check className="w-3.5 h-3.5" /> Xác nhận đã nhận tiền mặt
+                          </>
+                        )}
+                      </button>
+                    </>
+                  )}
+                </div>
+              )}
+
               <button 
-                onClick={() => setSuccessOrder(null)} 
-                className="mt-2 w-full py-1.5 border border-slate-300 rounded bg-white text-slate-700 hover:bg-slate-50 text-[11px] font-semibold"
+                onClick={() => {
+                  setSuccessOrder(null);
+                  setSepayQr(null);
+                  setPaymentStatus('');
+                }} 
+                className="mt-2 w-full py-1.5 border border-slate-300 rounded bg-white text-slate-700 hover:bg-slate-50 text-[11px] font-semibold cursor-pointer"
               >
                 Tạo hóa đơn mới
               </button>
@@ -988,6 +1159,33 @@ export default function DirectPurchasePage() {
           </div> {/* Zoom Wrapper */}
         </div>
       </div>
+
+      {showRedirectSuccessModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm animate-fade-in">
+          <div className="bg-white/95 border border-slate-200 shadow-2xl rounded-2xl p-8 max-w-sm w-full mx-4 flex flex-col items-center text-center animate-scale-up">
+            <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mb-4 text-green-600 animate-pulse">
+              <Check className="w-8 h-8 stroke-[3]" />
+            </div>
+            <h3 className="text-lg font-bold text-slate-800">Thanh Toán Thành Công!</h3>
+            <p className="text-xs text-slate-500 mt-2">
+              Đơn hàng <strong className="text-blue-900">{successOrder?.orderCode}</strong> đã được thanh toán và hoàn tất.
+            </p>
+            <div className="w-full bg-slate-100 h-1.5 rounded-full overflow-hidden mt-6">
+              <div className="bg-green-600 h-full rounded-full animate-progress-bar"></div>
+            </div>
+            <p className="text-[10px] text-slate-400 mt-2">Đang chuyển hướng về Dashboard bán hàng...</p>
+          </div>
+        </div>
+      )}
+      <style>{`
+        @keyframes progressBar {
+          from { width: 0%; }
+          to { width: 100%; }
+        }
+        .animate-progress-bar {
+          animation: progressBar 2.5s linear forwards;
+        }
+      `}</style>
     </div>
   );
 }
