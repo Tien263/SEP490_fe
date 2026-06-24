@@ -3,7 +3,7 @@ import { Loader2, MapPin } from 'lucide-react'
 import { motion } from 'motion/react'
 import { Button } from './ui/Button.jsx'
 import { Input } from './ui/Input.jsx'
-import { getProvinces, getDistricts, getWards } from '../services/provinceService.js'
+import { getProvinces, getWards } from '../services/provinceService.js'
 
 export function buildFullAddress({ addressLine, ward, district, city }) {
   return [addressLine, ward, district, city].filter(Boolean).join(', ')
@@ -36,12 +36,10 @@ export default function AddressModal({
   onSubmit,
   submitLabel,
 }) {
-  // ─── Danh mục tỉnh/quận/phường ─────────────────────────────────────────────
+  // ─── Danh mục tỉnh/phường (2 cấp sau sáp nhập) ─────────────────────────────
   const [provinces, setProvinces] = useState([])
-  const [districts, setDistricts] = useState([])
   const [wards, setWards] = useState([])
   const [loadingProvinces, setLoadingProvinces] = useState(true)
-  const [loadingDistricts, setLoadingDistricts] = useState(false)
   const [loadingWards, setLoadingWards] = useState(false)
 
   // GPS state
@@ -63,34 +61,15 @@ export default function AddressModal({
     return () => { cancelled = true }
   }, [])
 
-  // Load districts khi form.provinceCode thay đổi
+  // Load wards (phường/xã) trực tiếp khi form.provinceCode thay đổi (mô hình 2 cấp)
   useEffect(() => {
     if (!form.provinceCode) {
-      setDistricts([])
-      return
-    }
-    let cancelled = false
-    setLoadingDistricts(true)
-    getDistricts(form.provinceCode)
-      .then((data) => {
-        if (!cancelled) setDistricts(data)
-      })
-      .catch(() => {})
-      .finally(() => {
-        if (!cancelled) setLoadingDistricts(false)
-      })
-    return () => { cancelled = true }
-  }, [form.provinceCode])
-
-  // Load wards khi form.districtCode thay đổi
-  useEffect(() => {
-    if (!form.districtCode) {
       setWards([])
       return
     }
     let cancelled = false
     setLoadingWards(true)
-    getWards(form.districtCode)
+    getWards(form.provinceCode)
       .then((data) => {
         if (!cancelled) setWards(data)
       })
@@ -99,7 +78,7 @@ export default function AddressModal({
         if (!cancelled) setLoadingWards(false)
       })
     return () => { cancelled = true }
-  }, [form.districtCode])
+  }, [form.provinceCode])
 
   // ─── Handlers ───────────────────────────────────────────────────────────────
   function handleProvinceChange(e) {
@@ -107,19 +86,10 @@ export default function AddressModal({
     const selected = provinces.find((p) => String(p.code) === code)
     onChange('provinceCode', code)
     onChange('city', selected?.name || '')
-    // Reset quận/phường
+    // Không còn cấp quận/huyện — giữ rỗng cho tương thích
     onChange('districtCode', '')
     onChange('district', '')
-    onChange('wardCode', '')
-    onChange('ward', '')
-  }
-
-  function handleDistrictChange(e) {
-    const code = e.target.value
-    const selected = districts.find((d) => String(d.code) === code)
-    onChange('districtCode', code)
-    onChange('district', selected?.name || '')
-    // Reset phường
+    // Reset phường/xã
     onChange('wardCode', '')
     onChange('ward', '')
   }
@@ -175,35 +145,23 @@ export default function AddressModal({
           if (matchedProvince) {
             onChange('provinceCode', String(matchedProvince.code))
             onChange('city', matchedProvince.name)
+            // Không còn cấp quận/huyện
+            onChange('districtCode', '')
+            onChange('district', '')
 
-            // Load districts và tìm quận
+            // Load phường/xã trực tiếp theo tỉnh và tìm phường/xã phù hợp
             try {
-              const dists = await getDistricts(matchedProvince.code)
-              setDistricts(dists)
+              const wds = await getWards(matchedProvince.code)
+              setWards(wds)
 
-              const geoDistrict = geo.address.suburb || geo.address.city_district
-                || geo.address.county || geo.address.town || ''
-              if (geoDistrict && dists.length > 0) {
-                const matchedDistrict = findBestMatch(geoDistrict, dists)
-                if (matchedDistrict) {
-                  onChange('districtCode', String(matchedDistrict.code))
-                  onChange('district', matchedDistrict.name)
-
-                  // Load wards và tìm phường
-                  try {
-                    const wds = await getWards(matchedDistrict.code)
-                    setWards(wds)
-
-                    const geoWard = geo.address.quarter || geo.address.village
-                      || geo.address.hamlet || ''
-                    if (geoWard && wds.length > 0) {
-                      const matchedWard = findBestMatch(geoWard, wds)
-                      if (matchedWard) {
-                        onChange('wardCode', String(matchedWard.code))
-                        onChange('ward', matchedWard.name)
-                      }
-                    }
-                  } catch {}
+              const geoWard = geo.address.quarter || geo.address.village
+                || geo.address.hamlet || geo.address.suburb
+                || geo.address.city_district || geo.address.town || ''
+              if (geoWard && wds.length > 0) {
+                const matchedWard = findBestMatch(geoWard, wds)
+                if (matchedWard) {
+                  onChange('wardCode', String(matchedWard.code))
+                  onChange('ward', matchedWard.name)
                 }
               }
             } catch {}
@@ -316,33 +274,15 @@ export default function AddressModal({
             </select>
           </div>
 
-          {/* Quận/Huyện */}
-          <div>
-            <label className="mb-1 block text-xs text-gray-500">Quận/Huyện</label>
-            <select
-              className={selectClass}
-              value={form.districtCode || ''}
-              onChange={handleDistrictChange}
-              disabled={!form.provinceCode || loadingDistricts}
-              required
-            >
-              <option value="">
-                {loadingDistricts ? 'Đang tải...' : '-- Chọn Quận/Huyện --'}
-              </option>
-              {districts.map((d) => (
-                <option key={d.code} value={d.code}>{d.name}</option>
-              ))}
-            </select>
-          </div>
-
-          {/* Phường/Xã */}
+          {/* Phường/Xã (2 cấp — load trực tiếp theo Tỉnh/Thành phố) */}
           <div>
             <label className="mb-1 block text-xs text-gray-500">Phường/Xã</label>
             <select
               className={selectClass}
               value={form.wardCode || ''}
               onChange={handleWardChange}
-              disabled={!form.districtCode || loadingWards}
+              disabled={!form.provinceCode || loadingWards}
+              required
             >
               <option value="">
                 {loadingWards ? 'Đang tải...' : '-- Chọn Phường/Xã --'}
