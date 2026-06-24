@@ -71,6 +71,14 @@ export async function changePassword(data) {
 }
 
 /**
+ * Kiểm tra trạng thái hồ sơ (có địa chỉ chưa).
+ * @returns {Promise<{ isProfileCompleted: boolean, hasAddress: boolean }>}
+ */
+export async function getProfileStatus() {
+  return request('GET', '/customer-profile/status')
+}
+
+/**
  * Lấy danh sách địa chỉ của người dùng
  */
 export async function getAddresses() {
@@ -79,7 +87,7 @@ export async function getAddresses() {
 
 /**
  * Thêm địa chỉ mới
- * @param {{ name, phone, city, district, ward, addressLine, type, isDefault }} data
+ * @param {{ name, phone, city, district, ward, addressLine, type, isDefault, provinceCode?, districtCode?, wardCode?, latitude?, longitude? }} data
  */
 export async function createAddress(data) {
   return request('POST', '/user/addresses', data)
@@ -88,7 +96,7 @@ export async function createAddress(data) {
 /**
  * Cập nhật địa chỉ hiện tại
  * @param {string} id
- * @param {{ name, phone, city, district, ward, addressLine, type, isDefault }} data
+ * @param {{ name, phone, city, district, ward, addressLine, type, isDefault, provinceCode?, districtCode?, wardCode?, latitude?, longitude? }} data
  */
 export async function updateAddress(id, data) {
   return request('PUT', `/user/addresses/${id}`, data)

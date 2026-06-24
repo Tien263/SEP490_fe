@@ -1,5 +1,6 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react'
 import * as authService from '../services/authService.js'
+import { getProfileStatus } from '../services/userService.js'
 
 // ─── Storage keys ──────────────────────────────────────────────────────────────
 const ACCESS_TOKEN_KEY = 'accessToken'
@@ -117,6 +118,23 @@ export function AuthProvider({ children }) {
     })
   }, [])
 
+  // ─── Refresh Profile Status (gọi sau khi thêm địa chỉ) ─────────────────────
+  const refreshProfileStatus = useCallback(async () => {
+    try {
+      const status = await getProfileStatus()
+      setUser((prev) => {
+        if (!prev) return null
+        const updated = { ...prev, isProfileCompleted: status.isProfileCompleted }
+        writeJson(USER_KEY, updated)
+        return updated
+      })
+      return status
+    } catch (err) {
+      console.error('Lỗi kiểm tra trạng thái hồ sơ:', err)
+      return null
+    }
+  }, [])
+
   // ─── Logout ─────────────────────────────────────────────────────────────────
   const logout = useCallback(async () => {
     try {
@@ -209,7 +227,8 @@ export function AuthProvider({ children }) {
     resetPassword,
     completeProfile,
     updateUser,
-  }), [user, loading, error, login, loginWithGoogle, logout, register, verifyOtp, forgotPassword, resetPassword, completeProfile, updateUser])
+    refreshProfileStatus,
+  }), [user, loading, error, login, loginWithGoogle, logout, register, verifyOtp, forgotPassword, resetPassword, completeProfile, updateUser, refreshProfileStatus])
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
 }

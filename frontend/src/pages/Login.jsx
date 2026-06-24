@@ -18,12 +18,28 @@ export default function Login() {
   const [rememberMe, setRememberMe] = useState(false)
   const [errorMsg, setErrorMsg] = useState('')
 
+  const handleRedirect = useCallback((user) => {
+    // Nếu profile chưa hoàn chỉnh (chưa có địa chỉ) → yêu cầu thêm địa chỉ
+    if (user?.isProfileCompleted === false && (!user?.role || user?.role === 'Customer')) {
+      navigate('/profile?tab=addresses', { state: { needAddress: true } })
+      return
+    }
+    // Redirect theo role
+    if (user?.role === 'SalesStaff') {
+      navigate('/sales')
+    } else if (user?.role === 'Admin') {
+      navigate('/admin')
+    } else {
+      navigate('/home')
+    }
+  }, [navigate])
+
   const handleSubmit = async (event) => {
     event.preventDefault()
     setErrorMsg('')
     const result = await login(email, password)
     if (result.success) {
-      navigate('/home')
+      handleRedirect(result.user)
     } else {
       setErrorMsg(result.message)
     }
@@ -33,11 +49,11 @@ export default function Login() {
     setErrorMsg('')
     const result = await loginWithGoogle(idToken)
     if (result.success) {
-      navigate('/home')
+      handleRedirect(result.user)
     } else {
       setErrorMsg(result.message)
     }
-  }, [loginWithGoogle, navigate])
+  }, [loginWithGoogle, handleRedirect])
 
   const { triggerGoogleLogin } = useGoogleLogin(
     handleGoogleSuccess,
