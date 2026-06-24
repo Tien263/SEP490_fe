@@ -38,7 +38,6 @@ import {
   XAxis,
   YAxis,
 } from 'recharts'
-import { Link, useSearchParams } from 'react-router-dom'
 import AddressModal, { buildFullAddress, emptyAddressForm } from '../components/AddressModal.jsx'
 import Footer from '../components/Footer.jsx'
 import Header from '../components/Header.jsx'
