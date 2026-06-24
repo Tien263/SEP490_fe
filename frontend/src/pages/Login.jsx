@@ -19,6 +19,12 @@ export default function Login() {
   const [errorMsg, setErrorMsg] = useState('')
 
   const handleRedirect = useCallback((user) => {
+    // Nếu profile chưa hoàn chỉnh (chưa có địa chỉ) → yêu cầu thêm địa chỉ
+    if (user?.isProfileCompleted === false && (!user?.role || user?.role === 'Customer')) {
+      navigate('/profile?tab=addresses', { state: { needAddress: true } })
+      return
+    }
+    // Redirect theo role
     if (user?.role === 'SalesStaff') {
       navigate('/sales')
     } else if (user?.role === 'WarehouseStaff') {

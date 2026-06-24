@@ -26,6 +26,7 @@ import {
   User,
 } from 'lucide-react'
 import { AnimatePresence, motion } from 'motion/react'
+import { Link, useLocation, useSearchParams } from 'react-router-dom'
 import {
   Area,
   AreaChart,
@@ -412,7 +413,8 @@ function PersonalInfoTab({ user, onSuccess }) {
   )
 }
 
-function AddressesTab({ onSuccess }) {
+function AddressesTab({ onSuccess, needAddress }) {
+  const { refreshProfileStatus } = useAuth()
   const [addresses, setAddresses] = useState([])
   const [loading, setLoading] = useState(true)
   const [showModal, setShowModal] = useState(false)
@@ -433,6 +435,13 @@ function AddressesTab({ onSuccess }) {
     }
     loadAddresses()
   }, [])
+
+  // Auto-open modal khi redirect từ login (needAddress)
+  useEffect(() => {
+    if (needAddress && !loading && addresses.length === 0) {
+      openCreateModal()
+    }
+  }, [needAddress, loading, addresses.length])
 
   async function handleSetDefaultAddress(id) {
     try {
@@ -478,6 +487,11 @@ function AddressesTab({ onSuccess }) {
       addressLine: address.addressLine,
       type: address.type,
       isDefault: address.isDefault,
+      provinceCode: address.provinceCode || '',
+      districtCode: address.districtCode || '',
+      wardCode: address.wardCode || '',
+      latitude: address.latitude || null,
+      longitude: address.longitude || null,
     })
     setShowModal(true)
   }
@@ -500,6 +514,13 @@ function AddressesTab({ onSuccess }) {
       addressLine: addressForm.addressLine,
       type: addressForm.type || 'Nhà riêng',
       isDefault: addressForm.isDefault,
+      // Mã hành chính
+      provinceCode: addressForm.provinceCode || undefined,
+      districtCode: addressForm.districtCode || undefined,
+      wardCode: addressForm.wardCode || undefined,
+      // Toạ độ GPS
+      latitude: addressForm.latitude || undefined,
+      longitude: addressForm.longitude || undefined,
     }
 
     try {
@@ -525,6 +546,9 @@ function AddressesTab({ onSuccess }) {
         onSuccess('Thêm địa chỉ thành công')
       }
       closeModal()
+
+      // Refresh profile status sau khi lưu (mở khoá mua hàng)
+      refreshProfileStatus()
     } catch (err) {
       alert(err.message || 'Lỗi khi lưu địa chỉ')
     }
@@ -547,6 +571,17 @@ function AddressesTab({ onSuccess }) {
 
   return (
     <div className="space-y-4">
+      {/* Banner khi cần thêm địa chỉ */}
+      {needAddress && addresses.length === 0 && (
+        <div className="flex items-start gap-3 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3">
+          <MapPin className="mt-0.5 h-5 w-5 flex-shrink-0 text-amber-600" />
+          <div>
+            <p className="text-sm font-semibold text-amber-800">Vui lòng thêm địa chỉ giao hàng</p>
+            <p className="text-xs text-amber-600">Bạn cần có ít nhất 1 địa chỉ giao hàng để bắt đầu mua hàng.</p>
+          </div>
+        </div>
+      )}
+
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <p className="text-sm text-gray-500">{addresses.length} địa chỉ đã lưu</p>
         <Button className="gap-1.5 rounded-full bg-gray-900 text-sm text-white hover:bg-gray-800" onClick={openCreateModal}>
@@ -1440,6 +1475,10 @@ export default function Profile() {
   const activeTab = searchParams.get('tab') || 'info'
   const activeTabMeta = profileTabs.find((tab) => tab.id === activeTab) ?? profileTabs[0]
 
+  // Đọc needAddress từ location.state (khi redirect từ login)
+  const location = useLocation()
+  const needAddress = location.state?.needAddress === true
+
   const userName = user?.fullName || 'Nguyễn Văn A'
   const userEmail = user?.email || 'nguyen.van.a@company.com'
   const userPhone = user?.phoneNumber || '0901 234 567'
@@ -1456,7 +1495,7 @@ export default function Profile() {
         onSuccess={showSuccess}
       />
     ),
-    addresses: <AddressesTab onSuccess={showSuccess} />,
+    addresses: <AddressesTab onSuccess={showSuccess} needAddress={needAddress} />,
     tax: (
       <TaxInfoTab
         userName={userName}
