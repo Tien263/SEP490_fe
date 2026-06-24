@@ -9,33 +9,33 @@ import html2canvas from 'html2canvas';
 // ─── Utility: Vietnamese Number to Words ─────────────────────────────────────
 function numberToVietnameseWords(amount: number): string {
   if (amount === 0) return 'Không đồng';
-  
+
   const units = ['', ' nghìn', ' triệu', ' tỷ', ' nghìn tỷ', ' triệu tỷ'];
   const digits = ['không', 'một', 'hai', 'ba', 'bốn', 'năm', 'sáu', 'bảy', 'tám', 'chín'];
-  
+
   function readGroup3(n: number, showZeroHundred: boolean): string {
     const hundred = Math.floor(n / 100);
     const ten = Math.floor((n % 100) / 10);
     const unit = n % 10;
     let res = '';
-    
+
     if (hundred > 0 || showZeroHundred) {
       res += digits[hundred] + ' trăm ';
     }
-    
+
     if (ten > 0) {
       if (ten === 1) res += 'mười ';
       else res += digits[ten] + ' mươi ';
     } else if (hundred > 0 && unit > 0) {
       res += 'lẻ ';
     }
-    
+
     if (unit > 0) {
       if (unit === 1 && ten > 1) res += 'mốt';
       else if (unit === 5 && ten > 0) res += 'lăm';
       else res += digits[unit];
     }
-    
+
     return res.trim();
   }
 
@@ -45,7 +45,7 @@ function numberToVietnameseWords(amount: number): string {
     groups.push(strAmount.substring(Math.max(0, strAmount.length - 3)));
     strAmount = strAmount.substring(0, Math.max(0, strAmount.length - 3));
   }
-  
+
   let resultStr = '';
   for (let i = groups.length - 1; i >= 0; i--) {
     const groupVal = parseInt(groups[i], 10);
@@ -55,10 +55,10 @@ function numberToVietnameseWords(amount: number): string {
       resultStr += groupStr + units[i] + ' ';
     }
   }
-  
+
   resultStr = resultStr.trim();
   if (!resultStr) return 'Không đồng';
-  
+
   resultStr = resultStr.charAt(0).toUpperCase() + resultStr.slice(1) + ' đồng';
   return resultStr + ' chẵn.';
 }
@@ -77,7 +77,7 @@ interface InvoiceItem {
 
 export default function DirectPurchasePage() {
   const navigate = useNavigate();
-  
+
   // ─── Customer details ──────────────────────────────────────────────────────
   const [customerName, setCustomerName] = useState('Khách lẻ');
   const [phoneNumber, setPhoneNumber] = useState('');
@@ -86,20 +86,20 @@ export default function DirectPurchasePage() {
     const today = new Date();
     return today.toISOString().split('T')[0];
   });
-  
+
   // ─── Products lists ────────────────────────────────────────────────────────
   const [items, setItems] = useState<InvoiceItem[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState<any[]>([]);
   const [showDropdown, setShowDropdown] = useState(false);
   const [searching, setSearching] = useState(false);
-  
+
   // ─── Checkout configs ──────────────────────────────────────────────────────
   const [paymentMethod, setPaymentMethod] = useState<'Cash' | 'SePay'>('Cash');
   const [discountPercent, setDiscountPercent] = useState(0);
   const [hasVat, setHasVat] = useState(false);
   const [paperSize, setPaperSize] = useState<'A5' | 'A4'>('A5');
-  
+
   // ─── API Submit status ──────────────────────────────────────────────────────
   const [submitting, setSubmitting] = useState(false);
   const [successOrder, setSuccessOrder] = useState<any>(null);
@@ -205,7 +205,7 @@ export default function DirectPurchasePage() {
   const [phoneError, setPhoneError] = useState('');
   const [stockErrors, setStockErrors] = useState<Record<string, string>>({});
   const [highlightErrors, setHighlightErrors] = useState<Record<string, boolean>>({});
-  
+
   // ─── Dom ref for PDF capture ───────────────────────────────────────────────
   const previewRef = useRef<HTMLDivElement>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
@@ -216,7 +216,7 @@ export default function DirectPurchasePage() {
       setSearchResults([]);
       return;
     }
-    
+
     const delayDebounce = setTimeout(async () => {
       setSearching(true);
       try {
@@ -289,7 +289,7 @@ export default function DirectPurchasePage() {
   // ─── Add Product ───────────────────────────────────────────────────────────
   const handleAddProduct = (product: any) => {
     const stock = product.availableStock ?? 0;
-    
+
     // Concurrency or standard stock validation (NAC-01, BV-01)
     const existingIndex = items.findIndex(i => i.productId === product.id);
     if (existingIndex > -1) {
@@ -306,7 +306,7 @@ export default function DirectPurchasePage() {
       const updated = [...items];
       updated[existingIndex].quantity = targetQty;
       setItems(updated);
-      
+
       // Clear error if resolved
       setStockErrors(prev => {
         const copy = { ...prev };
@@ -318,7 +318,7 @@ export default function DirectPurchasePage() {
         alert(`Insufficient stock. Available: ${stock} units. Please adjust the quantity or contact Warehouse.`);
         return;
       }
-      
+
       let defaultUnit = 'Cuộn';
       const nameLower = product.name.toLowerCase();
       if (nameLower.includes('khăn') || nameLower.includes('tờ') || nameLower.includes('rút')) {
@@ -421,19 +421,19 @@ export default function DirectPurchasePage() {
     if (!previewRef.current) return null;
     try {
       const canvas = await html2canvas(previewRef.current, {
-        scale: 2, 
+        scale: 2,
         useCORS: true
       });
       const imgData = canvas.toDataURL('image/jpeg', 0.95);
       const width = paperSize === 'A5' ? 148 : 210;
       const height = paperSize === 'A5' ? 210 : 297;
-      
+
       const pdf = new jsPDF({
         orientation: 'portrait',
         unit: 'mm',
         format: paperSize === 'A5' ? 'a5' : 'a4'
       });
-      
+
       pdf.addImage(imgData, 'JPEG', 0, 0, width, height);
       return pdf.output('datauristring'); // base64 URI
     } catch (err) {
@@ -457,13 +457,13 @@ export default function DirectPurchasePage() {
       const imgData = canvas.toDataURL('image/jpeg', 0.95);
       const width = paperSize === 'A5' ? 148 : 210;
       const height = paperSize === 'A5' ? 210 : 297;
-      
+
       const pdf = new jsPDF({
         orientation: 'portrait',
         unit: 'mm',
         format: paperSize === 'A5' ? 'a5' : 'a4'
       });
-      
+
       pdf.addImage(imgData, 'JPEG', 0, 0, width, height);
       pdf.save(`HoaDon_Viettien_${customerName.replace(/\s+/g, '_')}_${Date.now()}.pdf`);
     } catch (err) {
@@ -502,14 +502,14 @@ export default function DirectPurchasePage() {
     setHighlightErrors({});
     setSubmitting(true);
     setErrorMsg('');
-    
+
     try {
       // 1. Generate PDF base64 string
       const pdfBase64 = await generatePdfBlob();
-      
+
       // 2. Prepare payload
       const backendPaymentMethod = paymentMethod === 'Cash' ? 'Cash' : 'SePay';
-      
+
       const payload = {
         customerName: customerName,
         phoneNumber: phoneNumber || null,
@@ -529,7 +529,7 @@ export default function DirectPurchasePage() {
 
       // 3. Post to API (Atomic inventory deduction AC-03, NAC-03)
       const result = await placeDirectOrder(payload);
-      
+
       setSuccessOrder({ ...result, paymentMethod: backendPaymentMethod });
 
       // 4. Open generated PDF in a new tab immediately (AC-04)
@@ -542,13 +542,13 @@ export default function DirectPurchasePage() {
           const imgData = canvas.toDataURL('image/jpeg', 0.95);
           const width = paperSize === 'A5' ? 148 : 210;
           const height = paperSize === 'A5' ? 210 : 297;
-          
+
           const pdf = new jsPDF({
             orientation: 'portrait',
             unit: 'mm',
             format: paperSize === 'A5' ? 'a5' : 'a4'
           });
-          
+
           pdf.addImage(imgData, 'JPEG', 0, 0, width, height);
           const pdfBlob = pdf.output('blob');
           const blobUrl = URL.createObjectURL(pdfBlob);
@@ -557,7 +557,7 @@ export default function DirectPurchasePage() {
           console.error('Error auto-opening print tab:', err);
         }
       }
-      
+
       // Clear invoice form on success
       setItems([]);
       setCustomerName('Khách lẻ');
@@ -582,7 +582,7 @@ export default function DirectPurchasePage() {
       {/* Top Toolbar */}
       <div className="bg-white border-b border-gray-200 px-6 h-12 flex items-center justify-between flex-shrink-0">
         <div className="flex items-center gap-2">
-          <button 
+          <button
             onClick={() => navigate('/sales/dashboard')}
             className="p-1 rounded hover:bg-slate-100 text-slate-500 transition-colors"
             title="Quay lại"
@@ -595,17 +595,15 @@ export default function DirectPurchasePage() {
           <div className="flex items-center rounded-lg bg-slate-100 p-1">
             <button
               onClick={() => setPaperSize('A5')}
-              className={`px-3 py-1 rounded text-xs font-semibold transition-all ${
-                paperSize === 'A5' ? 'bg-white shadow-sm text-blue-900' : 'text-slate-500 hover:text-slate-900'
-              }`}
+              className={`px-3 py-1 rounded text-xs font-semibold transition-all ${paperSize === 'A5' ? 'bg-white shadow-sm text-blue-900' : 'text-slate-500 hover:text-slate-900'
+                }`}
             >
               Khổ A5
             </button>
             <button
               onClick={() => setPaperSize('A4')}
-              className={`px-3 py-1 rounded text-xs font-semibold transition-all ${
-                paperSize === 'A4' ? 'bg-white shadow-sm text-blue-900' : 'text-slate-500 hover:text-slate-900'
-              }`}
+              className={`px-3 py-1 rounded text-xs font-semibold transition-all ${paperSize === 'A4' ? 'bg-white shadow-sm text-blue-900' : 'text-slate-500 hover:text-slate-900'
+                }`}
             >
               Khổ A4 (Auto Scale)
             </button>
@@ -653,7 +651,7 @@ export default function DirectPurchasePage() {
               </div>
               <p>Mã đơn hàng: <strong className="text-blue-900">{successOrder.orderCode}</strong></p>
               <p>Tổng tiền thanh toán: <strong>{formatPrice(successOrder.finalPayment)} đ</strong></p>
-              
+
               {successOrder.paymentMethod === 'SePay' && (
                 <div className="mt-3 p-3 bg-white rounded-lg border border-slate-200 flex flex-col items-center gap-2">
                   <span className="font-bold text-slate-700 text-[11px] uppercase tracking-wide">Mã QR Quét Thanh Toán SePay</span>
@@ -671,7 +669,7 @@ export default function DirectPurchasePage() {
                       <span>Đang tải mã QR...</span>
                     </div>
                   )}
-                  
+
                   <div className="mt-2 flex items-center justify-center">
                     {paymentStatus === 'Paid' ? (
                       <span className="px-3 py-1 bg-green-100 text-green-700 rounded-full font-bold text-[10px] flex items-center gap-1.5 animate-pulse">
@@ -689,9 +687,9 @@ export default function DirectPurchasePage() {
               )}
 
               {successOrder.invoicePdfUrl && (
-                <a 
-                  href={`/api${successOrder.invoicePdfUrl}`} 
-                  target="_blank" 
+                <a
+                  href={`/api${successOrder.invoicePdfUrl}`}
+                  target="_blank"
                   rel="noopener noreferrer"
                   className="mt-1 inline-flex text-xs text-blue-600 hover:underline font-semibold"
                 >
@@ -734,12 +732,12 @@ export default function DirectPurchasePage() {
                 </div>
               )}
 
-              <button 
+              <button
                 onClick={() => {
                   setSuccessOrder(null);
                   setSepayQr(null);
                   setPaymentStatus('');
-                }} 
+                }}
                 className="mt-2 w-full py-1.5 border border-slate-300 rounded bg-white text-slate-700 hover:bg-slate-50 text-[11px] font-semibold cursor-pointer"
               >
                 Tạo hóa đơn mới
@@ -761,9 +759,8 @@ export default function DirectPurchasePage() {
                   }
                 }}
                 placeholder="Nhập tên khách hàng (vd: Siêu thị Vinmart+, Chị Hạnh...)"
-                className={`w-full text-xs h-8 border rounded px-2.5 outline-none focus:border-blue-900 ${
-                  highlightErrors.customerName ? 'border-red-500 bg-red-50' : 'border-slate-300'
-                }`}
+                className={`w-full text-xs h-8 border rounded px-2.5 outline-none focus:border-blue-900 ${highlightErrors.customerName ? 'border-red-500 bg-red-50' : 'border-slate-300'
+                  }`}
               />
             </div>
             <div>
@@ -778,9 +775,8 @@ export default function DirectPurchasePage() {
                   }
                 }}
                 placeholder="09xx xxx xxx"
-                className={`w-full text-xs h-8 border rounded px-2.5 outline-none focus:border-blue-900 ${
-                  highlightErrors.phoneNumber ? 'border-red-500 bg-red-50' : 'border-slate-300'
-                }`}
+                className={`w-full text-xs h-8 border rounded px-2.5 outline-none focus:border-blue-900 ${highlightErrors.phoneNumber ? 'border-red-500 bg-red-50' : 'border-slate-300'
+                  }`}
               />
               {phoneError && (
                 <p className="text-[10px] text-red-500 font-semibold mt-0.5">{phoneError}</p>
@@ -856,20 +852,18 @@ export default function DirectPurchasePage() {
           {/* Form Item list */}
           <div className="space-y-2">
             <label className="block text-[11px] font-bold text-slate-500 uppercase">Sản phẩm đã chọn ({items.length})</label>
-            <div className={`border rounded-lg divide-y divide-slate-200 max-h-64 overflow-y-auto bg-slate-50 ${
-              highlightErrors.items ? 'border-red-500 bg-red-50' : 'border-slate-200'
-            }`}>
+            <div className={`border rounded-lg divide-y divide-slate-200 max-h-64 overflow-y-auto bg-slate-50 ${highlightErrors.items ? 'border-red-500 bg-red-50' : 'border-slate-200'
+              }`}>
               {items.length === 0 ? (
                 <div className="p-6 text-center text-xs text-slate-400">Chưa có sản phẩm nào. Dùng ô tìm kiếm để chọn sản phẩm.</div>
               ) : (
                 items.map(item => {
                   const hasStockError = !!stockErrors[item.id];
                   return (
-                    <div 
-                      key={item.id} 
-                      className={`p-3 flex flex-col gap-2 transition-colors ${
-                        hasStockError ? 'bg-red-50 border border-red-500 rounded-md' : 'bg-white'
-                      }`}
+                    <div
+                      key={item.id}
+                      className={`p-3 flex flex-col gap-2 transition-colors ${hasStockError ? 'bg-red-50 border border-red-500 rounded-md' : 'bg-white'
+                        }`}
                     >
                       <div className="flex items-start justify-between gap-3">
                         <div className="min-w-0">
@@ -901,9 +895,8 @@ export default function DirectPurchasePage() {
                             type="number"
                             value={item.quantity}
                             onChange={e => updateItemField(item.id, 'quantity', e.target.value)}
-                            className={`w-full text-xs h-7 border rounded px-1.5 outline-none focus:border-blue-900 ${
-                              hasStockError ? 'border-red-500 bg-red-100 text-red-700 font-bold' : 'border-slate-300'
-                            }`}
+                            className={`w-full text-xs h-7 border rounded px-1.5 outline-none focus:border-blue-900 ${hasStockError ? 'border-red-500 bg-red-100 text-red-700 font-bold' : 'border-slate-300'
+                              }`}
                           />
                         </div>
                         <div>
@@ -987,7 +980,7 @@ export default function DirectPurchasePage() {
             }}
           >
             {/* Document preview container */}
-            <div 
+            <div
               ref={previewRef}
               className="relative overflow-hidden flex flex-col shrink-0"
               style={{
@@ -1130,12 +1123,12 @@ export default function DirectPurchasePage() {
                     {numberToVietnameseWords(totalAmount)}
                   </span>
                 </div>
-                
+
                 {/* DATE STATEMENT */}
                 <div className="text-right italic font-medium pr-4 mt-2">
                   {formatDateVietnamese(invoiceDate)}
                 </div>
-                
+
                 {/* SIGNATURE SECTION */}
                 <div className="grid grid-cols-3 text-center text-[12px] font-bold mt-4 pt-1 gap-2 leading-relaxed">
                   <div>

@@ -82,7 +82,10 @@ export default function Cart() {
       state: {
         cartItems: cartItems.map(item => ({
           productId: item.productId,
-          quantity: item.quantity
+          productName: item.productName,
+          imageUrl: item.imageUrl,
+          quantity: item.quantity,
+          unitPrice: item.unitPrice
         })),
       },
     })
@@ -134,7 +137,7 @@ export default function Cart() {
 
   const automaticDiscountRate = getAutomaticDiscount(subtotal)
   const automaticDiscountAmount = subtotal * automaticDiscountRate
-  const shippingFee = subtotal >= 500000 ? 0 : 30000
+  const shippingFee = 0
   const total = subtotal + shippingFee - automaticDiscountAmount
 
   if (!isAuthenticated) {
@@ -400,7 +403,7 @@ export default function Cart() {
                       <span>Vận Chuyển</span>
                       <span className="font-medium">{shippingFee === 0 ? 'Miễn Phí' : formatPrice(shippingFee)}</span>
                     </div>
-                    <div className="text-xs text-gray-500">Miễn phí vận chuyển cho đơn hàng trên 500.000 đ</div>
+                    <div className="text-xs text-gray-500">Miễn phí vận chuyển cho mọi đơn hàng</div>
                   </div>
 
                   <div className="mb-6 border-t border-gray-200 pt-4">
@@ -415,7 +418,7 @@ export default function Cart() {
                     className="mb-4 w-full rounded-full bg-gray-900 text-white hover:bg-gray-800"
                     onClick={goToCheckout}
                   >
-                    Thanh Toán
+                    Đặt Hàng & Xem Hóa Đơn
                     <ArrowRight className="h-4 w-4" />
                   </Button>
 
