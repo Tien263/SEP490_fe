@@ -24,7 +24,15 @@ async function request(method, url, body) {
   const json = await res.json().catch(() => ({}))
 
   if (!res.ok) {
-    throw new Error(json.message || json.detail || `Lỗi ${res.status}`)
+    // Ưu tiên hiện lỗi chi tiết theo từng trường (ModelState) nếu có
+    let message = json.message || json.detail || `Lỗi ${res.status}`
+    if (json.errors && typeof json.errors === 'object') {
+      const fieldMessages = Object.values(json.errors).flat().filter(Boolean)
+      if (fieldMessages.length > 0) {
+        message = fieldMessages.join(' ')
+      }
+    }
+    throw new Error(message)
   }
 
   return json
