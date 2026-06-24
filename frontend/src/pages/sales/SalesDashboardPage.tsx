@@ -150,35 +150,8 @@ export default function SalesDashboard() {
     fetchStats();
   }, []);
 
-  // Compute daily sums of revenue for the last 7 days dynamically
-  const last7DaysRevenue = Array.from({ length: 7 }).map((_, i) => {
-    const d = new Date();
-    d.setDate(d.getDate() - (6 - i));
-    const dayName = d.toLocaleDateString('vi-VN', { weekday: 'short' }); // T2, T3...
-    
-    // Filter orders paid on this date
-    const dayOrders = (stats?.recentOrders || []).filter((o: any) => {
-      const oDate = parseDate(o.createdAt);
-      return oDate.toDateString() === d.toDateString() && o.paymentStatus === 'Paid';
-    });
-    
-    const sum = dayOrders.reduce((acc: number, o: any) => acc + o.finalPayment, 0);
-    const sumInMillions = sum / 1_000_000;
-    
-    return {
-      day: dayName,
-      revenue: Number(sumInMillions.toFixed(2)),
-      target: 0.5
-    };
-  });
-
-  const topProductsMock = [
-    { name: 'Giấy vệ sinh VT 10 cuộn', revenue: 84 },
-    { name: 'Khăn giấy ăn 450g', revenue: 71 },
-    { name: 'Giấy cuộn jumbo 200m', revenue: 63 },
-    { name: 'Khăn ướt 80 tờ', revenue: 55 },
-    { name: 'Giấy rút hộp 250 tờ', revenue: 48 },
-  ];
+  const last7DaysRevenue = stats?.last7DaysRevenue || [];
+  const topProductsMock = stats?.topProducts || [];
 
   if (loading) {
     return (
