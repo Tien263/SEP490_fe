@@ -164,6 +164,20 @@ function PersonalInfoTab({ user, onSuccess }) {
 
   const fileInputRef = useRef(null)
 
+  // Địa chỉ mặc định lấy từ danh sách địa chỉ giao hàng (địa chỉ có isDefault)
+  const [defaultAddress, setDefaultAddress] = useState('')
+  useEffect(() => {
+    let cancelled = false
+    getAddresses()
+      .then((list) => {
+        if (cancelled) return
+        const def = (list || []).find((a) => a.isDefault)
+        setDefaultAddress(def ? (def.fullAddress || def.address || '') : '')
+      })
+      .catch(() => {})
+    return () => { cancelled = true }
+  }, [])
+
   const userInitial = (fullName || user?.fullName || 'U').charAt(0).toUpperCase()
 
   const handleAvatarClick = () => {
@@ -193,10 +207,15 @@ function PersonalInfoTab({ user, onSuccess }) {
       alert('Số điện thoại không được để trống')
       return
     }
+    // Khớp validation backend: SĐT Việt Nam phải đủ 10 số và bắt đầu bằng 0
+    if (!/^0\d{9}$/.test(phoneNumber.trim())) {
+      alert('Số điện thoại phải có 10 số và bắt đầu bằng 0')
+      return
+    }
 
     try {
       setSavingInfo(true)
-      const res = await updateUserProfile({ fullName, phoneNumber })
+      const res = await updateUserProfile({ fullName: fullName.trim(), phoneNumber: phoneNumber.trim() })
       updateUser({ fullName: res.fullName, phoneNumber: res.phoneNumber })
       onSuccess('Lưu thông tin cá nhân thành công')
     } catch (err) {
@@ -291,7 +310,8 @@ function PersonalInfoTab({ user, onSuccess }) {
             <div>
               <label className="mb-1 block text-xs text-gray-500">Địa chỉ mặc định</label>
               <Input
-                value={user?.defaultAddressId ? 'Có địa chỉ mặc định' : 'Chưa thiết lập'}
+                value={defaultAddress || 'Chưa thiết lập'}
+                title={defaultAddress}
                 disabled
                 className="rounded-xl bg-gray-50 text-sm cursor-not-allowed"
               />
