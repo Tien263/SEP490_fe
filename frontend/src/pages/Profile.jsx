@@ -1,24 +1,44 @@
 import { useEffect, useMemo, useState, useRef } from 'react'
 import {
   AlertCircle,
+  BarChart3,
   Building2,
   Camera,
+  Check,
   ChevronRight,
   Download,
   Edit2,
   Eye,
   EyeOff,
   ExternalLink,
+  FileText,
   Mail,
   MapPin,
+  MessageSquare,
   Package,
   Plus,
   Search,
+  ShoppingBag,
+  Star,
+  TrendingUp,
   Trash2,
+  Truck,
   User,
 } from 'lucide-react'
 import { AnimatePresence, motion } from 'motion/react'
 import { Link, useLocation, useSearchParams } from 'react-router-dom'
+import {
+  Area,
+  AreaChart,
+  Bar,
+  BarChart,
+  CartesianGrid,
+  ResponsiveContainer,
+  Tooltip,
+  XAxis,
+  YAxis,
+} from 'recharts'
+import { Link, useSearchParams } from 'react-router-dom'
 import AddressModal, { buildFullAddress, emptyAddressForm } from '../components/AddressModal.jsx'
 import Footer from '../components/Footer.jsx'
 import Header from '../components/Header.jsx'
@@ -27,9 +47,10 @@ import { Badge } from '../components/ui/Badge.jsx'
 import { Button } from '../components/ui/Button.jsx'
 import { Input } from '../components/ui/Input.jsx'
 import { useAuth } from '../context/AuthContext.jsx'
-import { isVatExpired, orders, paymentStatusMeta, shippingStatusMeta } from '../data/orders.js'
+import { getTrackingSteps, isVatExpired, orders, paymentStatusMeta, shippingStatusMeta } from '../data/orders.js'
 import { formatPrice } from '../data/products.js'
 import { getCustomerProfile, updateCustomerProfile } from '../services/authService.js'
+import { getQuotations } from '../services/quotationService.js'
 import {
   uploadAvatar,
   updateUserProfile,
@@ -46,6 +67,9 @@ const profileTabs = [
   { id: 'addresses', label: 'Địa chỉ giao hàng', icon: MapPin },
   { id: 'tax', label: 'Thông tin MST', icon: Building2 },
   { id: 'orders', label: 'Lịch sử đơn hàng', icon: Package },
+  { id: 'stats', label: 'Thống kê cá nhân', icon: BarChart3 },
+  { id: 'quotations', label: 'Báo giá đặc biệt', icon: MessageSquare },
+  { id: 'tracking', label: 'Theo dõi đơn hàng', icon: Truck },
 ]
 
 const mockAddresses = [
@@ -94,6 +118,10 @@ const defaultTaxInfo = {
   invoiceEmail: 'invoice@company.com',
   representative: 'Nguyễn Văn A',
   companyPhone: '028 3822 1234',
+}
+
+function normalizeQuotationStatus(status) {
+  return String(status || '').toLowerCase().replace(/_/g, '')
 }
 
 function ToggleRow({ checked, label, onToggle }) {
@@ -1001,6 +1029,445 @@ function OrderHistoryTab({ onSuccess }) {
   )
 }
 
+function PersonalStatsTab() {
+  const [period, setPeriod] = useState('month')
+
+  const statsData = useMemo(() => {
+    const latestOrderDate = orders.reduce((latest, order) => {
+      const orderDate = new Date(order.date)
+      return orderDate > latest ? orderDate : latest
+    }, new Date(orders[0]?.date ?? Date.now()))
+
+    const periodDays = {
+      week: 7,
+      month: 30,
+      quarter: 90,
+      year: 365,
+    }
+
+    const days = periodDays[period] ?? periodDays.month
+    const cutoff = new Date(latestOrderDate)
+    cutoff.setDate(cutoff.getDate() - days)
+
+    const scopedOrders = orders.filter((order) => new Date(order.date) >= cutoff)
+    const relevantOrders = scopedOrders.length > 0 ? scopedOrders : orders
+    const totalSpent = relevantOrders.reduce((sum, order) => sum + order.total, 0)
+    const vatInvoices = relevantOrders.filter((order) => order.hasVat).length
+
+    const monthMap = new Map()
+    relevantOrders.forEach((order) => {
+      const orderDate = new Date(order.date)
+      const key = `${orderDate.getFullYear()}-${String(orderDate.getMonth() + 1).padStart(2, '0')}`
+      const label = `T${orderDate.getMonth() + 1}`
+      const current = monthMap.get(key) ?? { name: label, value: 0, sortValue: orderDate.getTime() }
+      current.value += order.total
+      monthMap.set(key, current)
+    })
+
+    const spendingData = Array.from(monthMap.values())
+      .sort((a, b) => a.sortValue - b.sortValue)
+      .map(({ name, value }) => ({ name, value }))
+
+    const productMap = new Map()
+    relevantOrders.forEach((order) => {
+      order.items.forEach((item) => {
+        productMap.set(item.name, (productMap.get(item.name) ?? 0) + item.quantity)
+      })
+    })
+
+    const productData = Array.from(productMap.entries())
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 5)
+      .map(([name, value]) => ({ name, value }))
+
+    const topProduct = productData[0]?.name ?? 'Chưa có dữ liệu'
+
+    return {
+      productData,
+      spendingData,
+      statCards: [
+        {
+          label: 'Tổng đơn hàng',
+          value: String(relevantOrders.length),
+          icon: ShoppingBag,
+          color: 'bg-blue-50 text-blue-600',
+        },
+        {
+          label: 'Tổng chi tiêu',
+          value: formatPrice(totalSpent),
+          icon: TrendingUp,
+          color: 'bg-green-50 text-green-600',
+        },
+        {
+          label: 'Sản phẩm đặt nhiều nhất',
+          value: topProduct,
+          icon: Star,
+          color: 'bg-yellow-50 text-yellow-600',
+        },
+        {
+          label: 'Số hóa đơn VAT',
+          value: String(vatInvoices),
+          icon: FileText,
+          color: 'bg-purple-50 text-purple-600',
+        },
+      ],
+    }
+  }, [period])
+
+  return (
+    <div className="space-y-6">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        {statsData.statCards.map(({ label, value, icon: Icon, color }) => (
+          <section key={label} className="rounded-2xl border border-gray-100 bg-white p-5">
+            <div className={`mb-3 flex h-10 w-10 items-center justify-center rounded-xl ${color}`}>
+              <Icon className="h-5 w-5" />
+            </div>
+            <p className="mb-1 text-xs text-gray-500">{label}</p>
+            <p className="truncate text-lg font-bold text-gray-900">{value}</p>
+          </section>
+        ))}
+      </div>
+
+      <div className="flex flex-wrap gap-2">
+        {[
+          { key: 'week', label: 'Tuần' },
+          { key: 'month', label: 'Tháng' },
+          { key: 'quarter', label: 'Quý' },
+          { key: 'year', label: 'Năm' },
+        ].map((item) => (
+          <button
+            key={item.key}
+            type="button"
+            onClick={() => setPeriod(item.key)}
+            className={`rounded-full px-4 py-1.5 text-sm transition-colors ${
+              period === item.key ? 'bg-gray-900 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+            }`}
+          >
+            {item.label}
+          </button>
+        ))}
+      </div>
+
+      <div className="grid grid-cols-1 gap-6 xl:grid-cols-2">
+        <section className="rounded-2xl border border-gray-100 bg-white p-5">
+          <h4 className="mb-4 text-sm font-semibold text-gray-900">Chi tiêu theo tháng</h4>
+          <ResponsiveContainer width="100%" height={220}>
+            <AreaChart data={statsData.spendingData}>
+              <defs>
+                <linearGradient id="profile-spending" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="5%" stopColor="#111827" stopOpacity={0.16} />
+                  <stop offset="95%" stopColor="#111827" stopOpacity={0} />
+                </linearGradient>
+              </defs>
+              <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
+              <XAxis dataKey="name" tick={{ fontSize: 11, fill: '#6b7280' }} axisLine={false} tickLine={false} />
+              <YAxis
+                tick={{ fontSize: 11, fill: '#6b7280' }}
+                tickFormatter={(value) => `${Math.round(value / 1000)}k`}
+                axisLine={false}
+                tickLine={false}
+              />
+              <Tooltip formatter={(value) => formatPrice(Number(value))} />
+              <Area type="monotone" dataKey="value" stroke="#111827" strokeWidth={2} fill="url(#profile-spending)" />
+            </AreaChart>
+          </ResponsiveContainer>
+        </section>
+
+        <section className="rounded-2xl border border-gray-100 bg-white p-5">
+          <h4 className="mb-4 text-sm font-semibold text-gray-900">Sản phẩm đặt nhiều nhất</h4>
+          <ResponsiveContainer width="100%" height={220}>
+            <BarChart data={statsData.productData} layout="vertical" margin={{ top: 4, right: 12, left: 12, bottom: 4 }}>
+              <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" horizontal={false} />
+              <XAxis type="number" tick={{ fontSize: 11, fill: '#6b7280' }} axisLine={false} tickLine={false} />
+              <YAxis
+                dataKey="name"
+                type="category"
+                width={140}
+                tick={{ fontSize: 10, fill: '#6b7280' }}
+                axisLine={false}
+                tickLine={false}
+              />
+              <Tooltip formatter={(value) => `${value} sản phẩm`} />
+              <Bar dataKey="value" fill="#111827" radius={[0, 6, 6, 0]} />
+            </BarChart>
+          </ResponsiveContainer>
+        </section>
+      </div>
+    </div>
+  )
+}
+
+function QuotationRequestsTab() {
+  const [quotations, setQuotations] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState('')
+
+  useEffect(() => {
+    let cancelled = false
+
+    async function loadQuotations() {
+      try {
+        setLoading(true)
+        setError('')
+        const data = await getQuotations()
+        if (!cancelled) {
+          setQuotations(Array.isArray(data) ? data : [])
+        }
+      } catch (err) {
+        if (!cancelled) {
+          setError(err.message || 'Không thể tải danh sách báo giá')
+        }
+      } finally {
+        if (!cancelled) {
+          setLoading(false)
+        }
+      }
+    }
+
+    loadQuotations()
+    return () => {
+      cancelled = true
+    }
+  }, [])
+
+  const statusBadge = {
+    pending: 'bg-yellow-100 text-yellow-700',
+    salesresponded: 'bg-blue-100 text-blue-700',
+    negotiating: 'bg-purple-100 text-purple-700',
+    waitingforadminapproval: 'bg-orange-100 text-orange-700',
+    accepted: 'bg-green-100 text-green-700',
+    rejected: 'bg-red-100 text-red-700',
+  }
+
+  const statusLabel = {
+    pending: 'Đang chờ Sales phản hồi',
+    salesresponded: 'Sales đã gửi bảng giá',
+    negotiating: 'Đang trao đổi',
+    waitingforadminapproval: 'Chờ Admin duyệt',
+    accepted: 'Đã chấp nhận',
+    rejected: 'Đã hủy',
+  }
+
+  if (loading) {
+    return (
+      <section className="flex min-h-[220px] flex-col items-center justify-center rounded-2xl border border-gray-100 bg-white p-6">
+        <div className="h-8 w-8 animate-spin rounded-full border-2 border-gray-200 border-t-gray-950" />
+        <p className="mt-4 text-sm text-gray-500">Đang tải danh sách báo giá...</p>
+      </section>
+    )
+  }
+
+  if (error) {
+    return (
+      <section className="rounded-2xl border border-red-200 bg-red-50 p-8 text-center">
+        <AlertCircle className="mx-auto mb-3 h-10 w-10 text-red-400" />
+        <p className="font-medium text-red-700">{error}</p>
+      </section>
+    )
+  }
+
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center justify-between">
+        <p className="text-sm text-gray-500">{quotations.length} yêu cầu báo giá</p>
+      </div>
+
+      <section className="overflow-hidden rounded-2xl border border-gray-100 bg-white">
+        <div className="overflow-x-auto">
+          <table className="w-full">
+            <thead className="border-b border-gray-100 bg-gray-50">
+              <tr>
+                {['Mã yêu cầu', 'Ngày gửi', 'Tổng ban đầu', 'Tổng Sales báo giá', 'Tiết kiệm', 'Trạng thái', 'Hành động'].map((heading) => (
+                  <th key={heading} className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">
+                    {heading}
+                  </th>
+                ))}
+              </tr>
+            </thead>
+
+            <tbody className="divide-y divide-gray-50">
+              {quotations.map((quotation) => {
+                const statusKey = normalizeQuotationStatus(quotation.status)
+                const savings = quotation.salesProposedTotal ? quotation.originalTotal - quotation.salesProposedTotal : 0
+
+                return (
+                  <tr key={quotation.id} className="transition-colors hover:bg-gray-50/50">
+                    <td className="px-4 py-4">
+                      <span className="font-mono text-sm font-medium text-gray-900">{quotation.id}</span>
+                    </td>
+                    <td className="whitespace-nowrap px-4 py-4 text-sm text-gray-600">{quotation.requestDate}</td>
+                    <td className="whitespace-nowrap px-4 py-4 text-sm font-semibold text-gray-900">
+                      {formatPrice(quotation.originalTotal)}
+                    </td>
+                    <td className="whitespace-nowrap px-4 py-4 text-sm font-semibold text-green-600">
+                      {quotation.salesProposedTotal ? formatPrice(quotation.salesProposedTotal) : '-'}
+                    </td>
+                    <td className="whitespace-nowrap px-4 py-4 text-sm font-semibold text-green-600">
+                      {savings > 0 ? `- ${formatPrice(savings)}` : '-'}
+                    </td>
+                    <td className="px-4 py-4">
+                      <Badge className={`${statusBadge[statusKey] ?? 'bg-gray-100 text-gray-700'} text-[10px] hover:opacity-100`}>
+                        {statusLabel[statusKey] ?? quotation.status}
+                      </Badge>
+                    </td>
+                    <td className="px-4 py-4">
+                      <div className="flex items-center gap-3 text-xs">
+                        <Link
+                          to={`/profile/quotations/${quotation.id}`}
+                          className="inline-flex items-center gap-1 font-medium text-gray-600 transition hover:text-gray-900 hover:underline"
+                        >
+                          <ExternalLink className="h-3 w-3" />
+                          Xem chi tiết
+                        </Link>
+
+                        {statusKey !== 'accepted' && statusKey !== 'rejected' && (
+                          <Link
+                            to={`/profile/quotations/${quotation.id}?chat=1`}
+                            className="inline-flex items-center gap-1 font-medium text-blue-600 transition hover:text-blue-800 hover:underline"
+                          >
+                            <MessageSquare className="h-3 w-3" />
+                            Chat
+                          </Link>
+                        )}
+                      </div>
+                    </td>
+                  </tr>
+                )
+              })}
+            </tbody>
+          </table>
+
+          {quotations.length === 0 && (
+            <div className="py-12 text-center text-gray-400">
+              <MessageSquare className="mx-auto mb-2 h-10 w-10" />
+              <p className="text-sm">Chưa có yêu cầu báo giá nào</p>
+            </div>
+          )}
+        </div>
+      </section>
+    </div>
+  )
+}
+
+function OrderTrackingTab() {
+  const trackableOrders = useMemo(
+    () => orders.filter((order) => order.shipStatus === 'shipping' || order.shipStatus === 'pending' || order.shipStatus === 'delivered'),
+    [],
+  )
+  const defaultOrderId = trackableOrders.find((order) => order.trackingStatus === 'shipping')?.id ?? trackableOrders[0]?.id ?? ''
+  const [selectedOrderId, setSelectedOrderId] = useState(defaultOrderId)
+
+  const selectedOrder = trackableOrders.find((order) => order.id === selectedOrderId) ?? trackableOrders[0]
+
+  if (!selectedOrder) {
+    return (
+      <section className="rounded-2xl border border-gray-100 bg-white p-8 text-center text-sm text-gray-400">
+        Chưa có đơn hàng nào để theo dõi.
+      </section>
+    )
+  }
+
+  const trackingSteps = getTrackingSteps(selectedOrder)
+  const activeStepIndex = trackingSteps.findIndex((step) => step.key === selectedOrder.trackingStatus)
+
+  return (
+    <div className="space-y-5">
+      <section className="rounded-2xl border border-gray-100 bg-white p-6">
+        <div className="mb-6 flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+          <div>
+            <p className="mb-1 text-xs text-gray-500">Mã đơn hàng</p>
+            <p className="font-mono text-lg font-bold text-gray-900">{selectedOrder.id}</p>
+          </div>
+
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+            <Badge
+              className={`${shippingStatusMeta[selectedOrder.shipStatus].badgeClass} px-3 py-1.5 text-xs font-medium hover:opacity-100`}
+            >
+              {shippingStatusMeta[selectedOrder.shipStatus].label}
+            </Badge>
+            <select
+              value={selectedOrderId}
+              onChange={(event) => setSelectedOrderId(event.target.value)}
+              className="h-11 min-w-[240px] rounded-xl border border-gray-200 bg-white px-4 text-sm text-gray-700 outline-none focus:border-gray-900 focus:ring-2 focus:ring-gray-900/10"
+            >
+              {trackableOrders.map((order) => (
+                <option key={order.id} value={order.id}>
+                  {order.id} - {order.product}
+                </option>
+              ))}
+            </select>
+          </div>
+        </div>
+
+        <div className="flex items-start gap-0 overflow-x-auto pb-2">
+          {trackingSteps.map((step, index) => {
+            const isActive = index === activeStepIndex
+            const isDone = index < activeStepIndex || (selectedOrder.trackingStatus === 'delivered' && step.key === 'delivered')
+
+            return (
+              <div key={step.key} className="flex min-w-[220px] flex-1 items-start">
+                <div className="flex flex-col items-center">
+                  <div
+                    className={`flex h-10 w-10 items-center justify-center rounded-full transition-colors ${
+                      isDone
+                        ? 'bg-gray-900 text-white'
+                        : isActive
+                          ? 'bg-orange-500 text-white ring-4 ring-orange-100'
+                          : 'bg-gray-100 text-gray-400'
+                    }`}
+                  >
+                    {isDone ? <Check className="h-5 w-5" /> : <span className="text-sm font-bold">{index + 1}</span>}
+                  </div>
+                  <p
+                    className={`mt-2 max-w-[120px] text-center text-[10px] font-semibold leading-tight ${
+                      isActive ? 'text-orange-600' : isDone ? 'text-gray-700' : 'text-gray-400'
+                    }`}
+                  >
+                    {step.label}
+                  </p>
+                  <p className="mt-1 hidden max-w-[120px] text-center text-[10px] leading-tight text-gray-400 lg:block">{step.desc}</p>
+                </div>
+                {index < trackingSteps.length - 1 && (
+                  <div className={`mx-3 mt-5 h-[2px] flex-1 ${index < activeStepIndex ? 'bg-gray-900' : 'bg-gray-200'}`} />
+                )}
+              </div>
+            )
+          })}
+        </div>
+      </section>
+
+      <section className="rounded-2xl border border-gray-100 bg-white p-6">
+        <h4 className="mb-4 flex items-center gap-2 text-sm font-semibold text-gray-900">
+          <Truck className="h-4 w-4" />
+          Thông tin vận chuyển
+        </h4>
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+          {[
+            { label: 'Mã xe', value: selectedOrder.vehicle.code },
+            { label: 'Tài xế / NV giao hàng', value: selectedOrder.vehicle.driver },
+            { label: 'Ca vận chuyển', value: selectedOrder.vehicle.shift },
+            { label: 'Thời gian dự kiến giao', value: selectedOrder.vehicle.eta },
+          ].map((item) => (
+            <div key={item.label}>
+              <p className="mb-0.5 text-xs text-gray-500">{item.label}</p>
+              <p className="text-sm font-medium text-gray-900">{item.value}</p>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      <section className="rounded-2xl border border-gray-100 bg-white p-6">
+        <h4 className="mb-3 flex items-center gap-2 text-sm font-semibold text-gray-900">
+          <Package className="h-4 w-4" />
+          Sản phẩm
+        </h4>
+        <p className="text-sm text-gray-600">{selectedOrder.product}</p>
+        <p className="mt-2 text-sm font-bold text-gray-900">{formatPrice(selectedOrder.total)}</p>
+      </section>
+    </div>
+  )
+}
+
 export default function Profile() {
   const { user } = useAuth()
   const [searchParams, setSearchParams] = useSearchParams()
@@ -1038,6 +1505,9 @@ export default function Profile() {
       />
     ),
     orders: <OrderHistoryTab onSuccess={showSuccess} />,
+    stats: <PersonalStatsTab />,
+    quotations: <QuotationRequestsTab />,
+    tracking: <OrderTrackingTab />,
   }
 
   function setTab(tabId) {

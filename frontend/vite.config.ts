@@ -12,11 +12,17 @@ export default defineConfig({
   server: {
     proxy: {
       // Proxy tất cả request /api/* → backend ASP.NET Core
-      // Thay đổi port nếu backend chạy trên port khác
       '/api': {
-        target: 'https://localhost:7003',
+        target: 'http://127.0.0.1:5000',
         changeOrigin: true,
         secure: false, // Bỏ qua self-signed SSL cert khi dev
+      },
+      // Proxy SignalR WebSocket /hubs/* → backend ASP.NET Core
+      '/hubs': {
+        target: 'http://127.0.0.1:5000',
+        changeOrigin: true,
+        secure: false,
+        ws: true, // Bắt buộc cho WebSocket (SignalR)
       },
     },
   },

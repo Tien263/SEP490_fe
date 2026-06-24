@@ -27,6 +27,10 @@ export default function Login() {
     // Redirect theo role
     if (user?.role === 'SalesStaff') {
       navigate('/sales')
+    } else if (user?.role === 'WarehouseStaff') {
+      navigate('/warehouse')
+    } else if (user?.role === 'AccountingStaff') {
+      navigate('/accounting')
     } else if (user?.role === 'Admin') {
       navigate('/admin')
     } else {

@@ -17,6 +17,7 @@ import { motion } from 'motion/react'
 import { Button } from './ui/Button.jsx'
 import { cn } from '../lib/utils.js'
 import { useAuth } from '../context/AuthContext.jsx'
+import { useCart } from '../context/CartContext.jsx'
 
 const navigation = [
   { to: '/', label: 'Giới thiệu' },
@@ -27,14 +28,15 @@ const navigation = [
 const dropdownItems = [
   { icon: User, label: 'Hồ sơ cá nhân', href: '/profile' },
   { icon: Package, label: 'Lịch sử đơn hàng', href: '/profile?tab=orders' },
-  { icon: MapPin, label: 'Theo dõi đơn hàng', href: '#' },
-  { icon: BarChart3, label: 'Thống kê cá nhân', href: '#' },
+  { icon: MapPin, label: 'Theo dõi đơn hàng', href: '/profile?tab=tracking' },
+  { icon: BarChart3, label: 'Thống kê cá nhân', href: '/profile?tab=stats' },
 ]
 
 export default function Header() {
   const location = useLocation()
   const navigate = useNavigate()
   const { isAuthenticated, logout, user } = useAuth()
+  const { totalItems } = useCart()
   const [dropdownOpen, setDropdownOpen] = useState(false)
   const [mobileOpen, setMobileOpen] = useState(false)
   const dropdownRef = useRef(null)
@@ -129,9 +131,11 @@ export default function Header() {
             aria-label="Giỏ hàng"
           >
             <ShoppingCart className="h-5 w-5 stroke-[1.8]" />
-            <span className="absolute -right-0.5 top-0 flex min-w-4.5 items-center justify-center rounded-full bg-slate-900 px-1 text-[10px] font-semibold leading-none text-white">
-              3
-            </span>
+            {isAuthenticated && totalItems > 0 && (
+              <span className="absolute -right-0.5 top-0 flex min-w-4.5 items-center justify-center rounded-full bg-slate-900 px-1 text-[10px] font-semibold leading-none text-white">
+                {totalItems}
+              </span>
+            )}
           </Link>
 
           {isAuthenticated ? (

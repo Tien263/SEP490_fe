@@ -6,13 +6,12 @@ import {
   DropdownMenuTrigger,
 } from '../../components/sales-ui/dropdown-menu';
 import {
-  LayoutDashboard, MessageSquare, Bell, LogOut, ChevronDown,
-  Search, Settings, ShoppingCart
+  LayoutDashboard, Bell, LogOut, ChevronDown,
+  Search, Settings, Package
 } from 'lucide-react';
-import SalesDashboardPage from './SalesDashboardPage';
-import SalesNegotiationPage from './SalesNegotiationPage';
-import DirectPurchasePage from './DirectPurchasePage';
 import { useAuth } from '../../context/AuthContext';
+import WarehouseOrdersPage from './WarehouseOrdersPage';
+import WarehouseOrderDetailPage from './WarehouseOrderDetailPage';
 
 interface NavItem {
   id: string;
@@ -25,23 +24,16 @@ interface NavItem {
 const NAV_ITEMS: NavItem[] = [
   {
     id: 'dashboard',
-    label: 'Dashboard',
+    label: 'Dashboard Kho',
     icon: <LayoutDashboard className="w-4 h-4" />,
-    path: '/sales/dashboard',
+    path: '/warehouse/dashboard',
   },
   {
-    id: 'negotiation',
-    label: 'Báo giá & Đàm phán giá',
-    icon: <MessageSquare className="w-4 h-4" />,
-    path: '/sales/negotiation',
-    badge: 3,
-  },
-  {
-    id: 'direct-purchase',
-    label: 'Mua hàng trực tiếp',
-    icon: <ShoppingCart className="w-4 h-4" />,
-    path: '/sales/direct-purchase',
-  },
+    id: 'orders',
+    label: 'Quản lý Đóng gói',
+    icon: <Package className="w-4 h-4" />,
+    path: '/warehouse/orders',
+  }
 ];
 
 function NavItemRow({ item, onNavigate }: { item: NavItem; onNavigate: (path: string) => void }) {
@@ -71,32 +63,32 @@ function NavItemRow({ item, onNavigate }: { item: NavItem; onNavigate: (path: st
   );
 }
 
-export default function SalesPortal() {
+export default function WarehousePortal() {
   const navigate = useNavigate();
   const { user, logout } = useAuth() as any;
-  const totalBadge = 5;
+  const totalBadge = 0;
 
   const handleLogout = async () => {
     await logout();
     navigate('/login');
   };
 
-  const userName = user?.fullName || user?.email || 'Nhân viên Sales';
-  const initials = userName.split(' ').slice(-2).map((n: string) => n[0]).join('').toUpperCase() || 'NV';
+  const userName = user?.fullName || user?.email || 'Nhân viên Kho';
+  const initials = userName.split(' ').slice(-2).map((n: string) => n[0]).join('').toUpperCase() || 'KHO';
 
   return (
     <div className="flex h-screen bg-[#F5F7FA] overflow-hidden">
       {/* Sidebar */}
-      <aside className="w-[220px] min-w-[220px] flex flex-col h-full" style={{ backgroundColor: '#1F3B64' }}>
+      <aside className="w-[220px] min-w-[220px] flex flex-col h-full bg-slate-800">
         {/* Logo */}
         <div className="h-12 flex items-center px-4 border-b flex-shrink-0" style={{ borderColor: 'rgba(255,255,255,0.08)' }}>
           <div className="flex items-center gap-2.5">
             <div className="w-6 h-6 bg-white rounded flex items-center justify-center flex-shrink-0">
-              <span className="text-[#1F3B64] font-black text-[10px]">VT</span>
+              <span className="text-slate-800 font-black text-[10px]">VT</span>
             </div>
             <div>
               <p className="text-white font-semibold text-[13px] leading-tight">Việt Tiến ERP</p>
-              <p className="text-white/40 text-[10px] leading-tight">Nhân viên bán hàng</p>
+              <p className="text-white/40 text-[10px] leading-tight">Quản lý Kho</p>
             </div>
           </div>
         </div>
@@ -118,7 +110,7 @@ export default function SalesPortal() {
             </Avatar>
             <div className="flex-1 min-w-0">
               <p className="text-[11px] font-semibold text-white truncate">{userName}</p>
-              <p className="text-[10px] text-white/45 truncate">NV Bán Hàng</p>
+              <p className="text-[10px] text-white/45 truncate">Thủ kho</p>
             </div>
             <button onClick={handleLogout} className="text-white/30 hover:text-red-400 transition-colors flex-shrink-0" title="Đăng xuất">
               <LogOut className="w-3.5 h-3.5" />
@@ -131,7 +123,6 @@ export default function SalesPortal() {
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
         {/* Top Header */}
         <header className="h-11 bg-white border-b border-gray-200 flex items-center px-4 gap-3 flex-shrink-0">
-          {/* Search */}
           <div className="flex-1 max-w-xs">
             <button className="w-full flex items-center gap-2 px-2.5 h-7 rounded border border-gray-300 bg-gray-50 text-[12px] text-gray-400 hover:bg-white transition-colors text-left">
               <Search className="w-3 h-3 flex-shrink-0" />
@@ -141,7 +132,6 @@ export default function SalesPortal() {
 
           <div className="flex-1" />
 
-          {/* Actions */}
           <div className="flex items-center gap-0.5">
             <button
               className="relative p-1.5 rounded text-gray-500 hover:bg-gray-100 hover:text-gray-700 transition-colors"
@@ -163,7 +153,7 @@ export default function SalesPortal() {
               <DropdownMenuTrigger asChild>
                 <button className="flex items-center gap-1.5 px-2 py-1 rounded hover:bg-gray-100 transition-colors">
                   <Avatar className="w-6 h-6">
-                    <AvatarFallback className="text-[9px] font-semibold" style={{ backgroundColor: '#1F3B64', color: 'white' }}>
+                    <AvatarFallback className="text-[9px] font-semibold" style={{ backgroundColor: '#1E293B', color: 'white' }}>
                       {initials}
                     </AvatarFallback>
                   </Avatar>
@@ -183,10 +173,9 @@ export default function SalesPortal() {
         {/* Page Content */}
         <main className="flex-1 overflow-auto">
           <Routes>
-            <Route path="dashboard" element={<SalesDashboardPage />} />
-            <Route path="negotiation" element={<SalesNegotiationPage />} />
-            <Route path="direct-purchase" element={<DirectPurchasePage />} />
-            <Route path="*" element={<SalesDashboardPage />} />
+            <Route path="orders" element={<WarehouseOrdersPage />} />
+            <Route path="orders/:id" element={<WarehouseOrderDetailPage />} />
+            <Route path="*" element={<div className="p-4">Chào mừng đến với hệ thống quản lý Kho. Vui lòng chọn menu bên trái.</div>} />
           </Routes>
         </main>
       </div>

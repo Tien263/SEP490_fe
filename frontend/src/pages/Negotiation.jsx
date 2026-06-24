@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { useState, useEffect } from "react";
+import { Link, useParams, useSearchParams } from "react-router-dom";
 import { motion } from "motion/react";
 import {
   ArrowLeft,
@@ -17,6 +17,7 @@ import { Button } from "../components/ui/Button.jsx";
 import { Badge } from "../components/ui/Badge.jsx";
 import { formatPrice } from "../services/productService.js";
 import ChatInterface from "../components/ChatInterface.jsx";
+import { getQuotationById, acceptQuotation, rejectQuotation } from "../services/quotationService.js";
 
 const mockQuotation = {
   id: "QT-2026-001",
@@ -51,38 +52,108 @@ const mockQuotation = {
 };
 
 export default function Negotiation() {
-  const navigate = useNavigate();
-  const [quotation, setQuotation] = useState(mockQuotation);
+  const { id } = useParams();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const [quotation, setQuotation] = useState(null);
   const [showChat, setShowChat] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+  const isDemoMode = id === "demo";
+
+  useEffect(() => {
+    if (id) {
+      if (isDemoMode) {
+        setQuotation(mockQuotation);
+        setIsLoading(false);
+        setShowChat(searchParams.get("chat") === "1");
+        return;
+      }
+
+      getQuotationById(id)
+        .then(data => {
+          setQuotation(data);
+          setIsLoading(false);
+          const status = (data.status || "").toLowerCase().replace(/_/g, "");
+          if (searchParams.get("chat") === "1" || status === "negotiating") {
+            setShowChat(true);
+          } else {
+            setShowChat(false);
+          }
+        })
+        .catch(err => {
+          console.error(err);
+          setIsLoading(false);
+        });
+    }
+  }, [id, isDemoMode, searchParams]);
 
   const updateQuotation = (updates) => {
-    setQuotation(prev => ({ ...prev, ...updates }));
+    setQuotation((prev) => ({ ...prev, ...updates }));
   };
 
-  const handleAccept = () => {
+  const handleAccept = async () => {
     if (!quotation) return;
-    updateQuotation({
-      status: "accepted",
-      finalTotal: quotation.salesProposedTotal,
-    });
-    alert("Bảng giá đã được chấp nhận. Giá mới đã được áp dụng vào giỏ hàng.");
-    navigate("/cart");
+    if (isDemoMode) {
+      updateQuotation({
+        status: "WaitingForAdminApproval",
+        finalTotal: quotation.salesProposedTotal || quotation.originalTotal,
+      });
+      alert("Demo: đã chấp nhận bảng giá và chuyển sang trạng thái chờ Admin duyệt.");
+      return;
+    }
+    try {
+      await acceptQuotation(quotation.id);
+      updateQuotation({
+        status: "WaitingForAdminApproval",
+        finalTotal: quotation.salesProposedTotal || quotation.originalTotal,
+      });
+      alert("Bảng giá đã được chấp nhận. Đang chờ Admin duyệt.");
+    } catch (error) {
+      alert("Có lỗi xảy ra: " + error.message);
+    }
   };
 
-  const handleReject = () => {
+  const handleReject = async () => {
     if (!quotation) return;
     const confirmed = window.confirm("Bạn có chắc muốn từ chối bảng giá này?");
     if (confirmed) {
-      updateQuotation({ status: "rejected" });
-      navigate("/cart");
+      if (isDemoMode) {
+        updateQuotation({ status: "Rejected" });
+        alert("Demo: đã từ chối báo giá.");
+        return;
+      }
+      try {
+        await rejectQuotation(quotation.id);
+        updateQuotation({ status: "Rejected" });
+        alert("Đã từ chối đàm phán.");
+      } catch (error) {
+        alert("Có lỗi xảy ra: " + error.message);
+      }
     }
   };
 
   const handleNegotiate = () => {
     if (!quotation) return;
     updateQuotation({ status: "negotiating" });
+    setSearchParams({ chat: "1" });
     setShowChat(true);
   };
+
+  const handleCloseChat = () => {
+    setShowChat(false);
+    setSearchParams({});
+  };
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-white">
+        <Header />
+        <div className="pt-20 min-h-[60vh] flex items-center justify-center">
+          <p>Đang tải dữ liệu...</p>
+        </div>
+        <Footer />
+      </div>
+    );
+  }
 
   if (!quotation) {
     return (
@@ -94,9 +165,9 @@ export default function Negotiation() {
             <h2 className="text-3xl font-bold text-gray-900 mb-4">
               Không tìm thấy yêu cầu báo giá
             </h2>
-            <Link to="/cart">
+            <Link to="/profile?tab=quotations">
               <Button className="bg-gray-900 hover:bg-gray-800 rounded-full text-white">
-                Quay lại danh sách
+                Quay lại
               </Button>
             </Link>
           </div>
@@ -106,18 +177,23 @@ export default function Negotiation() {
     );
   }
 
+  // Normalize status to handle both PascalCase (API) and snake_case (mock)
+  const normalizedStatus = (quotation.status || "").toLowerCase().replace(/_/g, "");
+
   const statusBadge = {
     pending: "bg-yellow-100 text-yellow-700",
-    sales_responded: "bg-blue-100 text-blue-700",
+    salesresponded: "bg-blue-100 text-blue-700",
     negotiating: "bg-purple-100 text-purple-700",
+    waitingforadminapproval: "bg-orange-100 text-orange-700",
     accepted: "bg-green-100 text-green-700",
     rejected: "bg-red-100 text-red-700",
   };
 
   const statusLabel = {
     pending: "Đang chờ Sales phản hồi",
-    sales_responded: "Sales đã gửi bảng giá",
+    salesresponded: "Sales đã gửi bảng giá",
     negotiating: "Đang trao đổi",
+    waitingforadminapproval: "Chờ Admin duyệt",
     accepted: "Đã chấp nhận",
     rejected: "Đã hủy",
   };
@@ -134,7 +210,7 @@ export default function Negotiation() {
     return (
       <ChatInterface
         quotation={quotation}
-        onClose={() => setShowChat(false)}
+        onClose={handleCloseChat}
         onAccept={handleAccept}
       />
     );
@@ -154,10 +230,10 @@ export default function Negotiation() {
               </Link>
               <span className="text-gray-400">/</span>
               <Link
-                to="/cart"
+                to="/profile?tab=quotations"
                 className="text-gray-600 hover:text-gray-900"
               >
-                Giỏ hàng
+                Báo giá đặc biệt
               </Link>
               <span className="text-gray-400">/</span>
               <span className="text-gray-900 font-medium">{quotation.id}</span>
@@ -169,11 +245,11 @@ export default function Negotiation() {
         <div className="bg-white border-b border-gray-100">
           <div className="max-w-7xl mx-auto px-6 lg:px-8 py-8">
             <Link
-              to="/cart"
+              to="/profile?tab=quotations"
               className="inline-flex items-center text-gray-600 hover:text-gray-900 mb-4 transition-colors"
             >
               <ArrowLeft className="w-4 h-4 mr-2" />
-              Quay lại
+              Quay lại danh sách báo giá
             </Link>
 
             <div className="flex items-start justify-between">
@@ -195,9 +271,9 @@ export default function Negotiation() {
                 </div>
               </div>
               <Badge
-                className={`${statusBadge[quotation.status]} hover:opacity-90`}
+                className={`${statusBadge[normalizedStatus] || "bg-gray-100 text-gray-700"} hover:opacity-90`}
               >
-                {statusLabel[quotation.status]}
+                {statusLabel[normalizedStatus] || quotation.status}
               </Badge>
             </div>
           </div>
@@ -305,11 +381,13 @@ export default function Negotiation() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-50">
-                  {quotation.products.map((product, index) => {
-                    const finalPrice = product.salesProposedPrice || product.originalPrice;
+                  {(quotation.items || quotation.products || []).map((product, index) => {
+                    const originalPrice = product.originalUnitPrice ?? product.originalPrice;
+                    const salesProposedPrice = product.salesProposedUnitPrice ?? product.salesProposedPrice;
+                    const finalPrice = salesProposedPrice || originalPrice;
                     const totalPrice = finalPrice * product.quantity;
-                    const savingsPerUnit = product.salesProposedPrice
-                      ? product.originalPrice - product.salesProposedPrice
+                    const savingsPerUnit = salesProposedPrice
+                      ? originalPrice - salesProposedPrice
                       : 0;
                     const totalSavings = savingsPerUnit * product.quantity;
 
@@ -324,7 +402,7 @@ export default function Negotiation() {
                               {product.productName}
                             </p>
                             <p className="text-xs text-gray-500">
-                              Mã: {product.productId.padStart(6, "0")}
+                              Mã: {String(product.productId).padStart(6, "0")}
                             </p>
                           </div>
                         </td>
@@ -332,17 +410,17 @@ export default function Negotiation() {
                           {product.quantity.toLocaleString()}
                         </td>
                         <td className="px-6 py-4">
-                          <p className={`text-sm font-medium ${product.salesProposedPrice ? 'text-gray-500 line-through' : 'text-gray-900'}`}>
-                            {formatPrice(product.originalPrice)}
+                          <p className={`text-sm font-medium ${salesProposedPrice ? 'text-gray-500 line-through' : 'text-gray-900'}`}>
+                            {formatPrice(originalPrice)}
                           </p>
                         </td>
                         {quotation.salesProposedTotal && (
                           <>
                             <td className="px-6 py-4">
                               <p className="text-sm font-semibold text-green-600">
-                                {product.salesProposedPrice
-                                  ? formatPrice(product.salesProposedPrice)
-                                  : formatPrice(product.originalPrice)}
+                                {salesProposedPrice
+                                  ? formatPrice(salesProposedPrice)
+                                  : formatPrice(originalPrice)}
                               </p>
                             </td>
                             <td className="px-6 py-4">
@@ -385,7 +463,7 @@ export default function Negotiation() {
           )}
 
           {/* Action Buttons */}
-          {quotation.status === "sales_responded" && (
+          {(normalizedStatus === "salesresponded" || normalizedStatus === "negotiating") && (
             <div className="bg-white rounded-2xl border border-gray-100 p-6">
               <div className="flex items-center justify-between gap-4">
                 <div>
@@ -425,7 +503,7 @@ export default function Negotiation() {
             </div>
           )}
 
-          {quotation.status === "pending" && (
+          {normalizedStatus === "pending" && (
             <div className="bg-yellow-50 rounded-2xl border border-yellow-200 p-6">
               <div className="flex items-center gap-3">
                 <AlertCircle className="w-6 h-6 text-yellow-600" />
@@ -441,7 +519,7 @@ export default function Negotiation() {
             </div>
           )}
 
-          {quotation.status === "accepted" && (
+          {normalizedStatus === "accepted" && (
             <div className="bg-green-50 rounded-2xl border border-green-200 p-6">
               <div className="flex items-center gap-3">
                 <Check className="w-6 h-6 text-green-600" />
@@ -457,7 +535,7 @@ export default function Negotiation() {
             </div>
           )}
 
-          {quotation.status === "rejected" && (
+          {normalizedStatus === "rejected" && (
             <div className="bg-red-50 rounded-2xl border border-red-200 p-6">
               <div className="flex items-center gap-3">
                 <X className="w-6 h-6 text-red-600" />

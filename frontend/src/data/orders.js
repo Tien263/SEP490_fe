@@ -57,6 +57,13 @@ export const orders = [
       { title: 'Đã xác nhận thanh toán', time: '2024-05-28 08:42', done: true },
       { title: 'Đã giao thành công', time: '2024-05-29 10:15', done: true },
     ],
+    trackingStatus: 'delivered',
+    vehicle: {
+      code: '51B-123.45',
+      driver: 'Trần Văn B',
+      shift: 'Ca sáng (7:00 - 12:00)',
+      eta: 'Đã giao ngày 2024-05-29, 10:15',
+    },
   },
   {
     id: 'VT-2024-10039',
@@ -83,6 +90,13 @@ export const orders = [
       { title: 'Đã đóng gói và bàn giao', time: '2024-05-20 13:25', done: true },
       { title: 'Đã giao thành công', time: '2024-05-21 15:00', done: true },
     ],
+    trackingStatus: 'delivered',
+    vehicle: {
+      code: '50H-456.78',
+      driver: 'Phạm Văn C',
+      shift: 'Ca chiều (13:00 - 18:00)',
+      eta: 'Đã giao ngày 2024-05-21, 15:00',
+    },
   },
   {
     id: 'VT-2024-10031',
@@ -112,6 +126,13 @@ export const orders = [
       { title: 'Đã xác nhận thanh toán', time: '2024-05-10 10:20', done: true },
       { title: 'Đang chờ xử lý kho', time: '2024-05-10 14:00', done: false },
     ],
+    trackingStatus: 'received',
+    vehicle: {
+      code: 'Đang cập nhật',
+      driver: 'Kho đang xử lý',
+      shift: 'Chưa phân ca',
+      eta: 'Dự kiến xác nhận trong 24 giờ',
+    },
   },
   {
     id: 'VT-2024-10018',
@@ -138,6 +159,13 @@ export const orders = [
       { title: 'Đã xác nhận thanh toán', time: '2024-04-22 08:02', done: true },
       { title: 'Đang vận chuyển', time: '2024-04-22 11:35', done: true },
     ],
+    trackingStatus: 'shipping',
+    vehicle: {
+      code: '51C-789.10',
+      driver: 'Lê Văn D',
+      shift: 'Ca sáng (7:00 - 12:00)',
+      eta: 'Hôm nay, 09:30 - 11:00',
+    },
   },
   {
     id: 'VT-2024-10005',
@@ -164,6 +192,13 @@ export const orders = [
       { title: 'Đã bàn giao vận chuyển', time: '2024-04-09 08:00', done: true },
       { title: 'Đang giao hàng', time: '2024-04-09 11:15', done: true },
     ],
+    trackingStatus: 'shipping',
+    vehicle: {
+      code: '52D-246.80',
+      driver: 'Nguyễn Văn E',
+      shift: 'Ca chiều (13:00 - 18:00)',
+      eta: 'Hôm nay, 15:00 - 17:30',
+    },
   },
 ]
 
@@ -173,4 +208,32 @@ export function getOrderById(orderId) {
 
 export function isVatExpired(order) {
   return order.daysAgo > 7 && !order.hasVat
+}
+
+export function getTrackingSteps(order) {
+  return [
+    {
+      key: 'received',
+      label: 'ĐÃ NHẬN ĐƠN',
+      desc: 'Kho xác nhận tồn kho, đóng gói và bàn giao cho nhân viên phụ trách.',
+    },
+    {
+      key: 'shipping',
+      label: 'ĐANG VẬN CHUYỂN',
+      desc: 'Đơn hàng đang được giao và có đầy đủ thông tin xe, tài xế, ca vận chuyển.',
+    },
+    {
+      key: 'delivered',
+      label: 'ĐÃ GIAO HÀNG',
+      desc: 'Đơn đã được giao thành công, khách đã ký nhận hoặc xác nhận hoàn tất.',
+    },
+  ].map((step) => ({
+    ...step,
+    done:
+      step.key === 'received'
+        ? true
+        : step.key === 'shipping'
+          ? order.trackingStatus === 'shipping' || order.trackingStatus === 'delivered'
+          : order.trackingStatus === 'delivered',
+  }))
 }

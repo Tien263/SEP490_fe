@@ -3,6 +3,7 @@ import ForgotPassword from './pages/ForgotPassword.jsx'
 import ForgotPasswordSent from './pages/ForgotPasswordSent.jsx'
 import ResetPassword from './pages/ResetPassword.jsx'
 import { AuthProvider } from './context/AuthContext.jsx'
+import { CartProvider } from './context/CartContext.jsx'
 import Cart from './pages/Cart.jsx'
 import Checkout from './pages/Checkout.jsx'
 import Landing from './pages/Landing.jsx'
@@ -15,33 +16,52 @@ import Products from './pages/Products.jsx'
 import Register from './pages/Register.jsx'
 import VerifyOtp from './pages/VerifyOtp.jsx'
 import Negotiation from './pages/Negotiation.jsx'
+import NegotiationList from './pages/NegotiationList.jsx'
 import SalesPortal from './pages/sales/SalesPortal.tsx'
 import AdminPortal from './pages/admin/AdminPortal.tsx'
+import WarehousePortal from './pages/warehouse/WarehousePortal.tsx'
+import ProtectedRouteImport from './components/ProtectedRoute.jsx'
+const ProtectedRoute = ProtectedRouteImport as any;
 
 function App() {
   return (
     <BrowserRouter>
       <AuthProvider>
-        <Routes>
-          <Route path="/" element={<Landing />} />
-          <Route path="/home" element={<Home />} />
-          <Route path="/products" element={<Products />} />
-          <Route path="/products/:id" element={<ProductDetail />} />
-          <Route path="/profile" element={<Profile />} />
-          <Route path="/profile/orders/:orderId" element={<OrderDetail />} />
-          <Route path="/cart" element={<Cart />} />
-          <Route path="/checkout" element={<Checkout />} />
-          <Route path="/login" element={<Login />} />
-          <Route path="/register" element={<Register />} />
-          <Route path="/forgot-password" element={<ForgotPassword />} />
-          <Route path="/forgot-password/sent" element={<ForgotPasswordSent />} />
-          <Route path="/verify-otp" element={<VerifyOtp />} />
-          <Route path="/reset-password" element={<ResetPassword />} />
-          <Route path="/negotiation" element={<Negotiation />} />
-          <Route path="/sales/*" element={<SalesPortal />} />
-          <Route path="/admin/*" element={<AdminPortal />} />
-          <Route path="*" element={<Navigate to="/" replace />} />
-        </Routes>
+        <CartProvider>
+          <Routes>
+            {/* Public Routes */}
+            <Route path="/" element={<Landing />} />
+            <Route path="/home" element={<Home />} />
+            <Route path="/products" element={<Products />} />
+            <Route path="/products/:id" element={<ProductDetail />} />
+            <Route path="/login" element={<Login />} />
+            <Route path="/register" element={<Register />} />
+            <Route path="/forgot-password" element={<ForgotPassword />} />
+            <Route path="/forgot-password/sent" element={<ForgotPasswordSent />} />
+            <Route path="/verify-otp" element={<VerifyOtp />} />
+            <Route path="/reset-password" element={<ResetPassword />} />
+
+            {/* Customer Routes */}
+            <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
+            <Route path="/profile/orders/:orderId" element={<ProtectedRoute><OrderDetail /></ProtectedRoute>} />
+            <Route path="/profile/quotations/:id" element={<ProtectedRoute allowedRoles={['Customer']}><Negotiation /></ProtectedRoute>} />
+            <Route path="/cart" element={<ProtectedRoute allowedRoles={['Customer']}><Cart /></ProtectedRoute>} />
+            <Route path="/checkout" element={<ProtectedRoute allowedRoles={['Customer']}><Checkout /></ProtectedRoute>} />
+            <Route path="/negotiation/:id" element={<ProtectedRoute allowedRoles={['Customer']}><Negotiation /></ProtectedRoute>} />
+            <Route path="/negotiations" element={<ProtectedRoute allowedRoles={['Customer']}><NegotiationList /></ProtectedRoute>} />
+
+            {/* Sales Routes */}
+            <Route path="/sales/*" element={<ProtectedRoute allowedRoles={['SalesStaff', 'Admin']}><SalesPortal /></ProtectedRoute>} />
+
+            {/* Admin Routes */}
+            <Route path="/admin/*" element={<ProtectedRoute allowedRoles={['Admin']}><AdminPortal /></ProtectedRoute>} />
+
+            {/* Warehouse Routes */}
+            <Route path="/warehouse/*" element={<ProtectedRoute allowedRoles={['WarehouseStaff', 'Admin']}><WarehousePortal /></ProtectedRoute>} />
+
+            <Route path="*" element={<Navigate to="/" replace />} />
+          </Routes>
+        </CartProvider>
       </AuthProvider>
     </BrowserRouter>
   )

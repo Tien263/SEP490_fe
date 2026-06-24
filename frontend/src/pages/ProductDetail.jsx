@@ -8,6 +8,7 @@ import ProductCard from '../components/ProductCard.jsx'
 import { Badge } from '../components/ui/Badge.jsx'
 import { Button } from '../components/ui/Button.jsx'
 import { formatPrice, getProductById, getProducts } from '../services/productService.js'
+import { useCart } from '../context/CartContext.jsx'
 
 const tabs = [
   { id: 'description', label: 'Mô Tả' },
@@ -16,6 +17,8 @@ const tabs = [
 
 export default function ProductDetail() {
   const { id } = useParams()
+  const { addToCart } = useCart()
+  const [addingToCart, setAddingToCart] = useState(false)
 
   const [product, setProduct] = useState(null)
   const [relatedProducts, setRelatedProducts] = useState([])
@@ -24,6 +27,20 @@ export default function ProductDetail() {
   const [quantity, setQuantity] = useState(1)
   const [selectedImage, setSelectedImage] = useState(0)
   const [activeTab, setActiveTab] = useState('description')
+
+  async function handleAddToCart() {
+    if (!product) return
+    const qty = Number(quantity) || 1
+    setAddingToCart(true)
+    try {
+      await addToCart(product.id, qty)
+      alert('Đã thêm sản phẩm vào giỏ hàng thành công!')
+    } catch (err) {
+      alert(err.message || 'Không thể thêm vào giỏ hàng')
+    } finally {
+      setAddingToCart(false)
+    }
+  }
 
   // ─── Fetch product detail ──────────────────────────────────────────────────
   useEffect(() => {
@@ -169,7 +186,27 @@ export default function ProductDetail() {
                     >
                       <Minus className="h-4 w-4" />
                     </button>
-                    <span className="w-16 text-center font-medium">{quantity}</span>
+                    <input
+                      type="number"
+                      min="1"
+                      max={product?.availableStock ?? 9999}
+                      value={quantity}
+                      onChange={(e) => {
+                        const val = parseInt(e.target.value, 10)
+                        if (!isNaN(val)) {
+                          const maxStock = product?.availableStock ?? 9999
+                          setQuantity(Math.max(1, Math.min(maxStock, val)))
+                        } else if (e.target.value === '') {
+                          setQuantity('')
+                        }
+                      }}
+                      onBlur={() => {
+                        if (quantity === '' || quantity < 1) {
+                          setQuantity(1)
+                        }
+                      }}
+                      className="w-16 text-center font-medium bg-transparent border-none focus:outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none focus:ring-0"
+                    />
                     <button
                       onClick={() => handleQuantityChange(1)}
                       disabled={product.availableStock != null && quantity >= product.availableStock}
@@ -189,10 +226,11 @@ export default function ProductDetail() {
                 <Button
                   size="lg"
                   className="flex-1 rounded-full bg-gray-900 text-white hover:bg-gray-800"
-                  disabled={product.availableStock === 0}
+                  disabled={product.availableStock === 0 || addingToCart}
+                  onClick={handleAddToCart}
                 >
                   <ShoppingCart className="h-5 w-5" />
-                  Thêm Vào Giỏ
+                  {addingToCart ? 'Đang thêm...' : 'Thêm Vào Giỏ'}
                 </Button>
                 <Button size="lg" variant="outline" className="rounded-full px-6">
                   <Heart className="h-5 w-5" />

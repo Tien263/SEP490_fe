@@ -1,3 +1,4 @@
+import { useState, useEffect } from 'react';
 import {
   ShoppingCart, TrendingUp, Truck, CheckCircle, AlertCircle,
   Clock, Eye, ChevronRight, Plus, RefreshCw, ArrowUp, ArrowDown,
@@ -16,67 +17,18 @@ const WARNING  = '#F97316';
 const ERROR    = '#DC2626';
 const NEUTRAL  = '#64748B';
 
-// ─── Static data ──────────────────────────────────────────────────────────────
-const revenueData = [
-  { day: 'T2', revenue: 42, target: 80 },
-  { day: 'T3', revenue: 68, target: 80 },
-  { day: 'T4', revenue: 53, target: 80 },
-  { day: 'T5', revenue: 91, target: 80 },
-  { day: 'T6', revenue: 74, target: 80 },
-  { day: 'T7', revenue: 38, target: 40 },
-  { day: 'CN', revenue: 22, target: 40 },
-];
-
-const productData = [
-  { name: 'Giấy vệ sinh VT 10 cuộn', revenue: 84 },
-  { name: 'Khăn giấy ăn 450g', revenue: 71 },
-  { name: 'Giấy cuộn jumbo 200m', revenue: 63 },
-  { name: 'Khăn ướt 80 tờ', revenue: 55 },
-  { name: 'Giấy rút hộp 250 tờ', revenue: 48 },
-];
-
-const urgentOrders = [
-  { id: 'DH-2406-087', customer: 'Siêu thị Vinmart+', amount: '12.400.000', deadline: '30 phút nữa', level: 'critical' },
-  { id: 'DH-2406-084', customer: 'Chuỗi Bách Hóa Xanh', amount: '8.750.000', deadline: '2 giờ nữa', level: 'high' },
-  { id: 'DH-2406-079', customer: 'Nhà hàng Nam Phúc', amount: '5.200.000', deadline: '4 giờ nữa', level: 'normal' },
-];
-
-const warehouseQueue = [
-  { id: 'DH-2406-082', customer: 'Khách sạn Rex Sài Gòn', items: 14, status: 'Chờ xác nhận' },
-  { id: 'DH-2406-081', customer: 'Siêu thị Co.opmart', items: 8, status: 'Đang đóng gói' },
-  { id: 'DH-2406-078', customer: 'Chuỗi cửa hàng 7-Eleven', items: 22, status: 'Chờ xác nhận' },
-];
-
-const quoteRequests = [
-  { id: 'BG-2406-019', customer: 'Tập đoàn Dệt May Phú Cường', value: '145.000.000', time: '15 phút trước' },
-  { id: 'BG-2406-018', customer: 'Chuỗi khách sạn Mường Thanh', value: '112.000.000', time: '2 giờ trước' },
-];
-
-const recentOrders = [
-  { id: 'DH-2406-092', customer: 'Siêu thị Vinmart+', date: '09:42', amount: '18.500.000', status: 'new', payment: 'SePay' },
-  { id: 'DH-2406-091', customer: 'Nhà hàng Cây Dừa', date: '09:21', amount: '4.200.000', status: 'confirmed', payment: 'COD' },
-  { id: 'DH-2406-090', customer: 'Khách sạn Rex', date: '08:57', amount: '9.800.000', status: 'preparing', payment: 'SePay' },
-  { id: 'DH-2406-089', customer: 'Chuỗi Bách Hóa Xanh', date: '08:33', amount: '6.300.000', status: 'shipping', payment: 'COD' },
-  { id: 'DH-2406-088', customer: 'Co.opmart Nguyễn Đình Chiểu', date: '08:15', amount: '27.600.000', status: 'delivered', payment: 'SePay' },
-  { id: 'DH-2406-087', customer: 'Siêu thị Vinmart+ Q1', date: '07:48', amount: '12.400.000', status: 'new', payment: 'COD' },
-  { id: 'DH-2406-086', customer: 'Nhà hàng La Maison', date: '07:22', amount: '3.750.000', status: 'confirmed', payment: 'SePay' },
-  { id: 'DH-2406-085', customer: 'Khách sạn Caravelle', date: '06:55', amount: '8.900.000', status: 'preparing', payment: 'COD' },
-  { id: 'DH-2406-084', customer: 'Chuỗi Bách Hóa Xanh Q3', date: '06:31', amount: '8.750.000', status: 'shipping', payment: 'SePay' },
-  { id: 'DH-2406-083', customer: 'Nhà hàng Ngọc Sương', date: '05:44', amount: '2.100.000', status: 'delivered', payment: 'COD' },
-];
-
 const ORDER_STATUS: Record<string, { label: string; bg: string }> = {
+  New:       { label: 'Đơn mới',   bg: NEUTRAL },
+  Received:  { label: 'Đã nhận',   bg: INFO },
+  InTransit: { label: 'Đang giao', bg: WARNING },
+  Delivered: { label: 'Đã giao',   bg: SUCCESS },
+  Cancelled: { label: 'Đã hủy',    bg: ERROR },
   new:       { label: 'Đơn mới',   bg: NEUTRAL },
   confirmed: { label: 'Xác nhận',  bg: INFO },
-  preparing: { label: 'Chuẩn bị', bg: NEUTRAL },
+  preparing: { label: 'Chuẩn bị',  bg: NEUTRAL },
   shipping:  { label: 'Đang giao', bg: NEUTRAL },
   delivered: { label: 'Đã giao',   bg: SUCCESS },
   cancelled: { label: 'Đã hủy',    bg: ERROR },
-};
-
-const WH_STATUS: Record<string, string> = {
-  'Chờ xác nhận': NEUTRAL,
-  'Đang đóng gói': INFO,
 };
 
 function StatusBadge({ label, bg }: { label: string; bg: string }) {
@@ -91,10 +43,15 @@ function StatusBadge({ label, bg }: { label: string; bg: string }) {
 }
 
 function PaymentBadge({ method }: { method: string }) {
+  let bg = NEUTRAL;
+  if (method === 'SePay') bg = INFO;
+  else if (method === 'Cash') bg = SUCCESS;
+  else if (method === 'COD') bg = WARNING;
+
   return (
     <span
       className="inline-block px-2 text-white text-[11px] font-medium"
-      style={{ backgroundColor: method === 'SePay' ? INFO : WARNING, borderRadius: 4, lineHeight: '22px', height: 22 }}
+      style={{ backgroundColor: bg, borderRadius: 4, lineHeight: '22px', height: 22 }}
     >
       {method}
     </span>
@@ -105,15 +62,15 @@ function KpiRow({ label, value, sub, delta, up, icon }: {
   label: string; value: string; sub?: string; delta?: string; up?: boolean; icon: React.ReactNode;
 }) {
   return (
-    <div className="bg-white border border-[#E5E7EB] rounded-lg p-3.5">
+    <div className="bg-white border border-[#E5E7EB] rounded-lg p-3.5 shadow-sm">
       <div className="flex items-center justify-between mb-2">
-        <span className="text-[11px] text-[#6B7280] leading-none">{label}</span>
+        <span className="text-[11px] text-[#6B7280] leading-none font-bold uppercase tracking-wider">{label}</span>
         <span className="text-[#9CA3AF]">{icon}</span>
       </div>
-      <p className="text-[22px] font-bold text-[#374151] leading-none tabular-nums">{value}</p>
-      {sub && <p className="text-[11px] text-[#9CA3AF] mt-1.5">{sub}</p>}
+      <p className="text-[20px] font-extrabold text-[#374151] leading-none tabular-nums mt-1">{value}</p>
+      {sub && <p className="text-[10px] text-[#9CA3AF] mt-2 font-medium">{sub}</p>}
       {delta && (
-        <p className={`text-[11px] mt-1.5 flex items-center gap-0.5 font-medium ${up ? 'text-[#16A34A]' : 'text-[#DC2626]'}`}>
+        <p className={`text-[10px] mt-2 flex items-center gap-0.5 font-bold ${up ? 'text-[#16A34A]' : 'text-[#DC2626]'}`}>
           {up ? <ArrowUp className="w-3 h-3" /> : <ArrowDown className="w-3 h-3" />}
           {delta}
         </p>
@@ -125,9 +82,9 @@ function KpiRow({ label, value, sub, delta, up, icon }: {
 function PanelHeader({ title, action, onAction }: { title: string; action?: string; onAction?: () => void }) {
   return (
     <div className="flex items-center justify-between px-3 py-2 border-b border-[#E5E7EB]">
-      <span className="text-[11px] font-semibold text-[#6B7280] uppercase tracking-wide">{title}</span>
+      <span className="text-[11px] font-bold text-[#4B5563] uppercase tracking-wider">{title}</span>
       {action && (
-        <button onClick={onAction} className="text-[11px] text-[#1F3B64] hover:underline flex items-center gap-0.5">
+        <button onClick={onAction} className="text-[11px] text-[#1F3B64] hover:underline flex items-center gap-0.5 font-semibold cursor-pointer">
           {action} <ChevronRight className="w-3 h-3" />
         </button>
       )}
@@ -137,26 +94,149 @@ function PanelHeader({ title, action, onAction }: { title: string; action?: stri
 
 const tooltipStyle = { fontSize: 11, borderRadius: 4, border: '1px solid #E5E7EB', padding: '4px 8px', boxShadow: 'none' };
 
+const formatPrice = (price: number) => {
+  return new Intl.NumberFormat('vi-VN').format(price);
+};
+
+const parseDate = (dateStr: string) => {
+  if (!dateStr) return new Date();
+  const hasTimezone = /([+-]\d{2}(:?\d{2})?|Z)$/.test(dateStr);
+  return new Date(hasTimezone ? dateStr : dateStr + 'Z');
+};
+
+const formatTimeOrDate = (dateStr: string) => {
+  if (!dateStr) return '';
+  const d = parseDate(dateStr);
+  const hours = String(d.getHours()).padStart(2, '0');
+  const minutes = String(d.getMinutes()).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  const month = String(d.getMonth() + 1).padStart(2, '0');
+  return `${hours}:${minutes} ${day}/${month}`;
+};
+
 export default function SalesDashboard() {
   const navigate = useNavigate();
+  const [stats, setStats] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+  const [lastUpdated, setLastUpdated] = useState('');
+
+  const fetchStats = async () => {
+    setLoading(true);
+    setError('');
+    try {
+      const response = await fetch('/api/orders/sales-dashboard', {
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('accessToken')}`
+        }
+      });
+      if (response.ok) {
+        const data = await response.json();
+        setStats(data);
+        const now = new Date();
+        setLastUpdated(`${now.toLocaleDateString('vi-VN', { weekday: 'long' })} · ${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`);
+      } else {
+        setError('Không thể tải dữ liệu dashboard.');
+      }
+    } catch (err) {
+      console.error(err);
+      setError('Lỗi kết nối tới máy chủ.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchStats();
+  }, []);
+
+  // Compute daily sums of revenue for the last 7 days dynamically
+  const last7DaysRevenue = Array.from({ length: 7 }).map((_, i) => {
+    const d = new Date();
+    d.setDate(d.getDate() - (6 - i));
+    const dayName = d.toLocaleDateString('vi-VN', { weekday: 'short' }); // T2, T3...
+    
+    // Filter orders paid on this date
+    const dayOrders = (stats?.recentOrders || []).filter((o: any) => {
+      const oDate = parseDate(o.createdAt);
+      return oDate.toDateString() === d.toDateString() && o.paymentStatus === 'Paid';
+    });
+    
+    const sum = dayOrders.reduce((acc: number, o: any) => acc + o.finalPayment, 0);
+    const sumInMillions = sum / 1_000_000;
+    
+    return {
+      day: dayName,
+      revenue: Number(sumInMillions.toFixed(2)),
+      target: 0.5
+    };
+  });
+
+  const topProductsMock = [
+    { name: 'Giấy vệ sinh VT 10 cuộn', revenue: 84 },
+    { name: 'Khăn giấy ăn 450g', revenue: 71 },
+    { name: 'Giấy cuộn jumbo 200m', revenue: 63 },
+    { name: 'Khăn ướt 80 tờ', revenue: 55 },
+    { name: 'Giấy rút hộp 250 tờ', revenue: 48 },
+  ];
+
+  if (loading) {
+    return (
+      <div className="flex flex-col h-full bg-[#F5F7FA]">
+        <div className="bg-white border-b border-[#E5E7EB] px-5 h-11 flex items-center justify-between">
+          <span className="text-[13px] font-semibold text-[#374151]">Dashboard bán hàng</span>
+          <span className="text-[11px] text-[#9CA3AF]">Đang tải...</span>
+        </div>
+        <div className="flex-1 flex items-center justify-center">
+          <div className="flex flex-col items-center gap-2">
+            <RefreshCw className="w-8 h-8 animate-spin text-[#1F3B64]" />
+            <span className="text-xs text-slate-500 font-semibold">Đang tải dữ liệu dashboard...</span>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="flex flex-col h-full bg-[#F5F7FA]">
+        <div className="bg-white border-b border-[#E5E7EB] px-5 h-11 flex items-center justify-between">
+          <span className="text-[13px] font-semibold text-[#374151]">Dashboard bán hàng</span>
+        </div>
+        <div className="flex-1 flex flex-col items-center justify-center gap-3">
+          <span className="text-xs text-red-500 font-bold">{error}</span>
+          <button 
+            onClick={fetchStats}
+            className="px-3 py-1 bg-[#1F3B64] text-white rounded text-xs font-semibold cursor-pointer"
+          >
+            Thử lại
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="flex flex-col h-full" style={{ background: '#F5F7FA' }}>
       {/* Toolbar */}
       <div className="bg-white border-b border-[#E5E7EB] px-5 h-11 flex items-center justify-between flex-shrink-0">
         <div>
-          <span className="text-[13px] font-semibold text-[#374151]">Dashboard bán hàng</span>
-          <span className="text-[11px] text-[#9CA3AF] ml-3">Thứ Sáu, 05/06/2026 · cập nhật 09:45</span>
+          <span className="text-[13px] font-bold text-[#374151]">Dashboard bán hàng</span>
+          <span className="text-[11px] text-[#9CA3AF] ml-3">Cập nhật lúc: {lastUpdated}</span>
         </div>
         <div className="flex items-center gap-2">
-          <button className="h-7 px-3 text-[12px] border border-[#D1D5DB] rounded text-[#374151] bg-white hover:bg-gray-50 flex items-center gap-1.5">
+          <button 
+            onClick={fetchStats}
+            className="h-7 px-3 text-[12px] border border-[#D1D5DB] rounded text-[#374151] bg-white hover:bg-gray-50 flex items-center gap-1.5 cursor-pointer transition-colors"
+          >
             <RefreshCw className="w-3 h-3 text-[#9CA3AF]" /> Làm mới
           </button>
           <button
-            className="h-7 px-3 text-[12px] rounded text-white flex items-center gap-1.5"
+            onClick={() => navigate('/sales/direct-purchase')}
+            className="h-7 px-3 text-[12px] rounded text-white flex items-center gap-1.5 cursor-pointer hover:opacity-90 transition-opacity"
             style={{ backgroundColor: PRIMARY }}
           >
-            <Plus className="w-3 h-3" /> Tạo đơn hàng
+            <Plus className="w-3 h-3" /> Tạo đơn hàng POS
           </button>
         </div>
       </div>
@@ -164,25 +244,25 @@ export default function SalesDashboard() {
       <div className="flex-1 overflow-auto p-4 space-y-3">
         {/* KPI row */}
         <div className="grid grid-cols-6 gap-2">
-          <KpiRow label="Đơn mới hôm nay"     value="7"       sub="Cần xử lý ngay"          delta="+2 vs hôm qua"     up={true}  icon={<ShoppingCart className="w-4 h-4" />} />
-          <KpiRow label="Đang xử lý"           value="23"      sub="14 chuẩn bị · 9 xác nhận"                                      icon={<Clock className="w-4 h-4" />} />
-          <KpiRow label="Đang vận chuyển"      value="18"      sub="Dự kiến giao hôm nay"                                           icon={<Truck className="w-4 h-4" />} />
-          <KpiRow label="Đã giao hôm nay"      value="31"      sub="Tỷ lệ thành công 96,9%"  delta="+5 vs hôm qua"     up={true}  icon={<CheckCircle className="w-4 h-4" />} />
-          <KpiRow label="Doanh thu hôm nay"    value="74,2 tr" sub="Mục tiêu 120 tr"         delta="+12% vs hôm qua"   up={true}  icon={<TrendingUp className="w-4 h-4" />} />
-          <KpiRow label="Công nợ cần thu"      value="248,5 tr" sub="12 KH · 3 quá hạn"      delta="-8,2 tr vs hôm qua" up={false} icon={<AlertCircle className="w-4 h-4" />} />
+          <KpiRow label="Đơn mới hôm nay"     value={String(stats?.kpi?.newOrdersCount ?? 0)}       sub="Cần xử lý ngay"          icon={<ShoppingCart className="w-4 h-4" />} />
+          <KpiRow label="Đang xử lý"           value={String(stats?.kpi?.processingOrdersCount ?? 0)}      sub="Awaiting action"                                      icon={<Clock className="w-4 h-4" />} />
+          <KpiRow label="Đang vận chuyển"      value={String(stats?.kpi?.shippingOrdersCount ?? 0)}      sub="Dự kiến giao hôm nay"                                           icon={<Truck className="w-4 h-4" />} />
+          <KpiRow label="Đã giao hôm nay"      value={String(stats?.kpi?.deliveredTodayCount ?? 0)}      sub="Thành công"              icon={<CheckCircle className="w-4 h-4" />} />
+          <KpiRow label="Doanh thu hôm nay"    value={formatPrice(stats?.kpi?.revenueToday ?? 0) + ' đ'} sub="Hôm nay"           icon={<TrendingUp className="w-4 h-4" />} />
+          <KpiRow label="Công nợ cần thu"      value={formatPrice(stats?.kpi?.pendingDebt ?? 0) + ' đ'} sub="Unpaid orders"          icon={<AlertCircle className="w-4 h-4" />} />
         </div>
 
         {/* Charts */}
         <div className="grid grid-cols-5 gap-3">
-          <div className="col-span-3 bg-white border border-[#E5E7EB] rounded-lg">
-            <PanelHeader title="Doanh thu 7 ngày (triệu đồng)" />
+          <div className="col-span-3 bg-white border border-[#E5E7EB] rounded-lg shadow-sm">
+            <PanelHeader title="Doanh thu 7 ngày qua (triệu đồng)" />
             <div className="p-3">
               <div className="flex items-center gap-4 mb-2 text-[11px] text-[#6B7280]">
                 <span className="flex items-center gap-1.5"><span className="w-3 h-[2px] inline-block" style={{ background: PRIMARY }} /> Thực tế</span>
                 <span className="flex items-center gap-1.5"><span className="w-3 inline-block" style={{ borderTop: '2px dashed #D1D5DB' }} /> Mục tiêu</span>
               </div>
               <ResponsiveContainer width="100%" height={150}>
-                <AreaChart data={revenueData} margin={{ top: 4, right: 4, left: -24, bottom: 0 }}>
+                <AreaChart data={last7DaysRevenue} margin={{ top: 4, right: 4, left: -24, bottom: 0 }}>
                   <defs>
                     <linearGradient id="revFill" x1="0" y1="0" x2="0" y2="1">
                       <stop offset="0%"   stopColor={PRIMARY} stopOpacity={0.1} />
@@ -192,7 +272,10 @@ export default function SalesDashboard() {
                   <CartesianGrid strokeDasharray="3 3" stroke="#F3F4F6" vertical={false} />
                   <XAxis dataKey="day" tick={{ fontSize: 10, fill: '#9CA3AF' }} axisLine={false} tickLine={false} />
                   <YAxis tick={{ fontSize: 10, fill: '#9CA3AF' }} axisLine={false} tickLine={false} />
-                  <Tooltip contentStyle={tooltipStyle} formatter={(v: unknown) => [`${v} tr đ`]} />
+                  <Tooltip 
+                    contentStyle={tooltipStyle} 
+                    formatter={(v: any) => [`${v} tr đ (${formatPrice(v * 1_000_000)} đ)`, "Doanh thu"]} 
+                  />
                   <Area type="monotone" dataKey="revenue" name="Thực tế" stroke={PRIMARY} strokeWidth={1.5} fill="url(#revFill)" dot={{ r: 2.5, fill: PRIMARY, strokeWidth: 0 }} />
                   <Area type="monotone" dataKey="target"  name="Mục tiêu" stroke="#D1D5DB" strokeWidth={1} strokeDasharray="4 3" fill="none" dot={false} />
                 </AreaChart>
@@ -200,11 +283,11 @@ export default function SalesDashboard() {
             </div>
           </div>
 
-          <div className="col-span-2 bg-white border border-[#E5E7EB] rounded-lg">
+          <div className="col-span-2 bg-white border border-[#E5E7EB] rounded-lg shadow-sm">
             <PanelHeader title="Top sản phẩm (triệu đồng)" />
             <div className="p-3">
               <ResponsiveContainer width="100%" height={150}>
-                <BarChart data={productData} layout="vertical" margin={{ top: 0, right: 28, left: 0, bottom: 0 }} barSize={9}>
+                <BarChart data={topProductsMock} layout="vertical" margin={{ top: 0, right: 28, left: 0, bottom: 0 }} barSize={9}>
                   <XAxis type="number" tick={{ fontSize: 10, fill: '#9CA3AF' }} axisLine={false} tickLine={false} />
                   <YAxis type="category" dataKey="name" width={130} tick={{ fontSize: 10, fill: '#374151' }} axisLine={false} tickLine={false} />
                   <Tooltip contentStyle={tooltipStyle} formatter={(v: unknown) => [`${v} tr đ`]} />
@@ -217,102 +300,137 @@ export default function SalesDashboard() {
 
         {/* Operational widgets */}
         <div className="grid grid-cols-3 gap-3">
-          <div className="bg-white border border-[#E5E7EB] rounded-lg">
-            <PanelHeader title="Đơn cần xử lý gấp" action="Xem đơn hàng" />
-            <div className="divide-y divide-[#F3F4F6]">
-              {urgentOrders.map(o => (
-                <div key={o.id} className="flex items-stretch">
-                  <div className="w-[3px] flex-shrink-0 self-stretch" style={{ backgroundColor: o.level === 'critical' ? ERROR : o.level === 'high' ? WARNING : '#D1D5DB' }} />
-                  <div className="flex-1 px-3 py-2.5">
-                    <div className="flex items-center justify-between">
-                      <span className="text-[11px] font-semibold" style={{ color: PRIMARY }}>{o.id}</span>
-                      <span className="text-[10px] text-[#9CA3AF] flex items-center gap-1">
-                        <Clock className="w-2.5 h-2.5" />{o.deadline}
-                      </span>
+          <div className="bg-white border border-[#E5E7EB] rounded-lg shadow-sm">
+            <PanelHeader title="Đơn cần xử lý gấp" />
+            <div className="divide-y divide-[#F3F4F6] max-h-56 overflow-y-auto">
+              {(stats?.urgentOrders || []).length === 0 ? (
+                <div className="p-6 text-center text-xs text-slate-400">Không có đơn hàng khẩn cấp.</div>
+              ) : (
+                (stats.urgentOrders || []).map((o: any) => (
+                  <div key={o.id} className="flex items-stretch">
+                    <div className="w-[3px] flex-shrink-0 self-stretch" style={{ backgroundColor: o.level === 'critical' ? ERROR : o.level === 'high' ? WARNING : '#D1D5DB' }} />
+                    <div className="flex-1 px-3 py-2">
+                      <div className="flex items-center justify-between">
+                        <span className="text-[11px] font-bold" style={{ color: PRIMARY }}>{o.id}</span>
+                        <span className="text-[10px] text-[#9CA3AF] flex items-center gap-1">
+                          <Clock className="w-2.5 h-2.5" />{o.deadline}
+                        </span>
+                      </div>
+                      <p className="text-[11px] text-[#6B7280] mt-0.5 truncate">{o.customer}</p>
+                      <p className="text-[11px] font-bold text-[#374151] mt-0.5 tabular-nums">{formatPrice(o.amount)} ₫</p>
                     </div>
-                    <p className="text-[11px] text-[#6B7280] mt-0.5 truncate">{o.customer}</p>
-                    <p className="text-[11px] font-semibold text-[#374151] mt-0.5 tabular-nums">{o.amount}₫</p>
                   </div>
-                </div>
-              ))}
+                ))
+              )}
             </div>
           </div>
 
-          <div className="bg-white border border-[#E5E7EB] rounded-lg">
-            <PanelHeader title="Chờ xác nhận kho" action="Xem kho" />
-            <div className="divide-y divide-[#F3F4F6]">
-              {warehouseQueue.map(o => (
-                <div key={o.id} className="px-3 py-2.5 flex items-center justify-between">
-                  <div className="min-w-0">
-                    <p className="text-[11px] font-semibold truncate" style={{ color: PRIMARY }}>{o.id}</p>
-                    <p className="text-[11px] text-[#6B7280] truncate max-w-[160px]">{o.customer}</p>
-                    <p className="text-[10px] text-[#9CA3AF] mt-0.5">{o.items} sản phẩm</p>
+          <div className="bg-white border border-[#E5E7EB] rounded-lg shadow-sm">
+            <PanelHeader title="Chờ xác nhận kho" />
+            <div className="divide-y divide-[#F3F4F6] max-h-56 overflow-y-auto">
+              {(stats?.warehouseQueue || []).length === 0 ? (
+                <div className="p-6 text-center text-xs text-slate-400">Không có đơn hàng chờ kho.</div>
+              ) : (
+                (stats.warehouseQueue || []).map((o: any) => (
+                  <div key={o.id} className="px-3 py-2 flex items-center justify-between">
+                    <div className="min-w-0">
+                      <p className="text-[11px] font-bold truncate" style={{ color: PRIMARY }}>{o.id}</p>
+                      <p className="text-[11px] text-[#6B7280] truncate max-w-[160px]">{o.customer}</p>
+                      <p className="text-[10px] text-[#9CA3AF] mt-0.5">{o.itemsCount} sản phẩm</p>
+                    </div>
+                    <StatusBadge label={o.status} bg={o.status === 'Chờ xác nhận' ? NEUTRAL : INFO} />
                   </div>
-                  <StatusBadge label={o.status} bg={WH_STATUS[o.status] ?? NEUTRAL} />
-                </div>
-              ))}
+                ))
+              )}
             </div>
           </div>
 
-          <div className="bg-white border border-[#E5E7EB] rounded-lg">
+          <div className="bg-white border border-[#E5E7EB] rounded-lg shadow-sm">
             <PanelHeader title="Yêu cầu báo giá mới" action="Xem báo giá" onAction={() => navigate('/sales/negotiation')} />
-            <div className="divide-y divide-[#F3F4F6]">
-              {quoteRequests.map(q => (
-                <div key={q.id} className="px-3 py-2.5">
-                  <div className="flex items-center justify-between">
-                    <span className="text-[11px] font-semibold" style={{ color: PRIMARY }}>{q.id}</span>
-                    <span className="text-[10px] text-[#9CA3AF]">{q.time}</span>
+            <div className="divide-y divide-[#F3F4F6] max-h-56 overflow-y-auto">
+              {(stats?.quoteRequests || []).length === 0 ? (
+                <div className="p-6 text-center text-xs text-slate-400">Không có yêu cầu báo giá mới.</div>
+              ) : (
+                (stats.quoteRequests || []).map((q: any) => (
+                  <div key={q.id} className="px-3 py-2">
+                    <div className="flex items-center justify-between">
+                      <span className="text-[11px] font-bold truncate max-w-[110px]" style={{ color: PRIMARY }} title={q.id}>{q.id.slice(0, 8)}...</span>
+                      <span className="text-[10px] text-[#9CA3AF]">{formatTimeOrDate(q.requestDate)}</span>
+                    </div>
+                    <p className="text-[11px] text-[#374151] mt-0.5 truncate">{q.customerName}</p>
+                    <div className="flex items-center justify-between mt-1">
+                      <span className="text-[11px] font-bold text-[#374151] tabular-nums">{formatPrice(q.value)} ₫</span>
+                      <button
+                        className="text-[11px] px-2 h-6 border border-[#D1D5DB] rounded bg-white text-[#374151] hover:bg-gray-50 cursor-pointer font-semibold"
+                        onClick={() => navigate('/sales/negotiation')}
+                      >
+                        Xem
+                      </button>
+                    </div>
                   </div>
-                  <p className="text-[11px] text-[#374151] mt-0.5 truncate">{q.customer}</p>
-                  <div className="flex items-center justify-between mt-1.5">
-                    <span className="text-[11px] font-semibold text-[#374151] tabular-nums">{q.value}₫</span>
-                    <button
-                      className="text-[11px] px-2 h-6 border border-[#D1D5DB] rounded bg-white text-[#374151] hover:bg-gray-50"
-                      onClick={() => navigate('/sales/negotiation')}
-                    >
-                      Xem
-                    </button>
-                  </div>
-                </div>
-              ))}
+                ))
+              )}
             </div>
           </div>
         </div>
 
         {/* Recent orders table */}
-        <div className="bg-white border border-[#E5E7EB] rounded-lg">
-          <PanelHeader title="Đơn hàng gần đây — 10 đơn" action="Tất cả đơn hàng" />
+        <div className="bg-white border border-[#E5E7EB] rounded-lg shadow-sm">
+          <PanelHeader title="Đơn hàng gần đây — 10 đơn mới nhất" />
           <div className="overflow-x-auto">
-            <table className="w-full" style={{ fontSize: 12 }}>
+            <table className="w-full text-left" style={{ fontSize: 12 }}>
               <thead>
                 <tr style={{ background: '#F9FAFB', borderBottom: '1px solid #E5E7EB' }}>
                   {['Mã đơn', 'Khách hàng', 'Giờ đặt', 'Tổng tiền (₫)', 'Thanh toán', 'Trạng thái', ''].map(h => (
-                    <th key={h} className="px-3 py-2 text-left text-[11px] font-semibold text-[#6B7280] whitespace-nowrap">{h}</th>
+                    <th 
+                      key={h} 
+                      className={`px-3 py-2 text-[11px] font-bold text-[#6B7280] whitespace-nowrap uppercase tracking-wider ${h === 'Tổng tiền (₫)' ? 'text-right' : ''}`}
+                    >
+                      {h}
+                    </th>
                   ))}
                 </tr>
               </thead>
               <tbody>
-                {recentOrders.map((o, i) => (
-                  <tr
-                    key={o.id}
-                    style={{ borderBottom: '1px solid #F3F4F6', background: i % 2 === 1 ? '#FAFAFA' : '#FFFFFF' }}
-                    className="hover:bg-blue-50/30 transition-colors"
-                  >
-                    <td className="px-3 py-2 font-medium whitespace-nowrap" style={{ color: PRIMARY }}>{o.id}</td>
-                    <td className="px-3 py-2 text-[#374151] max-w-[180px] truncate">{o.customer}</td>
-                    <td className="px-3 py-2 text-[#6B7280] whitespace-nowrap tabular-nums">{o.date}</td>
-                    <td className="px-3 py-2 text-right font-semibold text-[#374151] whitespace-nowrap tabular-nums">{o.amount}</td>
-                    <td className="px-3 py-2"><PaymentBadge method={o.payment} /></td>
-                    <td className="px-3 py-2">
-                      <StatusBadge label={ORDER_STATUS[o.status].label} bg={ORDER_STATUS[o.status].bg} />
-                    </td>
-                    <td className="px-3 py-2">
-                      <button className="text-[#9CA3AF] hover:text-[#1F3B64] transition-colors">
-                        <Eye className="w-3.5 h-3.5" />
-                      </button>
-                    </td>
+                {(stats?.recentOrders || []).length === 0 ? (
+                  <tr>
+                    <td colSpan={7} className="px-3 py-6 text-center text-xs text-slate-400">Không có đơn hàng nào gần đây.</td>
                   </tr>
-                ))}
+                ) : (
+                  (stats.recentOrders || []).map((o: any, i: number) => (
+                    <tr
+                      key={o.id}
+                      style={{ borderBottom: '1px solid #F3F4F6', background: i % 2 === 1 ? '#FAFAFA' : '#FFFFFF' }}
+                      className="hover:bg-blue-50/30 transition-colors"
+                    >
+                      <td className="px-3 py-2 font-bold whitespace-nowrap" style={{ color: PRIMARY }}>{o.orderCode}</td>
+                      <td className="px-3 py-2 text-[#374151] max-w-[180px] truncate">{o.customerName}</td>
+                      <td className="px-3 py-2 text-[#6B7280] whitespace-nowrap tabular-nums">{formatTimeOrDate(o.createdAt)}</td>
+                      <td className="px-3 py-2 text-right font-bold text-[#374151] whitespace-nowrap tabular-nums">{formatPrice(o.finalPayment)}</td>
+                      <td className="px-3 py-2"><PaymentBadge method={o.paymentMethod} /></td>
+                      <td className="px-3 py-2">
+                        <StatusBadge label={ORDER_STATUS[o.orderStatus]?.label || o.orderStatus} bg={ORDER_STATUS[o.orderStatus]?.bg || NEUTRAL} />
+                      </td>
+                      <td className="px-3 py-2 text-center">
+                        {o.invoicePdfUrl ? (
+                          <a 
+                            href={`/api${o.invoicePdfUrl}`} 
+                            target="_blank" 
+                            rel="noopener noreferrer"
+                            className="text-[#9CA3AF] hover:text-[#1F3B64] transition-colors inline-block"
+                            title="Xem hóa đơn PDF"
+                          >
+                            <Eye className="w-3.5 h-3.5" />
+                          </a>
+                        ) : (
+                          <span className="text-slate-200" title="Không có PDF">
+                            <Eye className="w-3.5 h-3.5 opacity-30" />
+                          </span>
+                        )}
+                      </td>
+                    </tr>
+                  ))
+                )}
               </tbody>
             </table>
           </div>
