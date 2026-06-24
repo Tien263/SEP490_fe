@@ -486,15 +486,26 @@ export default function Checkout() {
     return () => clearTimeout(timer)
   }, [sepayPaid])
 
+  // ── Auto-upload PDF when order is created ──────────────────────────────────
+  useEffect(() => {
+    if (!createdOrder) return
+    const run = async () => {
+      // Wait a short delay to make sure the element is mounted in the DOM
+      await new Promise((resolve) => setTimeout(resolve, 800))
+      await generateAndUploadPdf(createdOrder.orderId, createdOrder.orderCode)
+    }
+    run()
+  }, [createdOrder])
+
   function showSuccess(message) {
     setSuccessToast({ id: Date.now(), message })
   }
 
   // ── PDF Generation ─────────────────────────────────────────────────────────
   async function generateAndDownloadPdf() {
-    if (!invoiceRef.current) return
+    if (!uploadInvoiceRef.current) return
     try {
-      const canvas = await html2canvas(invoiceRef.current, { scale: 2, useCORS: true })
+      const canvas = await html2canvas(uploadInvoiceRef.current, { scale: 2, useCORS: true })
       const imgData = canvas.toDataURL('image/jpeg', 0.95)
       const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a5' })
       pdf.addImage(imgData, 'JPEG', 0, 0, 148, 210)
@@ -754,7 +765,7 @@ export default function Checkout() {
 
             {/* Invoice preview hidden for PDF generation */}
             <div style={{ position: 'absolute', left: '-9999px', top: 0 }}>
-              <div ref={invoiceRef}>
+              <div ref={uploadInvoiceRef}>
                 <InvoicePreview
                   cartProducts={cartProducts}
                   selectedAddress={selectedAddress}
@@ -766,7 +777,7 @@ export default function Checkout() {
                   vat={vat}
                   paymentMethod={paymentMethod}
                   orderCode={createdOrder.orderCode}
-                  isPaid={paymentMethod === 'sepay' ? sepayPaid : true}
+                  isPaid={true}
                   customerName={profileFull?.representative || profileFull?.companyName || ''}
                   customerPhone={profileFull?.companyPhone || ''}
                   profileFull={profileFull}
@@ -913,6 +924,29 @@ export default function Checkout() {
             </div>
           </motion.div>
         </div>
+
+        {/* Hidden InvoicePreview for PDF upload generation */}
+        <div style={{ position: 'absolute', left: '-9999px', top: 0, pointerEvents: 'none' }}>
+          <div ref={uploadInvoiceRef}>
+            <InvoicePreview
+              cartProducts={cartProducts}
+              selectedAddress={selectedAddress}
+              discountRate={discountRate}
+              discountAmount={discountAmount}
+              vatRequested={vatRequested}
+              subtotal={subtotal}
+              total={total}
+              vat={vat}
+              paymentMethod={paymentMethod}
+              orderCode={createdOrder.orderCode}
+              isPaid={true}
+              customerName={profileFull?.representative || profileFull?.companyName || ''}
+              customerPhone={profileFull?.companyPhone || ''}
+              profileFull={profileFull}
+            />
+          </div>
+        </div>
+
         <Footer />
       </div>
     )
@@ -1402,30 +1436,6 @@ export default function Checkout() {
           />
         )}
       </AnimatePresence>
-
-      {/* Permanent hidden InvoicePreview for PDF upload generation */}
-      {createdOrder && (
-        <div style={{ position: 'absolute', left: '-9999px', top: 0, pointerEvents: 'none' }}>
-          <div ref={uploadInvoiceRef}>
-            <InvoicePreview
-              cartProducts={cartProducts}
-              selectedAddress={selectedAddress}
-              discountRate={discountRate}
-              discountAmount={discountAmount}
-              vatRequested={vatRequested}
-              subtotal={subtotal}
-              total={total}
-              vat={vat}
-              paymentMethod={paymentMethod}
-              orderCode={createdOrder.orderCode}
-              isPaid={true} // Always generate the final PDF with isPaid=true for the email attachment
-              customerName={profileFull?.representative || profileFull?.companyName || ''}
-              customerPhone={profileFull?.companyPhone || ''}
-              profileFull={profileFull}
-            />
-          </div>
-        </div>
-      )}
 
       <Footer />
     </div>
