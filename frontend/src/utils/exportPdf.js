@@ -2,7 +2,7 @@ import html2canvas from 'html2canvas'
 import { jsPDF } from 'jspdf'
 import { formatPrice } from '../data/products.js'
 
-export async function exportInvoiceToPdf(order) {
+export async function exportInvoiceToPdf(order, action = 'save') {
   // 1. Tạo container ẩn
   const container = document.createElement('div')
   container.style.position = 'absolute'
@@ -139,8 +139,13 @@ export async function exportInvoiceToPdf(order) {
     const imgData = canvas.toDataURL('image/png')
     pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight)
 
-    // 6. Lưu file
-    pdf.save(`HoaDon_${order.orderCode}.pdf`)
+    // 6. Lưu file hoặc xem trước
+    if (action === 'view') {
+      const blobUrl = pdf.output('bloburl')
+      window.open(blobUrl, '_blank')
+    } else {
+      pdf.save(`HoaDon_${order.orderCode}.pdf`)
+    }
   } catch (error) {
     console.error('Lỗi xuất PDF:', error)
     throw new Error('Không thể xuất file PDF lúc này.')

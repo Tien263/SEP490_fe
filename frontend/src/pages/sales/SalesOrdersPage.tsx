@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
-import { Eye, FileText, Filter, RefreshCw, Search, ShoppingCart } from 'lucide-react';
+import { FileText, Filter, RefreshCw, Search, ShoppingCart, CheckCircle, Eye } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { exportInvoiceToPdf } from '../../utils/exportPdf';
 
 const PRIMARY = '#1F3B64';
 const INFO = '#2563EB';
@@ -10,27 +11,24 @@ const ERROR = '#DC2626';
 const NEUTRAL = '#64748B';
 
 const ORDER_STATUS: Record<string, { label: string; bg: string }> = {
-  New: { label: 'Don moi', bg: NEUTRAL },
-  Received: { label: 'Da nhan', bg: INFO },
-  InTransit: { label: 'Dang giao', bg: WARNING },
-  Delivered: { label: 'Da giao', bg: SUCCESS },
-  Cancelled: { label: 'Da huy', bg: ERROR },
-  new: { label: 'Don moi', bg: NEUTRAL },
-  confirmed: { label: 'Xac nhan', bg: INFO },
-  preparing: { label: 'Chuan bi', bg: NEUTRAL },
-  shipping: { label: 'Dang giao', bg: WARNING },
-  delivered: { label: 'Da giao', bg: SUCCESS },
-  cancelled: { label: 'Da huy', bg: ERROR },
+  New: { label: 'Đơn mới', bg: NEUTRAL },
+  Received: { label: 'Đã nhận', bg: INFO },
+  Packing: { label: 'Đang đóng gói', bg: '#8B5CF6' },
+  Shortage: { label: 'Thiếu hàng', bg: ERROR },
+  InTransit: { label: 'Đang giao', bg: WARNING },
+  Delivered: { label: 'Đã giao', bg: SUCCESS },
+  Cancelled: { label: 'Đã hủy', bg: ERROR },
 };
 
 type SalesOrder = {
-  id?: string;
+  id: string;
   orderCode: string;
-  customerName?: string;
-  createdAt?: string;
-  finalPayment?: number;
-  paymentMethod?: string;
-  orderStatus?: string;
+  customerName: string;
+  createdAt: string;
+  finalPayment: number;
+  paymentMethod: string;
+  paymentStatus: string;
+  orderStatus: string;
   invoicePdfUrl?: string | null;
 };
 
@@ -41,13 +39,12 @@ type SalesDashboardPayload = {
     deliveredTodayCount?: number;
     revenueToday?: number;
   };
-  recentOrders?: SalesOrder[];
 };
 
 function StatusBadge({ label, bg }: { label: string; bg: string }) {
   return (
     <span
-      className="inline-flex w-[96px] items-center justify-center px-2 text-white text-[11px] font-medium"
+      className="inline-flex min-w-[80px] items-center justify-center px-2 text-white text-[11px] font-medium"
       style={{ backgroundColor: bg, borderRadius: 4, lineHeight: '22px', height: 22, whiteSpace: 'nowrap' }}
     >
       {label}
@@ -103,88 +100,138 @@ const formatDateTime = (dateStr?: string) => {
 export default function SalesOrdersPage() {
   const navigate = useNavigate();
   const [dashboard, setDashboard] = useState<SalesDashboardPayload | null>(null);
+  const [orders, setOrders] = useState<SalesOrder[]>([]);
+  const [totalOrders, setTotalOrders] = useState(0);
+  
   const [loading, setLoading] = useState(true);
+  const [confirmingId, setConfirmingId] = useState<string | null>(null);
   const [error, setError] = useState('');
   const [lastUpdated, setLastUpdated] = useState('');
+  
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [paymentFilter, setPaymentFilter] = useState('all');
+  const [page, setPage] = useState(1);
 
-  const fetchOrders = async () => {
+  const fetchDashboard = async () => {
+    try {
+      const response = await fetch('/api/orders/sales-dashboard', {
+        headers: { Authorization: `Bearer ${localStorage.getItem('accessToken')}` },
+      });
+      if (response.ok) {
+        const data = await response.json();
+        setDashboard(data);
+      }
+    } catch (err) {
+      console.error('Failed to load dashboard stats', err);
+    }
+  };
+
+  const fetchOrdersList = async () => {
     setLoading(true);
     setError('');
     try {
-      const response = await fetch('/api/orders/sales-dashboard', {
-        headers: {
-          Authorization: `Bearer ${localStorage.getItem('accessToken')}`,
-        },
+      const params = new URLSearchParams({
+        page: page.toString(),
+        pageSize: '50'
+      });
+      if (searchQuery) params.append('searchQuery', searchQuery);
+      if (statusFilter !== 'all') params.append('status', statusFilter);
+      if (paymentFilter !== 'all') params.append('paymentMethod', paymentFilter);
+
+      const response = await fetch(`/api/orders/sales?${params.toString()}`, {
+        headers: { Authorization: `Bearer ${localStorage.getItem('accessToken')}` },
       });
 
-      if (!response.ok) {
-        throw new Error('Khong the tai danh sach don hang.');
-      }
-
-      const data: SalesDashboardPayload = await response.json();
-      setDashboard(data);
+      if (!response.ok) throw new Error('Không thể tải danh sách đơn hàng.');
+      const data = await response.json();
+      
+      setOrders(data.items || []);
+      setTotalOrders(data.totalCount || 0);
 
       const now = new Date();
       setLastUpdated(
         now.toLocaleString('vi-VN', {
-          hour: '2-digit',
-          minute: '2-digit',
-          day: '2-digit',
-          month: '2-digit',
-          year: 'numeric',
+          hour: '2-digit', minute: '2-digit', day: '2-digit', month: '2-digit', year: 'numeric',
         })
       );
     } catch (err) {
-      console.error(err);
-      setError(err instanceof Error ? err.message : 'Loi ket noi toi may chu.');
+      setError(err instanceof Error ? err.message : 'Lỗi kết nối tới máy chủ.');
     } finally {
       setLoading(false);
     }
   };
 
+  const handleConfirmOrder = async (orderId: string) => {
+    if (!window.confirm('Bạn có chắc muốn xác nhận đơn hàng này và chuyển xuống kho?')) return;
+    
+    setConfirmingId(orderId);
+    try {
+      const response = await fetch(`/api/orders/sales/${orderId}/confirm`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${localStorage.getItem('accessToken')}` },
+      });
+
+      if (!response.ok) {
+        const err = await response.json();
+        throw new Error(err.message || 'Lỗi khi xác nhận đơn hàng.');
+      }
+      
+      alert('Xác nhận thành công!');
+      fetchDashboard();
+      fetchOrdersList();
+    } catch (err) {
+      alert(err instanceof Error ? err.message : 'Lỗi không xác định.');
+    } finally {
+      setConfirmingId(null);
+    }
+  };
+
+  const handleExportPdf = async (orderId: string) => {
+    try {
+      // 1. Lấy thông tin chi tiết đơn hàng (vì list không có đủ item và giá)
+      const response = await fetch(`/api/orders/sales/${orderId}`, {
+        headers: { Authorization: `Bearer ${localStorage.getItem('accessToken')}` },
+      });
+
+      if (!response.ok) {
+        throw new Error('Không thể lấy chi tiết đơn hàng để xuất PDF.');
+      }
+
+      const orderDetail = await response.json();
+
+      // 2. Gọi hàm xuất PDF (chế độ xem trước)
+      await exportInvoiceToPdf(orderDetail, 'view');
+    } catch (err) {
+      alert(err instanceof Error ? err.message : 'Có lỗi xảy ra khi xuất PDF.');
+    }
+  };
+
   useEffect(() => {
-    fetchOrders();
+    fetchDashboard();
   }, []);
 
-  const orders = [...(dashboard?.recentOrders || [])].sort((a, b) => {
-    const aTime = a.createdAt ? parseDate(a.createdAt).getTime() : 0;
-    const bTime = b.createdAt ? parseDate(b.createdAt).getTime() : 0;
-    return bTime - aTime;
-  });
-
-  const normalizedQuery = searchQuery.trim().toLowerCase();
-  const filteredOrders = orders.filter((order) => {
-    const matchesQuery =
-      normalizedQuery.length === 0 ||
-      order.orderCode?.toLowerCase().includes(normalizedQuery) ||
-      order.customerName?.toLowerCase().includes(normalizedQuery);
-
-    const matchesStatus = statusFilter === 'all' || order.orderStatus === statusFilter;
-    const matchesPayment = paymentFilter === 'all' || order.paymentMethod === paymentFilter;
-
-    return matchesQuery && matchesStatus && matchesPayment;
-  });
-
-  const statusOptions = Array.from(new Set(orders.map((order) => order.orderStatus).filter(Boolean))) as string[];
-  const paymentOptions = Array.from(new Set(orders.map((order) => order.paymentMethod).filter(Boolean))) as string[];
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      fetchOrdersList();
+    }, 400);
+    return () => clearTimeout(timer);
+  }, [searchQuery, statusFilter, paymentFilter, page]);
 
   return (
     <div className="flex h-full flex-col bg-[#F5F7FA]">
       <div className="flex h-11 items-center justify-between border-b border-[#E5E7EB] bg-white px-5">
         <div>
-          <span className="text-[13px] font-bold text-[#374151]">Quan ly don hang Sales</span>
-          <span className="ml-3 text-[11px] text-[#9CA3AF]">Cap nhat luc: {lastUpdated || '--'}</span>
+          <span className="text-[13px] font-bold text-[#374151]">Quản lý đơn hàng Sales</span>
+          <span className="ml-3 text-[11px] text-[#9CA3AF]">Cập nhật lúc: {lastUpdated || '--'}</span>
         </div>
         <div className="flex items-center gap-2">
           <button
-            onClick={fetchOrders}
+            onClick={() => { fetchDashboard(); fetchOrdersList(); }}
             className="flex h-7 items-center gap-1.5 rounded border border-[#D1D5DB] bg-white px-3 text-[12px] text-[#374151] transition-colors hover:bg-gray-50"
           >
             <RefreshCw className={`h-3 w-3 text-[#9CA3AF] ${loading ? 'animate-spin' : ''}`} />
-            Lam moi
+            Làm mới
           </button>
           <button
             onClick={() => navigate('/sales/direct-purchase')}
@@ -192,7 +239,7 @@ export default function SalesOrdersPage() {
             style={{ backgroundColor: PRIMARY }}
           >
             <ShoppingCart className="h-3 w-3" />
-            Tao don POS
+            Tạo đơn POS
           </button>
         </div>
       </div>
@@ -200,35 +247,35 @@ export default function SalesOrdersPage() {
       <div className="flex-1 overflow-auto p-4">
         <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-4">
           <SummaryCard
-            label="Don moi"
+            label="Đơn mới"
             value={String(dashboard?.kpi?.newOrdersCount ?? 0)}
-            hint="Can uu tien xu ly"
+            hint="Cần ưu tiên xử lý"
           />
           <SummaryCard
-            label="Dang xu ly"
+            label="Đang xử lý"
             value={String(dashboard?.kpi?.processingOrdersCount ?? 0)}
-            hint="Cho xac nhan, kho, giao hang"
+            hint="Chờ xác nhận, kho, giao hàng"
           />
           <SummaryCard
-            label="Da giao hom nay"
+            label="Đã giao hôm nay"
             value={String(dashboard?.kpi?.deliveredTodayCount ?? 0)}
-            hint="Ket qua giao hang trong ngay"
+            hint="Kết quả giao hàng trong ngày"
           />
           <SummaryCard
-            label="Doanh thu hom nay"
-            value={`${formatPrice(dashboard?.kpi?.revenueToday ?? 0)} d`}
-            hint="Tong doanh thu ghi nhan"
+            label="Doanh thu hôm nay"
+            value={`${formatPrice(dashboard?.kpi?.revenueToday ?? 0)} đ`}
+            hint="Tổng doanh thu ghi nhận"
           />
         </div>
 
         <div className="mt-4 rounded-lg border border-[#E5E7EB] bg-white shadow-sm">
           <div className="flex items-center justify-between border-b border-[#E5E7EB] px-4 py-3">
             <div>
-              <p className="text-[11px] font-bold uppercase tracking-wider text-[#6B7280]">Danh sach don hang</p>
-              <p className="mt-1 text-xs text-[#9CA3AF]">Loc nhanh theo khach hang, trang thai va phuong thuc thanh toan</p>
+              <p className="text-[11px] font-bold uppercase tracking-wider text-[#6B7280]">Danh sách đơn hàng</p>
+              <p className="mt-1 text-xs text-[#9CA3AF]">Lọc theo mã đơn, khách hàng, trạng thái và thanh toán</p>
             </div>
             <div className="rounded-full bg-[#EEF2F8] px-3 py-1 text-[11px] font-semibold text-[#1F3B64]">
-              {filteredOrders.length} don
+              {totalOrders} đơn
             </div>
           </div>
 
@@ -237,8 +284,8 @@ export default function SalesOrdersPage() {
               <Search className="pointer-events-none absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-[#9CA3AF]" />
               <input
                 value={searchQuery}
-                onChange={(event) => setSearchQuery(event.target.value)}
-                placeholder="Tim ma don hoac ten khach hang"
+                onChange={(event) => { setSearchQuery(event.target.value); setPage(1); }}
+                placeholder="Tìm mã đơn hoặc tên khách hàng..."
                 className="h-9 w-full rounded border border-[#D1D5DB] bg-white pl-9 pr-3 text-sm text-[#374151] outline-none transition-colors focus:border-[#1F3B64]"
               />
             </label>
@@ -247,58 +294,54 @@ export default function SalesOrdersPage() {
               <Filter className="pointer-events-none absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-[#9CA3AF]" />
               <select
                 value={statusFilter}
-                onChange={(event) => setStatusFilter(event.target.value)}
+                onChange={(event) => { setStatusFilter(event.target.value); setPage(1); }}
                 className="h-9 w-full rounded border border-[#D1D5DB] bg-white pl-9 pr-3 text-sm text-[#374151] outline-none transition-colors focus:border-[#1F3B64]"
               >
-                <option value="all">Tat ca trang thai</option>
-                {statusOptions.map((status) => (
-                  <option key={status} value={status}>
-                    {ORDER_STATUS[status]?.label || status}
-                  </option>
+                <option value="all">Tất cả trạng thái</option>
+                {Object.entries(ORDER_STATUS).map(([key, val]) => (
+                  <option key={key} value={key}>{val.label}</option>
                 ))}
               </select>
             </label>
 
             <select
               value={paymentFilter}
-              onChange={(event) => setPaymentFilter(event.target.value)}
+              onChange={(event) => { setPaymentFilter(event.target.value); setPage(1); }}
               className="h-9 w-full rounded border border-[#D1D5DB] bg-white px-3 text-sm text-[#374151] outline-none transition-colors focus:border-[#1F3B64]"
             >
-              <option value="all">Tat ca thanh toan</option>
-              {paymentOptions.map((payment) => (
-                <option key={payment} value={payment}>
-                  {payment}
-                </option>
-              ))}
+              <option value="all">Tất cả thanh toán</option>
+              <option value="SePay">SePay</option>
+              <option value="COD">COD</option>
+              <option value="Cash">Cash</option>
             </select>
           </div>
 
-          {loading ? (
+          {loading && orders.length === 0 ? (
             <div className="flex h-52 items-center justify-center">
               <div className="flex flex-col items-center gap-2">
                 <RefreshCw className="h-8 w-8 animate-spin text-[#1F3B64]" />
-                <span className="text-xs font-semibold text-slate-500">Dang tai danh sach don hang...</span>
+                <span className="text-xs font-semibold text-slate-500">Đang tải danh sách đơn hàng...</span>
               </div>
             </div>
           ) : error ? (
             <div className="flex h-52 flex-col items-center justify-center gap-3 px-4 text-center">
               <p className="text-sm font-semibold text-red-600">{error}</p>
               <button
-                onClick={fetchOrders}
+                onClick={fetchOrdersList}
                 className="rounded px-3 py-1.5 text-xs font-semibold text-white"
                 style={{ backgroundColor: PRIMARY }}
               >
-                Thu lai
+                Thử lại
               </button>
             </div>
-          ) : filteredOrders.length === 0 ? (
+          ) : orders.length === 0 ? (
             <div className="flex h-52 flex-col items-center justify-center gap-3 px-4 text-center">
               <div className="rounded-full bg-slate-100 p-4 text-slate-400">
                 <FileText className="h-7 w-7" />
               </div>
               <div>
-                <p className="text-sm font-semibold text-slate-700">Khong co don hang phu hop</p>
-                <p className="mt-1 text-xs text-slate-400">Thu doi tu khoa tim kiem hoac bo bot bo loc hien tai.</p>
+                <p className="text-sm font-semibold text-slate-700">Không có đơn hàng phù hợp</p>
+                <p className="mt-1 text-xs text-slate-400">Thử đổi từ khóa tìm kiếm hoặc bỏ bớt bộ lọc.</p>
               </div>
             </div>
           ) : (
@@ -306,10 +349,10 @@ export default function SalesOrdersPage() {
               <table className="w-full text-left" style={{ fontSize: 12 }}>
                 <thead>
                   <tr style={{ background: '#F9FAFB', borderBottom: '1px solid #E5E7EB' }}>
-                    {['Ma don', 'Khach hang', 'Thoi gian dat', 'Tong tien', 'Thanh toan', 'Trang thai', 'Hoa don'].map((header) => (
+                    {['Mã đơn', 'Khách hàng', 'Thời gian đặt', 'Tổng tiền', 'Thanh toán', 'Trạng thái', 'Hóa đơn', 'Thao tác'].map((header) => (
                       <th
                         key={header}
-                        className={`px-4 py-3 text-[11px] font-bold uppercase tracking-wider text-[#6B7280] ${header === 'Tong tien' ? 'text-right' : ''}`}
+                        className={`px-4 py-3 text-[11px] font-bold uppercase tracking-wider text-[#6B7280] ${header === 'Tổng tiền' ? 'text-right' : header === 'Thao tác' ? 'text-center' : ''}`}
                       >
                         {header}
                       </th>
@@ -317,9 +360,9 @@ export default function SalesOrdersPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {filteredOrders.map((order, index) => (
+                  {orders.map((order, index) => (
                     <tr
-                      key={order.id || order.orderCode || `${order.customerName}-${index}`}
+                      key={order.id}
                       className="transition-colors hover:bg-blue-50/30"
                       style={{
                         borderBottom: '1px solid #F3F4F6',
@@ -327,47 +370,78 @@ export default function SalesOrdersPage() {
                       }}
                     >
                       <td className="px-4 py-3 font-bold whitespace-nowrap" style={{ color: PRIMARY }}>
-                        {order.orderCode || '--'}
+                        {order.orderCode}
                       </td>
                       <td className="max-w-[240px] truncate px-4 py-3 text-[#374151]">
-                        {order.customerName || '--'}
+                        {order.customerName}
                       </td>
                       <td className="px-4 py-3 whitespace-nowrap tabular-nums text-[#6B7280]">
                         {formatDateTime(order.createdAt)}
                       </td>
                       <td className="px-4 py-3 text-right font-bold whitespace-nowrap text-[#374151]">
-                        {formatPrice(order.finalPayment ?? 0)}
+                        {formatPrice(order.finalPayment)}
                       </td>
                       <td className="px-4 py-3">
-                        <PaymentBadge method={order.paymentMethod || '--'} />
+                        <PaymentBadge method={order.paymentMethod} />
+                        {order.paymentStatus === 'Paid' && <span className="ml-1 text-[10px] text-green-600 font-bold">(Đã thanh toán)</span>}
                       </td>
                       <td className="px-4 py-3">
                         <StatusBadge
-                          label={ORDER_STATUS[order.orderStatus || '']?.label || order.orderStatus || '--'}
-                          bg={ORDER_STATUS[order.orderStatus || '']?.bg || NEUTRAL}
+                          label={ORDER_STATUS[order.orderStatus]?.label || order.orderStatus}
+                          bg={ORDER_STATUS[order.orderStatus]?.bg || NEUTRAL}
                         />
                       </td>
                       <td className="px-4 py-3 text-center">
-                        {order.invoicePdfUrl ? (
-                          <a
-                            href={`/api${order.invoicePdfUrl}`}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="inline-flex rounded p-1.5 text-[#9CA3AF] transition-colors hover:bg-blue-100 hover:text-[#1F3B64]"
-                            title="Xem hoa don PDF"
+                        <button
+                          onClick={() => handleExportPdf(order.id)}
+                          className="inline-flex rounded p-1.5 text-[#9CA3AF] transition-colors hover:bg-blue-100 hover:text-[#1F3B64]"
+                          title="Xem PDF Hóa đơn"
+                        >
+                          <Eye className="h-4 w-4" />
+                        </button>
+                      </td>
+                      <td className="px-4 py-3 text-center">
+                        {order.orderStatus === 'New' && (
+                          <button
+                            onClick={() => handleConfirmOrder(order.id)}
+                            disabled={confirmingId === order.id}
+                            className="inline-flex items-center gap-1 rounded bg-[#2563EB] px-2 py-1 text-[11px] font-semibold text-white hover:bg-[#1D4ED8] disabled:opacity-50"
                           >
-                            <Eye className="h-4 w-4" />
-                          </a>
-                        ) : (
-                          <span className="inline-flex rounded p-1.5 text-slate-300" title="Khong co hoa don PDF">
-                            <Eye className="h-4 w-4" />
-                          </span>
+                            {confirmingId === order.id ? (
+                              <RefreshCw className="h-3 w-3 animate-spin" />
+                            ) : (
+                              <CheckCircle className="h-3 w-3" />
+                            )}
+                            Xác nhận
+                          </button>
                         )}
                       </td>
                     </tr>
                   ))}
                 </tbody>
               </table>
+              
+              <div className="flex items-center justify-between border-t border-[#E5E7EB] bg-white px-4 py-3">
+                <span className="text-xs text-gray-500">
+                  Hiển thị trang {page} (Tối đa 50 đơn/trang)
+                </span>
+                <div className="flex gap-2">
+                  <button 
+                    disabled={page === 1} 
+                    onClick={() => setPage(p => p - 1)}
+                    className="rounded border px-3 py-1 text-xs disabled:opacity-50"
+                  >
+                    Trước
+                  </button>
+                  <button 
+                    disabled={orders.length < 50} 
+                    onClick={() => setPage(p => p + 1)}
+                    className="rounded border px-3 py-1 text-xs disabled:opacity-50"
+                  >
+                    Sau
+                  </button>
+                </div>
+              </div>
             </div>
           )}
         </div>
