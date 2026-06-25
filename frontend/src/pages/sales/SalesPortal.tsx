@@ -1,18 +1,34 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Routes, Route, useNavigate, useLocation } from 'react-router-dom';
 import { Avatar, AvatarFallback } from '../../components/sales-ui/avatar';
 import {
-  DropdownMenu, DropdownMenuContent, DropdownMenuItem,
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
   DropdownMenuTrigger,
 } from '../../components/sales-ui/dropdown-menu';
 import {
-  LayoutDashboard, MessageSquare, Bell, LogOut, ChevronDown,
-  Search, Settings, ShoppingCart, FileText
+  Bell,
+  ChevronDown,
+  DollarSign,
+  FileText,
+  LayoutDashboard,
+  LogOut,
+  MessageSquare,
+  Package,
+  Search,
+  Settings,
+  ShoppingCart,
+  Truck,
 } from 'lucide-react';
 import SalesDashboardPage from './SalesDashboardPage';
 import SalesNegotiationPage from './SalesNegotiationPage';
 import DirectPurchasePage from './DirectPurchasePage';
 import SalesOrdersPage from './SalesOrdersPage';
+import SalesDeliveryPage from './SalesDeliveryPage';
+import SalesWarehouseCoordPage from './SalesWarehouseCoordPage';
+import SalesDeliveryArrangementPage from './SalesDeliveryArrangementPage';
+import SalesDeliveryCollectionPage from './SalesDeliveryCollectionPage';
 import { useAuth } from '../../context/AuthContext';
 
 interface NavItem {
@@ -21,6 +37,7 @@ interface NavItem {
   icon: React.ReactNode;
   path: string;
   badge?: number;
+  children?: NavItem[];
 }
 
 const NAV_ITEMS: NavItem[] = [
@@ -29,6 +46,12 @@ const NAV_ITEMS: NavItem[] = [
     label: 'Dashboard',
     icon: <LayoutDashboard className="w-4 h-4" />,
     path: '/sales/dashboard',
+  },
+  {
+    id: 'orders',
+    label: 'Quản lý đơn hàng',
+    icon: <FileText className="w-4 h-4" />,
+    path: '/sales/orders',
   },
   {
     id: 'negotiation',
@@ -44,37 +67,115 @@ const NAV_ITEMS: NavItem[] = [
     path: '/sales/direct-purchase',
   },
   {
-    id: 'orders',
-    label: 'Quản lý đơn hàng',
-    icon: <FileText className="w-4 h-4" />,
-    path: '/sales/orders',
+    id: 'delivery',
+    label: 'Giao hàng',
+    icon: <Truck className="w-4 h-4" />,
+    path: '/sales/delivery',
+    children: [
+      {
+        id: 'delivery-warehouse',
+        label: 'Phối hợp kho',
+        icon: <Package className="w-3.5 h-3.5" />,
+        path: '/sales/delivery/warehouse',
+      },
+      {
+        id: 'delivery-arrangement',
+        label: 'Sắp xếp vận chuyển',
+        icon: <Truck className="w-3.5 h-3.5" />,
+        path: '/sales/delivery/arrangement',
+      },
+      {
+        id: 'delivery-collection',
+        label: 'Giao hàng và thu tiền',
+        icon: <DollarSign className="w-3.5 h-3.5" />,
+        path: '/sales/delivery/collection',
+      },
+    ],
   },
 ];
 
-function NavItemRow({ item, onNavigate }: { item: NavItem; onNavigate: (path: string) => void }) {
+function NavItemRow({
+  item,
+  onNavigate,
+  level = 0,
+}: {
+  item: NavItem;
+  onNavigate: (path: string) => void;
+  level?: number;
+}) {
   const location = useLocation();
-  const isActive = location.pathname === item.path || location.pathname.startsWith(item.path + '/');
+  const inSection =
+    location.pathname === item.path ||
+    location.pathname.startsWith(item.path + '/') ||
+    item.children?.some((child) => location.pathname === child.path) ||
+    false;
+  const [expanded, setExpanded] = useState(Boolean(item.children && inSection));
+  const isActive = location.pathname === item.path;
+
+  const handleClick = () => {
+    if (!item.children) {
+      onNavigate(item.path);
+      return;
+    }
+
+    if (inSection) {
+      setExpanded((prev) => !prev);
+      if (!isActive) {
+        onNavigate(item.path);
+      }
+      return;
+    }
+
+    setExpanded(true);
+    onNavigate(item.path);
+  };
 
   return (
-    <button
-      onClick={() => onNavigate(item.path)}
-      className={[
-        'w-full flex items-center gap-2 px-2.5 py-1.5 rounded text-left transition-colors text-[12px] font-medium group',
-        isActive
-          ? 'bg-white/15 text-white'
-          : 'text-white/55 hover:bg-white/8 hover:text-white/80',
-      ].join(' ')}
-    >
-      <span className={`flex-shrink-0 ${isActive ? 'text-white' : 'text-white/45 group-hover:text-white/70'}`}>
-        {item.icon}
-      </span>
-      <span className="flex-1 truncate">{item.label}</span>
-      {item.badge && item.badge > 0 && (
-        <span className="text-[9px] px-1.5 py-0.5 rounded bg-red-500 text-white font-semibold flex-shrink-0">
-          {item.badge}
+    <>
+      <button
+        onClick={handleClick}
+        className={[
+          'w-full rounded px-2.5 py-1.5 text-left text-[12px] transition-colors group',
+          level > 0 ? 'ml-3 w-[calc(100%-0.75rem)] font-normal' : 'font-medium',
+          isActive
+            ? 'bg-white/15 text-white'
+            : inSection
+            ? 'text-white/90'
+            : 'text-white/55 hover:bg-white/8 hover:text-white/80',
+        ].join(' ')}
+      >
+        <span className="flex items-center gap-2">
+          <span
+            className={`flex-shrink-0 ${
+              isActive ? 'text-white' : 'text-white/45 group-hover:text-white/70'
+            }`}
+          >
+            {item.icon}
+          </span>
+          <span className="flex-1 truncate">{item.label}</span>
+          {item.badge && item.badge > 0 && (
+            <span className="flex-shrink-0 rounded bg-red-500 px-1.5 py-0.5 text-[9px] font-semibold text-white">
+              {item.badge}
+            </span>
+          )}
+          {item.children && (
+            <ChevronDown
+              className={`h-3 w-3 flex-shrink-0 text-white/35 transition-transform ${
+                expanded ? 'rotate-180' : ''
+              }`}
+            />
+          )}
         </span>
+      </button>
+
+      {item.children && expanded && (
+        <div className="mt-0.5 space-y-0.5">
+          {item.children.map((child) => (
+            <NavItemRow key={child.id} item={child} onNavigate={onNavigate} level={level + 1} />
+          ))}
+        </div>
       )}
-    </button>
+    </>
   );
 }
 
@@ -88,112 +189,124 @@ export default function SalesPortal() {
     navigate('/login');
   };
 
-  const userName = user?.fullName || user?.email || 'Nhân viên Sales';
-  const initials = userName.split(' ').slice(-2).map((n: string) => n[0]).join('').toUpperCase() || 'NV';
+  const userName = user?.fullName || user?.email || 'Nhan vien Sales';
+  const initials =
+    userName
+      .split(' ')
+      .slice(-2)
+      .map((part: string) => part[0])
+      .join('')
+      .toUpperCase() || 'NV';
 
   return (
-    <div className="flex h-screen bg-[#F5F7FA] overflow-hidden">
-      {/* Sidebar */}
-      <aside className="w-[220px] min-w-[220px] flex flex-col h-full" style={{ backgroundColor: '#1F3B64' }}>
-        {/* Logo */}
-        <div className="h-12 flex items-center px-4 border-b flex-shrink-0" style={{ borderColor: 'rgba(255,255,255,0.08)' }}>
+    <div className="flex h-screen overflow-hidden bg-[#F5F7FA]">
+      <aside className="flex h-full w-[220px] min-w-[220px] flex-col" style={{ backgroundColor: '#1F3B64' }}>
+        <div
+          className="flex h-12 flex-shrink-0 items-center border-b px-4"
+          style={{ borderColor: 'rgba(255,255,255,0.08)' }}
+        >
           <div className="flex items-center gap-2.5">
-            <div className="w-6 h-6 bg-white rounded flex items-center justify-center flex-shrink-0">
-              <span className="text-[#1F3B64] font-black text-[10px]">VT</span>
+            <div className="flex h-6 w-6 flex-shrink-0 items-center justify-center rounded bg-white">
+              <span className="text-[10px] font-black text-[#1F3B64]">VT</span>
             </div>
             <div>
-              <p className="text-white font-semibold text-[13px] leading-tight">Việt Tiến ERP</p>
-              <p className="text-white/40 text-[10px] leading-tight">Nhân viên bán hàng</p>
+              <p className="text-[13px] font-semibold leading-tight text-white">Viet Tien ERP</p>
+              <p className="text-[10px] leading-tight text-white/40">Nhân viên bán hàng</p>
             </div>
           </div>
         </div>
 
-        {/* Nav */}
-        <nav className="flex-1 overflow-y-auto px-1.5 py-2 space-y-px">
-          {NAV_ITEMS.map(item => (
+        <nav className="flex-1 space-y-px overflow-y-auto px-1.5 py-2">
+          {NAV_ITEMS.map((item) => (
             <NavItemRow key={item.id} item={item} onNavigate={navigate} />
           ))}
         </nav>
 
-        {/* User info */}
         <div className="p-2.5 flex-shrink-0" style={{ borderTop: '1px solid rgba(255,255,255,0.08)' }}>
           <div className="flex items-center gap-2 px-1">
-            <Avatar className="w-7 h-7 flex-shrink-0">
-              <AvatarFallback className="text-[10px] font-semibold" style={{ backgroundColor: 'rgba(255,255,255,0.15)', color: 'white' }}>
+            <Avatar className="h-7 w-7 flex-shrink-0">
+              <AvatarFallback
+                className="text-[10px] font-semibold"
+                style={{ backgroundColor: 'rgba(255,255,255,0.15)', color: 'white' }}
+              >
                 {initials}
               </AvatarFallback>
             </Avatar>
-            <div className="flex-1 min-w-0">
-              <p className="text-[11px] font-semibold text-white truncate">{userName}</p>
-              <p className="text-[10px] text-white/45 truncate">NV Bán Hàng</p>
+            <div className="min-w-0 flex-1">
+              <p className="truncate text-[11px] font-semibold text-white">{userName}</p>
+              <p className="truncate text-[10px] text-white/45">Nhân viên bán hàng</p>
             </div>
-            <button onClick={handleLogout} className="text-white/30 hover:text-red-400 transition-colors flex-shrink-0" title="Đăng xuất">
-              <LogOut className="w-3.5 h-3.5" />
+            <button
+              onClick={handleLogout}
+              className="flex-shrink-0 text-white/30 transition-colors hover:text-red-400"
+              title="Đăng xuất"
+            >
+              <LogOut className="h-3.5 w-3.5" />
             </button>
           </div>
         </div>
       </aside>
 
-      {/* Main Content */}
-      <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
-        {/* Top Header */}
-        <header className="h-11 bg-white border-b border-gray-200 flex items-center px-4 gap-3 flex-shrink-0">
-          {/* Search */}
-          <div className="flex-1 max-w-xs">
-            <button className="w-full flex items-center gap-2 px-2.5 h-7 rounded border border-gray-300 bg-gray-50 text-[12px] text-gray-400 hover:bg-white transition-colors text-left">
-              <Search className="w-3 h-3 flex-shrink-0" />
-              <span className="flex-1 truncate">Tìm kiếm...</span>
+      <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
+        <header className="flex h-11 flex-shrink-0 items-center gap-3 border-b border-gray-200 bg-white px-4">
+          <div className="max-w-xs flex-1">
+            <button className="flex h-7 w-full items-center gap-2 rounded border border-gray-300 bg-gray-50 px-2.5 text-left text-[12px] text-gray-400 transition-colors hover:bg-white">
+              <Search className="h-3 w-3 flex-shrink-0" />
+              <span className="flex-1 truncate">Tim kiem...</span>
             </button>
           </div>
 
           <div className="flex-1" />
 
-          {/* Actions */}
           <div className="flex items-center gap-0.5">
-            <button
-              className="relative p-1.5 rounded text-gray-500 hover:bg-gray-100 hover:text-gray-700 transition-colors"
-            >
-              <Bell className="w-4 h-4" />
+            <button className="relative rounded p-1.5 text-gray-500 transition-colors hover:bg-gray-100 hover:text-gray-700">
+              <Bell className="h-4 w-4" />
               {totalBadge > 0 && (
-                <span className="absolute top-0.5 right-0.5 w-3.5 h-3.5 bg-red-500 text-white text-[8px] rounded-full flex items-center justify-center font-bold">
+                <span className="absolute right-0.5 top-0.5 flex h-3.5 w-3.5 items-center justify-center rounded-full bg-red-500 text-[8px] font-bold text-white">
                   {totalBadge}
                 </span>
               )}
             </button>
-            <button className="p-1.5 rounded text-gray-500 hover:bg-gray-100 hover:text-gray-700 transition-colors">
-              <Settings className="w-4 h-4" />
+            <button className="rounded p-1.5 text-gray-500 transition-colors hover:bg-gray-100 hover:text-gray-700">
+              <Settings className="h-4 w-4" />
             </button>
 
-            <div className="w-px h-5 bg-gray-200 mx-1" />
+            <div className="mx-1 h-5 w-px bg-gray-200" />
 
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <button className="flex items-center gap-1.5 px-2 py-1 rounded hover:bg-gray-100 transition-colors">
-                  <Avatar className="w-6 h-6">
-                    <AvatarFallback className="text-[9px] font-semibold" style={{ backgroundColor: '#1F3B64', color: 'white' }}>
+                <button className="flex items-center gap-1.5 rounded px-2 py-1 transition-colors hover:bg-gray-100">
+                  <Avatar className="h-6 w-6">
+                    <AvatarFallback
+                      className="text-[9px] font-semibold"
+                      style={{ backgroundColor: '#1F3B64', color: 'white' }}
+                    >
                       {initials}
                     </AvatarFallback>
                   </Avatar>
                   <span className="text-[12px] font-medium text-gray-700">{userName.split(' ').pop()}</span>
-                  <ChevronDown className="w-3 h-3 text-gray-400" />
+                  <ChevronDown className="h-3 w-3 text-gray-400" />
                 </button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-48">
-                <DropdownMenuItem className="text-sm text-red-600 cursor-pointer" onClick={handleLogout}>
-                  <LogOut className="w-4 h-4 mr-2" /> Đăng xuất
+                <DropdownMenuItem className="cursor-pointer text-sm text-red-600" onClick={handleLogout}>
+                  <LogOut className="mr-2 h-4 w-4" /> Đăng xuất
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
           </div>
         </header>
 
-        {/* Page Content */}
         <main className="flex-1 overflow-auto">
           <Routes>
             <Route path="dashboard" element={<SalesDashboardPage />} />
+            <Route path="orders" element={<SalesOrdersPage />} />
             <Route path="negotiation" element={<SalesNegotiationPage />} />
             <Route path="direct-purchase" element={<DirectPurchasePage />} />
-            <Route path="orders" element={<SalesOrdersPage />} />
+            <Route path="delivery" element={<SalesDeliveryPage />} />
+            <Route path="delivery/warehouse" element={<SalesWarehouseCoordPage />} />
+            <Route path="delivery/arrangement" element={<SalesDeliveryArrangementPage />} />
+            <Route path="delivery/collection" element={<SalesDeliveryCollectionPage />} />
             <Route path="*" element={<SalesDashboardPage />} />
           </Routes>
         </main>

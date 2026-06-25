@@ -47,7 +47,7 @@ type SalesDashboardPayload = {
 function StatusBadge({ label, bg }: { label: string; bg: string }) {
   return (
     <span
-      className="inline-block px-2 text-white text-[11px] font-medium"
+      className="inline-flex w-[96px] items-center justify-center px-2 text-white text-[11px] font-medium"
       style={{ backgroundColor: bg, borderRadius: 4, lineHeight: '22px', height: 22, whiteSpace: 'nowrap' }}
     >
       {label}
@@ -63,7 +63,7 @@ function PaymentBadge({ method }: { method: string }) {
 
   return (
     <span
-      className="inline-block px-2 text-white text-[11px] font-medium"
+      className="inline-flex w-[68px] items-center justify-center px-2 text-white text-[11px] font-medium"
       style={{ backgroundColor: bg, borderRadius: 4, lineHeight: '22px', height: 22 }}
     >
       {method}
