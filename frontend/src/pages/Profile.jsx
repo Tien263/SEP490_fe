@@ -50,6 +50,7 @@ import { getTrackingSteps, isVatExpired, orders as mockOrders, shippingStatusMet
 import {
   getOrderDetail,
   getOrderHistory,
+  getSpendingStats,
   requestVatInvoice,
   downloadInvoicePdf,
   orderStatusMeta,
@@ -1254,88 +1255,118 @@ function OrderHistoryTab({ onSuccess }) {
 
 function PersonalStatsTab() {
   const [period, setPeriod] = useState('month')
+  const [stats, setStats] = useState(null)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState(null)
+
+  useEffect(() => {
+    let cancelled = false
+    async function load() {
+      setLoading(true)
+      setError(null)
+      try {
+        const data = await getSpendingStats(period)
+        if (!cancelled) setStats(data)
+      } catch (err) {
+        if (!cancelled) setError(err.message || 'Không thể tải thống kê chi tiêu.')
+      } finally {
+        if (!cancelled) setLoading(false)
+      }
+    }
+    load()
+    return () => { cancelled = true }
+  }, [period])
 
   const statsData = useMemo(() => {
-    const latestOrderDate = mockOrders.reduce((latest, order) => {
-      const orderDate = new Date(order.date)
-      return orderDate > latest ? orderDate : latest
-    }, new Date(mockOrders[0]?.date ?? Date.now()))
-
-    const periodDays = {
-      week: 7,
-      month: 30,
-      quarter: 90,
-      year: 365,
-    }
-
-    const days = periodDays[period] ?? periodDays.month
-    const cutoff = new Date(latestOrderDate)
-    cutoff.setDate(cutoff.getDate() - days)
-
-    const scopedOrders = mockOrders.filter((order) => new Date(order.date) >= cutoff)
-    const relevantOrders = scopedOrders.length > 0 ? scopedOrders : mockOrders
-    const totalSpent = relevantOrders.reduce((sum, order) => sum + order.total, 0)
-    const vatInvoices = relevantOrders.filter((order) => order.hasVat).length
-
-    const monthMap = new Map()
-    relevantOrders.forEach((order) => {
-      const orderDate = new Date(order.date)
-      const key = `${orderDate.getFullYear()}-${String(orderDate.getMonth() + 1).padStart(2, '0')}`
-      const label = `T${orderDate.getMonth() + 1}`
-      const current = monthMap.get(key) ?? { name: label, value: 0, sortValue: orderDate.getTime() }
-      current.value += order.total
-      monthMap.set(key, current)
-    })
-
-    const spendingData = Array.from(monthMap.values())
-      .sort((a, b) => a.sortValue - b.sortValue)
-      .map(({ name, value }) => ({ name, value }))
-
-    const productMap = new Map()
-    relevantOrders.forEach((order) => {
-      order.items.forEach((item) => {
-        productMap.set(item.name, (productMap.get(item.name) ?? 0) + item.quantity)
-      })
-    })
-
-    const productData = Array.from(productMap.entries())
-      .sort((a, b) => b[1] - a[1])
-      .slice(0, 5)
-      .map(([name, value]) => ({ name, value }))
-
-    const topProduct = productData[0]?.name ?? 'Chưa có dữ liệu'
+    const spendingData = (stats?.spendingByMonth ?? []).map((p) => ({ name: p.label, value: p.value }))
+    const productData = (stats?.topProducts ?? []).map((p) => ({ name: p.name, value: p.value }))
 
     return {
-      productData,
       spendingData,
+      productData,
       statCards: [
         {
           label: 'Tổng đơn hàng',
-          value: String(relevantOrders.length),
+          value: String(stats?.totalOrders ?? 0),
           icon: ShoppingBag,
           color: 'bg-blue-50 text-blue-600',
         },
         {
           label: 'Tổng chi tiêu',
-          value: formatPrice(totalSpent),
+          value: formatPrice(stats?.totalSpent ?? 0),
           icon: TrendingUp,
           color: 'bg-green-50 text-green-600',
         },
         {
           label: 'Sản phẩm đặt nhiều nhất',
-          value: topProduct,
+          value: stats?.topProductName || 'Chưa có dữ liệu',
           icon: Star,
           color: 'bg-yellow-50 text-yellow-600',
         },
         {
           label: 'Số hóa đơn VAT',
-          value: String(vatInvoices),
+          value: String(stats?.vatInvoiceCount ?? 0),
           icon: FileText,
           color: 'bg-purple-50 text-purple-600',
         },
       ],
     }
-  }, [period])
+  }, [stats])
+
+  const periodButtons = (
+    <div className="flex flex-wrap gap-2">
+      {[
+        { key: 'week', label: 'Tuần' },
+        { key: 'month', label: 'Tháng' },
+        { key: 'quarter', label: 'Quý' },
+        { key: 'year', label: 'Năm' },
+      ].map((item) => (
+        <button
+          key={item.key}
+          type="button"
+          onClick={() => setPeriod(item.key)}
+          className={`rounded-full px-4 py-1.5 text-sm transition-colors ${
+            period === item.key ? 'bg-gray-900 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+          }`}
+        >
+          {item.label}
+        </button>
+      ))}
+    </div>
+  )
+
+  if (loading) {
+    return (
+      <div className="space-y-6">
+        {periodButtons}
+        <div className="flex flex-col items-center justify-center py-16">
+          <div className="h-8 w-8 animate-spin rounded-full border-2 border-gray-200 border-t-gray-900" />
+          <p className="mt-4 text-sm text-gray-500">Đang tải thống kê chi tiêu...</p>
+        </div>
+      </div>
+    )
+  }
+
+  if (error) {
+    return (
+      <div className="space-y-6">
+        {periodButtons}
+        <div className="flex flex-col items-center justify-center py-16">
+          <AlertCircle className="h-10 w-10 text-red-400" />
+          <p className="mt-3 text-sm font-medium text-gray-700">{error}</p>
+          <button
+            type="button"
+            onClick={() => setPeriod((p) => p)}
+            className="mt-4 rounded-full border border-gray-200 px-4 py-2 text-xs font-medium text-gray-700 hover:bg-gray-50"
+          >
+            Thử lại
+          </button>
+        </div>
+      </div>
+    )
+  }
+
+  const hasData = (stats?.totalOrders ?? 0) > 0
 
   return (
     <div className="space-y-6">
@@ -1351,26 +1382,14 @@ function PersonalStatsTab() {
         ))}
       </div>
 
-      <div className="flex flex-wrap gap-2">
-        {[
-          { key: 'week', label: 'Tuần' },
-          { key: 'month', label: 'Tháng' },
-          { key: 'quarter', label: 'Quý' },
-          { key: 'year', label: 'Năm' },
-        ].map((item) => (
-          <button
-            key={item.key}
-            type="button"
-            onClick={() => setPeriod(item.key)}
-            className={`rounded-full px-4 py-1.5 text-sm transition-colors ${
-              period === item.key ? 'bg-gray-900 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-            }`}
-          >
-            {item.label}
-          </button>
-        ))}
-      </div>
+      {periodButtons}
 
+      {!hasData ? (
+        <div className="flex flex-col items-center justify-center rounded-2xl border border-gray-100 bg-white py-16">
+          <BarChart3 className="h-10 w-10 text-gray-300" />
+          <p className="mt-3 text-sm font-medium text-gray-500">Chưa có dữ liệu chi tiêu trong khoảng thời gian này.</p>
+        </div>
+      ) : (
       <div className="grid grid-cols-1 gap-6 xl:grid-cols-2">
         <section className="rounded-2xl border border-gray-100 bg-white p-5">
           <h4 className="mb-4 text-sm font-semibold text-gray-900">Chi tiêu theo tháng</h4>
@@ -1416,6 +1435,7 @@ function PersonalStatsTab() {
           </ResponsiveContainer>
         </section>
       </div>
+      )}
     </div>
   )
 }

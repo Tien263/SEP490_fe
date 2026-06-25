@@ -57,6 +57,16 @@ export async function getOrderDetail(orderId) {
 }
 
 /**
+ * Lấy số liệu thống kê chi tiêu cá nhân của Customer đang đăng nhập.
+ * @param {'week'|'month'|'quarter'|'year'} period
+ * @returns {Promise<{ totalOrders, totalSpent, topProductName, vatInvoiceCount,
+ *                      spendingByMonth: {label,value}[], topProducts: {name,value}[] }>}
+ */
+export async function getSpendingStats(period = 'month') {
+  return request('GET', `/orders/my-stats?period=${encodeURIComponent(period)}`)
+}
+
+/**
  * Yêu cầu hóa đơn VAT cho đơn hàng đã giao.
  * @param {string} orderId – UUID của đơn hàng
  * @returns {Promise<{ message: string }>}
