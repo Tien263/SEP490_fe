@@ -46,7 +46,17 @@ import { Badge } from '../components/ui/Badge.jsx'
 import { Button } from '../components/ui/Button.jsx'
 import { Input } from '../components/ui/Input.jsx'
 import { useAuth } from '../context/AuthContext.jsx'
-import { getTrackingSteps, isVatExpired, orders, paymentStatusMeta, shippingStatusMeta } from '../data/orders.js'
+import { getTrackingSteps, isVatExpired, orders as mockOrders, shippingStatusMeta } from '../data/orders.js'
+import {
+  getOrderDetail,
+  getOrderHistory,
+  requestVatInvoice,
+  downloadInvoicePdf,
+  orderStatusMeta,
+  paymentStatusMeta,
+  redInvoiceStatusMeta,
+} from '../services/orderService.js'
+import { exportInvoiceToPdf } from '../utils/exportPdf.js'
 import { formatPrice } from '../data/products.js'
 import { getCustomerProfile, updateCustomerProfile } from '../services/authService.js'
 import { getQuotations } from '../services/quotationService.js'
@@ -918,132 +928,326 @@ function TaxInfoTab({ userName, userEmail, userPhone, onSuccess }) {
 }
 
 function OrderHistoryTab({ onSuccess }) {
-  const [search, setSearch] = useState('')
-  const [statusFilter, setStatusFilter] = useState('all')
+  const [search, setSearch]               = useState('')
+  const [searchInput, setSearchInput]     = useState('')
+  const [statusFilter, setStatusFilter]   = useState('all')
+  const [payFilter, setPayFilter]         = useState('all')
+  const [fromDate, setFromDate]           = useState('')
+  const [toDate, setToDate]               = useState('')
+  const [page, setPage]                   = useState(1)
+  const PAGE_SIZE                         = 10
 
-  const filteredOrders = useMemo(
-    () =>
-      orders.filter((order) => {
-        const normalizedSearch = search.trim().toLowerCase()
-        const matchSearch =
-          normalizedSearch.length === 0 ||
-          order.id.toLowerCase().includes(normalizedSearch) ||
-          order.product.toLowerCase().includes(normalizedSearch)
-        const matchStatus = statusFilter === 'all' || order.shipStatus === statusFilter
+  const [orders, setOrders]               = useState([])
+  const [totalPages, setTotalPages]       = useState(1)
+  const [totalCount, setTotalCount]       = useState(0)
+  const [loading, setLoading]             = useState(true)
+  const [error, setError]                 = useState(null)
+  const [vatLoading, setVatLoading]       = useState({})
 
-        return matchSearch && matchStatus
-      }),
-    [search, statusFilter],
+  // Debounce search 400ms
+  useEffect(() => {
+    const t = setTimeout(() => setSearch(searchInput), 400)
+    return () => clearTimeout(t)
+  }, [searchInput])
+
+  // Load orders bất cứ khi nào filter thay đổi
+  useEffect(() => {
+    async function load() {
+      setLoading(true)
+      setError(null)
+      try {
+        const data = await getOrderHistory({
+          search: search || undefined,
+          status: statusFilter !== 'all' ? statusFilter : undefined,
+          paymentStatus: payFilter !== 'all' ? payFilter : undefined,
+          fromDate: fromDate || undefined,
+          toDate: toDate || undefined,
+          page,
+          pageSize: PAGE_SIZE,
+        })
+        setOrders(data.items || [])
+        setTotalPages(data.totalPages || 1)
+        setTotalCount(data.totalCount || 0)
+      } catch (err) {
+        setError(err.message || 'Không thể tải danh sách đơn hàng.')
+      } finally {
+        setLoading(false)
+      }
+    }
+    load()
+  }, [search, statusFilter, payFilter, fromDate, toDate, page])
+
+  // Reset về trang 1 khi filter thay đổi
+  useEffect(() => { setPage(1) }, [search, statusFilter, payFilter, fromDate, toDate])
+
+  async function handleRequestVat(orderId, orderCode) {
+    setVatLoading((prev) => ({ ...prev, [orderId]: true }))
+    try {
+      await requestVatInvoice(orderId)
+      setOrders((prev) =>
+        prev.map((o) =>
+          o.id === orderId ? { ...o, canRequestVat: false, redInvoiceStatus: 'Pending' } : o
+        )
+      )
+      onSuccess(`Yêu cầu hóa đơn VAT cho đơn ${orderCode} đã được ghi nhận.`)
+    } catch (err) {
+      alert(err.message || 'Lỗi khi yêu cầu VAT.')
+    } finally {
+      setVatLoading((prev) => ({ ...prev, [orderId]: false }))
+    }
+  }
+
+  async function handleDownloadPdf(order) {
+    try {
+      const detail = await getOrderDetail(order.id)
+      await exportInvoiceToPdf(detail)
+    } catch (err) {
+      alert(err.message || 'Lỗi khi tải PDF.')
+    }
+  }
+
+  const formatDate = (iso) =>
+    new Date(iso).toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric' })
+
+  const formatPrice = (n) =>
+    n?.toLocaleString('vi-VN', { style: 'currency', currency: 'VND' }) ?? '—'
+
+  // ─── Loading ───────────────────────────────────────────────────────────────
+  const loadingBlock = (
+    <div className="flex flex-col items-center justify-center py-16">
+      <div className="h-8 w-8 animate-spin rounded-full border-2 border-gray-200 border-t-gray-900" />
+      <p className="mt-4 text-sm text-gray-500">Đang tải lịch sử đơn hàng...</p>
+    </div>
+  )
+
+  // ─── Error ─────────────────────────────────────────────────────────────────
+  const errorBlock = (
+    <div className="flex flex-col items-center justify-center py-16">
+      <AlertCircle className="h-10 w-10 text-red-400" />
+      <p className="mt-3 text-sm font-medium text-gray-700">{error}</p>
+      <button
+        type="button"
+        onClick={() => setPage((p) => p)}
+        className="mt-4 rounded-full border border-gray-200 px-4 py-2 text-xs font-medium text-gray-700 hover:bg-gray-50"
+      >
+        Thử lại
+      </button>
+    </div>
+  )
+
+  // ─── Empty ─────────────────────────────────────────────────────────────────
+  const emptyBlock = (
+    <div className="flex flex-col items-center justify-center py-16">
+      <Package className="h-10 w-10 text-gray-300" />
+      <p className="mt-3 text-sm font-medium text-gray-500">Không tìm thấy đơn hàng phù hợp.</p>
+    </div>
   )
 
   return (
     <div className="space-y-4">
+      {/* ─── Filter bar ─────────────────────────────────────────────── */}
       <div className="flex flex-col gap-3 lg:flex-row">
         <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
           <Input
-            value={search}
-            placeholder="Tìm theo mã đơn hoặc sản phẩm..."
+            value={searchInput}
+            placeholder="Tìm theo mã đơn hàng..."
             className="rounded-xl pl-9 text-sm"
-            onChange={(event) => setSearch(event.target.value)}
+            onChange={(e) => setSearchInput(e.target.value)}
           />
         </div>
 
         <select
           value={statusFilter}
-          onChange={(event) => setStatusFilter(event.target.value)}
+          onChange={(e) => setStatusFilter(e.target.value)}
           className="h-11 rounded-xl border border-gray-200 bg-white px-4 text-sm text-gray-700 outline-none focus:border-gray-900 focus:ring-2 focus:ring-gray-900/10"
         >
           <option value="all">Tất cả trạng thái</option>
-          <option value="delivered">Đã giao</option>
-          <option value="shipping">Đang giao</option>
-          <option value="pending">Chờ xử lý</option>
+          <option value="New">Đơn mới</option>
+          <option value="Received">Đã tiếp nhận</option>
+          <option value="Packing">Đang đóng gói</option>
+          <option value="InTransit">Đang giao</option>
+          <option value="Delivered">Đã giao</option>
+          <option value="Cancelled">Đã hủy</option>
         </select>
+
+        <select
+          value={payFilter}
+          onChange={(e) => setPayFilter(e.target.value)}
+          className="h-11 rounded-xl border border-gray-200 bg-white px-4 text-sm text-gray-700 outline-none focus:border-gray-900 focus:ring-2 focus:ring-gray-900/10"
+        >
+          <option value="all">Tất cả thanh toán</option>
+          <option value="Pending">Chờ thanh toán</option>
+          <option value="Paid">Đã thanh toán</option>
+          <option value="Failed">Thất bại</option>
+        </select>
+
+        <input
+          type="date"
+          value={fromDate}
+          onChange={(e) => setFromDate(e.target.value)}
+          className="h-11 rounded-xl border border-gray-200 bg-white px-3 text-sm text-gray-700 outline-none focus:border-gray-900"
+          placeholder="Từ ngày"
+        />
+        <input
+          type="date"
+          value={toDate}
+          onChange={(e) => setToDate(e.target.value)}
+          className="h-11 rounded-xl border border-gray-200 bg-white px-3 text-sm text-gray-700 outline-none focus:border-gray-900"
+          placeholder="Đến ngày"
+        />
       </div>
 
-      <section className="overflow-hidden rounded-2xl border border-gray-100 bg-white">
-        <table className="w-full table-fixed">
-          <colgroup>
-            <col className="w-[11%]" />
-            <col className="w-[12%]" />
-            <col className="w-[23%]" />
-            <col className="w-[12%]" />
-            <col className="w-[12%]" />
-            <col className="w-[9%]" />
-            <col className="w-[21%]" />
-          </colgroup>
+      {/* ─── Count ──────────────────────────────────────────────────── */}
+      {!loading && !error && (
+        <p className="text-xs text-gray-400">
+          Tìm thấy <span className="font-semibold text-gray-700">{totalCount}</span> đơn hàng
+        </p>
+      )}
+
+      {/* ─── Desktop table ──────────────────────────────────────────── */}
+      <section className="hidden overflow-hidden rounded-2xl border border-gray-100 bg-white md:block">
+        {loading ? loadingBlock : error ? errorBlock : orders.length === 0 ? emptyBlock : (
+          <table className="w-full table-fixed">
+            <colgroup>
+              <col className="w-[13%]" />
+              <col className="w-[11%]" />
+              <col className="w-[8%]" />
+              <col className="w-[13%]" />
+              <col className="w-[11%]" />
+              <col className="w-[11%]" />
+              <col className="w-[11%]" />
+              <col className="w-[22%]" />
+            </colgroup>
             <thead className="border-b border-gray-100 bg-gray-50">
               <tr>
-                {['Mã đơn hàng', 'Ngày đặt', 'Sản phẩm', 'Tổng tiền', 'Thanh toán', 'Giao hàng', 'Hành động'].map((heading) => (
-                  <th key={heading} className="px-3 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">
-                    {heading}
-                  </th>
+                {['Mã đơn', 'Ngày đặt', 'SL', 'Tổng TT', 'PT Thanh toán', 'TT Thanh toán', 'TT Đơn hàng', 'Hành động'].map((h) => (
+                  <th key={h} className="px-3 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">{h}</th>
                 ))}
               </tr>
             </thead>
-
             <tbody className="divide-y divide-gray-50">
-              {filteredOrders.map((order) => (
-                <tr key={order.id} className="transition-colors hover:bg-gray-50/50">
-                  <td className="px-3 py-4 align-top">
-                    <span className="block break-words font-mono text-sm font-semibold leading-8 text-gray-900">{order.id}</span>
-                  </td>
-                  <td className="whitespace-nowrap px-3 py-4 align-top text-sm text-gray-600">{order.date}</td>
-                  <td className="px-3 py-4 align-top text-sm leading-7 text-gray-700">{order.product}</td>
-                  <td className="whitespace-nowrap px-3 py-4 align-top text-sm font-semibold text-gray-900">{formatPrice(order.total)}</td>
-                  <td className="px-2 py-4 align-top">
-                    <Badge
-                      className={`${paymentStatusMeta[order.payStatus].badgeClass} whitespace-nowrap px-2.5 py-1 text-[10px] font-medium hover:opacity-100`}
-                    >
-                      {paymentStatusMeta[order.payStatus].label}
-                    </Badge>
-                  </td>
-                  <td className="px-2 py-4 align-top">
-                    <Badge
-                      className={`${shippingStatusMeta[order.shipStatus].badgeClass} whitespace-nowrap px-2.5 py-1 text-[10px] font-medium hover:opacity-100`}
-                    >
-                      {shippingStatusMeta[order.shipStatus].label}
-                    </Badge>
-                  </td>
-                  <td className="px-3 py-4 align-top">
-                    <div className="flex items-center gap-2 whitespace-nowrap text-xs">
-                      <Link
-                        to={`/profile/orders/${order.id}`}
-                        className="inline-flex items-center gap-1 font-medium text-gray-600 transition hover:text-gray-900 hover:underline"
-                      >
-                        <ExternalLink className="h-3 w-3" />
-                        Chi tiết
-                      </Link>
-                      <button
-                        type="button"
-                        className="inline-flex items-center gap-1 font-medium text-gray-600 transition hover:text-gray-900 hover:underline"
-                        onClick={() => onSuccess(`Đã tải PDF đơn hàng ${order.id}`)}
-                      >
-                        <Download className="h-3 w-3" />
-                        PDF
-                      </button>
-                      {isVatExpired(order) ? (
-                        <span className="text-xs font-medium text-gray-400">Quá hạn VAT</span>
-                      ) : (
-                        <button
-                          type="button"
-                          className="inline-flex items-center gap-1 font-medium text-blue-600 transition hover:text-blue-800 hover:underline"
-                          onClick={() => onSuccess(`Đã tải hóa đơn VAT của ${order.id}`)}
+              {orders.map((order) => {
+                const payMeta   = paymentStatusMeta[order.paymentStatus]   || { label: order.paymentStatus,   badgeClass: 'bg-gray-100 text-gray-500' }
+                const orderMeta = orderStatusMeta[order.orderStatus]       || { label: order.orderStatus,     badgeClass: 'bg-gray-100 text-gray-500' }
+                return (
+                  <tr key={order.id} className="transition-colors hover:bg-gray-50/50">
+                    <td className="px-3 py-4 align-top">
+                      <span className="block break-all font-mono text-xs font-semibold text-gray-900">{order.orderCode}</span>
+                    </td>
+                    <td className="whitespace-nowrap px-3 py-4 align-top text-xs text-gray-600">{formatDate(order.createdAt)}</td>
+                    <td className="px-3 py-4 align-top text-xs text-gray-700">{order.itemCount} sp</td>
+                    <td className="whitespace-nowrap px-3 py-4 align-top text-xs font-semibold text-gray-900">{formatPrice(order.finalPayment)}</td>
+                    <td className="px-3 py-4 align-top text-xs text-gray-600">{order.paymentMethod}</td>
+                    <td className="px-2 py-4 align-top">
+                      <Badge className={`${payMeta.badgeClass} whitespace-nowrap px-2 py-0.5 text-[10px] font-medium hover:opacity-100`}>
+                        {payMeta.label}
+                      </Badge>
+                    </td>
+                    <td className="px-2 py-4 align-top">
+                      <Badge className={`${orderMeta.badgeClass} whitespace-nowrap px-2 py-0.5 text-[10px] font-medium hover:opacity-100`}>
+                        {orderMeta.label}
+                      </Badge>
+                    </td>
+                    <td className="px-3 py-4 align-top">
+                      <div className="flex flex-wrap items-center gap-2 text-xs">
+                        <Link
+                          to={`/profile/orders/${order.id}`}
+                          className="inline-flex items-center gap-1 font-medium text-gray-600 transition hover:text-gray-900 hover:underline"
                         >
-                          VAT
-                        </button>
-                      )}
-                    </div>
-                  </td>
-                </tr>
-              ))}
+                          <ExternalLink className="h-3 w-3" />
+                          Chi tiết
+                        </Link>
+                          <button
+                            type="button"
+                            className="inline-flex items-center gap-1 font-medium text-gray-600 transition hover:text-gray-900 hover:underline"
+                            onClick={() => handleDownloadPdf(order)}
+                          >
+                            <Download className="h-3 w-3" />
+                            PDF
+                          </button>
+                        {isVatExpired(order) ? (
+                          <span className="text-xs font-medium text-gray-400">Quá hạn VAT</span>
+                        ) : (
+                          <button
+                            type="button"
+                            className="inline-flex items-center gap-1 font-medium text-blue-600 transition hover:text-blue-800 hover:underline"
+                            onClick={() => onSuccess(`Đã tải hóa đơn VAT của ${order.id}`)}
+                          >
+                            VAT
+                          </button>
+                        )}
+                      </div>
+                    </td>
+                  </tr>
+                )
+              })}
             </tbody>
           </table>
-
-        {filteredOrders.length === 0 && (
-          <div className="px-6 py-12 text-center text-sm text-gray-400">Không tìm thấy đơn hàng phù hợp.</div>
         )}
       </section>
+
+      {/* ─── Mobile cards ───────────────────────────────────────────── */}
+      <div className="space-y-3 md:hidden">
+        {loading ? loadingBlock : error ? errorBlock : orders.length === 0 ? emptyBlock : orders.map((order) => {
+          const payMeta   = paymentStatusMeta[order.paymentStatus]   || { label: order.paymentStatus,   badgeClass: 'bg-gray-100 text-gray-500' }
+          const orderMeta = orderStatusMeta[order.orderStatus]       || { label: order.orderStatus,     badgeClass: 'bg-gray-100 text-gray-500' }
+          return (
+            <section key={order.id} className="rounded-2xl border border-gray-100 bg-white p-4">
+              <div className="flex items-start justify-between gap-2">
+                <span className="font-mono text-xs font-bold text-gray-900">{order.orderCode}</span>
+                <span className="text-xs text-gray-400">{formatDate(order.createdAt)}</span>
+              </div>
+              <p className="mt-1 text-xs text-gray-500">{order.itemCount} sản phẩm · {order.paymentMethod}</p>
+              <p className="mt-2 text-sm font-semibold text-gray-900">{formatPrice(order.finalPayment)}</p>
+              <div className="mt-2 flex flex-wrap gap-1.5">
+                <Badge className={`${payMeta.badgeClass} px-2 py-0.5 text-[10px] font-medium hover:opacity-100`}>{payMeta.label}</Badge>
+                <Badge className={`${orderMeta.badgeClass} px-2 py-0.5 text-[10px] font-medium hover:opacity-100`}>{orderMeta.label}</Badge>
+              </div>
+              <div className="mt-3 flex flex-wrap gap-3 text-xs">
+                <Link to={`/profile/orders/${order.id}`} className="inline-flex items-center gap-1 font-medium text-gray-600 hover:underline">
+                  <ExternalLink className="h-3 w-3" /> Chi tiết
+                </Link>
+                  <button type="button" className="inline-flex items-center gap-1 font-medium text-gray-600 hover:underline" onClick={() => handleDownloadPdf(order)}>
+                    <Download className="h-3 w-3" /> PDF
+                  </button>
+                {isVatExpired(order) ? (
+                  <span className="text-xs font-medium text-gray-400">Quá hạn VAT</span>
+                ) : (
+                  <button type="button" className="inline-flex items-center gap-1 font-medium text-blue-600 hover:underline" onClick={() => onSuccess(`Đã tải hóa đơn VAT của ${order.id}`)}>
+                    VAT
+                  </button>
+                )}
+              </div>
+            </section>
+          )
+        })}
+      </div>
+
+      {/* ─── Pagination ─────────────────────────────────────────────── */}
+      {!loading && !error && totalPages > 1 && (
+        <div className="flex items-center justify-between pt-2">
+          <button
+            type="button"
+            onClick={() => setPage((p) => Math.max(1, p - 1))}
+            disabled={page === 1}
+            className="rounded-full border border-gray-200 px-4 py-2 text-xs font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-40"
+          >
+            ← Trước
+          </button>
+          <span className="text-xs text-gray-500">
+            Trang <span className="font-semibold text-gray-900">{page}</span> / {totalPages}
+          </span>
+          <button
+            type="button"
+            onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+            disabled={page === totalPages}
+            className="rounded-full border border-gray-200 px-4 py-2 text-xs font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-40"
+          >
+            Tiếp →
+          </button>
+        </div>
+      )}
     </div>
   )
 }
@@ -1052,10 +1256,10 @@ function PersonalStatsTab() {
   const [period, setPeriod] = useState('month')
 
   const statsData = useMemo(() => {
-    const latestOrderDate = orders.reduce((latest, order) => {
+    const latestOrderDate = mockOrders.reduce((latest, order) => {
       const orderDate = new Date(order.date)
       return orderDate > latest ? orderDate : latest
-    }, new Date(orders[0]?.date ?? Date.now()))
+    }, new Date(mockOrders[0]?.date ?? Date.now()))
 
     const periodDays = {
       week: 7,
@@ -1068,8 +1272,8 @@ function PersonalStatsTab() {
     const cutoff = new Date(latestOrderDate)
     cutoff.setDate(cutoff.getDate() - days)
 
-    const scopedOrders = orders.filter((order) => new Date(order.date) >= cutoff)
-    const relevantOrders = scopedOrders.length > 0 ? scopedOrders : orders
+    const scopedOrders = mockOrders.filter((order) => new Date(order.date) >= cutoff)
+    const relevantOrders = scopedOrders.length > 0 ? scopedOrders : mockOrders
     const totalSpent = relevantOrders.reduce((sum, order) => sum + order.total, 0)
     const vatInvoices = relevantOrders.filter((order) => order.hasVat).length
 
@@ -1370,7 +1574,7 @@ function QuotationRequestsTab() {
 
 function OrderTrackingTab() {
   const trackableOrders = useMemo(
-    () => orders.filter((order) => order.shipStatus === 'shipping' || order.shipStatus === 'pending' || order.shipStatus === 'delivered'),
+    () => mockOrders.filter((order) => order.shipStatus === 'shipping' || order.shipStatus === 'pending' || order.shipStatus === 'delivered'),
     [],
   )
   const defaultOrderId = trackableOrders.find((order) => order.trackingStatus === 'shipping')?.id ?? trackableOrders[0]?.id ?? ''
