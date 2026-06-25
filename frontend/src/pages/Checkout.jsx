@@ -30,6 +30,7 @@ import { Button } from '../components/ui/Button.jsx'
 import { Input } from '../components/ui/Input.jsx'
 import { useCart } from '../context/CartContext.jsx'
 import { useAuth } from '../context/AuthContext.jsx'
+import { getAddresses, createAddress, updateAddress, setDefaultAddress } from '../services/userService.js'
 import jsPDF from 'jspdf'
 import html2canvas from 'html2canvas'
 
@@ -372,13 +373,15 @@ export default function Checkout() {
 
   // ── Fetch profile & addresses ─────────────────────────────────────────────
   useEffect(() => {
-    async function loadProfile() {
+    async function loadData() {
       try {
         const res = await fetch('/api/customer-profile', {
           headers: { 'Authorization': `Bearer ${localStorage.getItem('accessToken')}` }
         })
+        let profile = null
         if (res.ok) {
           const data = await res.json()
+          profile = data
           setProfileFull(data)
           const mappedInfo = {
             taxCode: data.taxCode || '',
@@ -388,30 +391,40 @@ export default function Checkout() {
           }
           setVatInfo(mappedInfo)
           setVatForm(mappedInfo)
+        }
 
-          // Build a default address from profile
-          if (data.companyAddress || data.representative) {
+        // Tải danh sách địa chỉ thật từ API
+        try {
+          const list = await getAddresses()
+          if (list && list.length > 0) {
+            setAddresses(list)
+            const defaultAddr = list.find(a => a.isDefault) || list[0]
+            setSelectedAddressId(defaultAddr.id)
+          } else if (profile?.companyAddress || profile?.representative) {
+            // Fallback nếu chưa có địa chỉ lưu, tạo địa chỉ tạm từ profile
             const profileAddr = {
               id: 'profile-default',
-              name: data.representative || data.companyName || 'Công ty',
-              phone: data.companyPhone || '',
+              name: profile.representative || profile.companyName || 'Công ty',
+              phone: profile.companyPhone || '',
               city: '',
               district: '',
               ward: '',
-              addressLine: data.companyAddress || '',
-              address: data.companyAddress || '',
+              addressLine: profile.companyAddress || '',
+              address: profile.companyAddress || '',
               type: 'Công ty',
               isDefault: true,
             }
             setAddresses([profileAddr])
             setSelectedAddressId('profile-default')
           }
+        } catch (addrErr) {
+          console.error('Lỗi khi tải danh sách địa chỉ:', addrErr)
         }
       } catch (err) {
         console.error('Error loading profile:', err)
       }
     }
-    loadProfile()
+    loadData()
   }, [])
 
   // ── Cart products ──────────────────────────────────────────────────────────
@@ -547,6 +560,19 @@ export default function Checkout() {
   async function handleConfirmOrder() {
     setIsProcessing(true)
     try {
+      // Nếu địa chỉ được chọn chưa phải là mặc định (và là địa chỉ thật lưu trong DB, không phải 'profile-default'), 
+      // set làm default trước khi đặt hàng để backend có thể tự lấy đúng địa chỉ này mà không cần sửa bảng Order.
+      const selectedAddrObj = addresses.find(a => a.id === selectedAddressId)
+      if (selectedAddrObj && !selectedAddrObj.isDefault && selectedAddressId !== 'profile-default') {
+        try {
+          await setDefaultAddress(selectedAddressId)
+          // Đặt lại state local để UI khớp
+          setAddresses(prev => prev.map(a => ({ ...a, isDefault: a.id === selectedAddressId })))
+        } catch (setDefaultErr) {
+          console.error("Lỗi khi cập nhật địa chỉ mặc định, vẫn tiếp tục đặt hàng:", setDefaultErr)
+        }
+      }
+
       const res = await fetch('/api/orders/place-order', {
         method: 'POST',
         headers: {
@@ -554,7 +580,7 @@ export default function Checkout() {
           'Authorization': `Bearer ${localStorage.getItem('accessToken')}`,
         },
         body: JSON.stringify({
-          addressId: null,
+          addressId: selectedAddressId === 'profile-default' ? null : selectedAddressId,
           paymentMethod: paymentMethod === 'sepay' ? 'SePay' : 'COD',
           notes: '',
           requiresRedInvoice: vatRequested,
@@ -612,10 +638,15 @@ export default function Checkout() {
       phone: addr.phone,
       city: addr.city,
       district: addr.district,
-      ward: addr.ward,
+      ward: addr.ward || '',
       addressLine: addr.addressLine,
       type: addr.type,
       isDefault: addr.isDefault,
+      provinceCode: addr.provinceCode || '',
+      districtCode: addr.districtCode || '',
+      wardCode: addr.wardCode || '',
+      latitude: addr.latitude || null,
+      longitude: addr.longitude || null,
     })
     setShowAddressModal(true)
   }
@@ -630,22 +661,51 @@ export default function Checkout() {
     setAddressForm((cur) => ({ ...cur, [key]: value }))
   }
 
-  function handleAddAddress(event) {
+  async function handleAddAddress(event) {
     event.preventDefault()
-    const next = {
-      ...addressForm,
-      id: editingAddressId || `${Date.now()}`,
-      type: editingAddressId ? addressForm.type : 'Nhà riêng',
-      address: buildFullAddress(addressForm),
+    
+    const payload = {
+      name: addressForm.name,
+      phone: addressForm.phone,
+      city: addressForm.city,
+      district: addressForm.district,
+      ward: addressForm.ward || '',
+      addressLine: addressForm.addressLine,
+      type: addressForm.type || 'Nhà riêng',
+      isDefault: addressForm.isDefault,
+      provinceCode: addressForm.provinceCode || undefined,
+      districtCode: addressForm.districtCode || undefined,
+      wardCode: addressForm.wardCode || undefined,
+      latitude: addressForm.latitude || undefined,
+      longitude: addressForm.longitude || undefined,
     }
-    setAddresses((prev) => {
-      const normalized = addressForm.isDefault ? prev.map((a) => ({ ...a, isDefault: false })) : prev
-      if (editingAddressId) return normalized.map((a) => (a.id === editingAddressId ? next : a))
-      return [...normalized, next]
-    })
-    setSelectedAddressId(next.id)
-    closeAddressModal()
-    showSuccess('Lưu địa chỉ thành công')
+
+    try {
+      if (editingAddressId) {
+        const updated = await updateAddress(editingAddressId, payload)
+        setAddresses((items) => {
+          if (updated.isDefault) {
+            return items.map((item) =>
+              item.id === editingAddressId ? updated : { ...item, isDefault: false }
+            )
+          }
+          return items.map((item) => (item.id === editingAddressId ? updated : item))
+        })
+      } else {
+        const created = await createAddress(payload)
+        setAddresses((items) => {
+          if (created.isDefault) {
+            return [...items.map((item) => ({ ...item, isDefault: false })), created]
+          }
+          return [...items, created]
+        })
+        setSelectedAddressId(created.id)
+      }
+      closeAddressModal()
+      showSuccess('Lưu địa chỉ thành công')
+    } catch (err) {
+      alert(err.message || 'Lỗi khi lưu địa chỉ')
+    }
   }
 
   async function handleSaveVatInfo(event) {
