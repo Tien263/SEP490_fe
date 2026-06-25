@@ -401,7 +401,7 @@ export default function SalesOrdersPage() {
                         </button>
                       </td>
                       <td className="px-4 py-3 text-center">
-                        {order.orderStatus === 'New' && (
+                        {order.orderStatus === 'New' ? (
                           <button
                             onClick={() => handleConfirmOrder(order.id)}
                             disabled={confirmingId === order.id}
@@ -414,6 +414,8 @@ export default function SalesOrdersPage() {
                             )}
                             Xác nhận
                           </button>
+                        ) : (
+                          <span className="text-[11px] text-gray-400 italic">Không có thao tác</span>
                         )}
                       </td>
                     </tr>
