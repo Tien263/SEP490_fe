@@ -4,6 +4,7 @@ import { motion } from 'motion/react'
 import { Link } from 'react-router-dom'
 import { Button } from './ui/Button.jsx'
 import { formatPrice } from '../services/productService.js'
+import { useCart } from '../context/CartContext.jsx'
 
 export default function ProductListCard({ product }) {
   const [isWishlisted, setIsWishlisted] = useState(false)
@@ -14,6 +15,24 @@ export default function ProductListCard({ product }) {
 
   const price    = product.standardListedPrice ?? product.price ?? 0
   const category = product.categoryName ?? product.category ?? ''
+  
+  const { addToCart } = useCart()
+  const [adding, setAdding] = useState(false)
+  const productId = product.id
+
+  async function handleAddToCartClick(e) {
+    e.preventDefault()
+    e.stopPropagation()
+    setAdding(true)
+    try {
+      await addToCart(productId, 1)
+      alert(`Đã thêm "${product.name}" vào giỏ hàng!`)
+    } catch (err) {
+      alert(err.message || 'Không thể thêm sản phẩm vào giỏ hàng')
+    } finally {
+      setAdding(false)
+    }
+  }
 
   return (
     <motion.article
@@ -65,10 +84,11 @@ export default function ProductListCard({ product }) {
             <span className="text-2xl font-bold text-gray-900">{formatPrice(price)}</span>
             <Button
               className="rounded-full bg-black px-8 text-white hover:bg-gray-800 disabled:opacity-40"
-              disabled={product.availableStock === 0}
+              disabled={product.availableStock === 0 || adding}
+              onClick={handleAddToCartClick}
             >
               <ShoppingCart className="h-4 w-4" />
-              Thêm vào giỏ
+              {adding ? 'Đang thêm...' : 'Thêm vào giỏ'}
             </Button>
           </div>
         </div>
