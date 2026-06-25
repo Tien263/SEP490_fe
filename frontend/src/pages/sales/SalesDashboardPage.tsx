@@ -350,6 +350,14 @@ export default function SalesDashboard() {
         {/* Recent orders table */}
         <div className="bg-white border border-[#E5E7EB] rounded-lg shadow-sm">
           <PanelHeader title="Đơn hàng gần đây — 10 đơn mới nhất" />
+          <div className="flex items-center justify-end px-3 pt-3">
+            <button
+              onClick={() => navigate('/sales/orders')}
+              className="text-[11px] font-semibold text-[#1F3B64] hover:underline"
+            >
+              Xem tat ca
+            </button>
+          </div>
           <div className="overflow-x-auto">
             <table className="w-full text-left" style={{ fontSize: 12 }}>
               <thead>

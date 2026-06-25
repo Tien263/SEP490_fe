@@ -7,11 +7,12 @@ import {
 } from '../../components/sales-ui/dropdown-menu';
 import {
   LayoutDashboard, MessageSquare, Bell, LogOut, ChevronDown,
-  Search, Settings, ShoppingCart
+  Search, Settings, ShoppingCart, FileText
 } from 'lucide-react';
 import SalesDashboardPage from './SalesDashboardPage';
 import SalesNegotiationPage from './SalesNegotiationPage';
 import DirectPurchasePage from './DirectPurchasePage';
+import SalesOrdersPage from './SalesOrdersPage';
 import { useAuth } from '../../context/AuthContext';
 
 interface NavItem {
@@ -41,6 +42,12 @@ const NAV_ITEMS: NavItem[] = [
     label: 'Mua hàng trực tiếp',
     icon: <ShoppingCart className="w-4 h-4" />,
     path: '/sales/direct-purchase',
+  },
+  {
+    id: 'orders',
+    label: 'Quản lý đơn hàng',
+    icon: <FileText className="w-4 h-4" />,
+    path: '/sales/orders',
   },
 ];
 
@@ -186,6 +193,7 @@ export default function SalesPortal() {
             <Route path="dashboard" element={<SalesDashboardPage />} />
             <Route path="negotiation" element={<SalesNegotiationPage />} />
             <Route path="direct-purchase" element={<DirectPurchasePage />} />
+            <Route path="orders" element={<SalesOrdersPage />} />
             <Route path="*" element={<SalesDashboardPage />} />
           </Routes>
         </main>
