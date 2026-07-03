@@ -41,6 +41,7 @@ import {
 import AddressModal, { buildFullAddress, emptyAddressForm } from '../components/AddressModal.jsx'
 import Footer from '../components/Footer.jsx'
 import Header from '../components/Header.jsx'
+import PhoneVerificationModal from '../components/PhoneVerificationModal.jsx'
 import SuccessToast from '../components/SuccessToast.jsx'
 import { Badge } from '../components/ui/Badge.jsx'
 import { Button } from '../components/ui/Button.jsx'
@@ -163,6 +164,8 @@ function PersonalInfoTab({ user, onSuccess }) {
   const [showCurrent, setShowCurrent] = useState(false)
   const [showNew, setShowNew] = useState(false)
   const [showConfirm, setShowConfirm] = useState(false)
+  const [isVerifyPhoneOpen, setIsVerifyPhoneOpen] = useState(false)
+
   const [savingInfo, setSavingInfo] = useState(false)
   const [updatingPassword, setUpdatingPassword] = useState(false)
 
@@ -172,6 +175,8 @@ function PersonalInfoTab({ user, onSuccess }) {
     vatInvoice: false,
     promotions: true,
   })
+
+  const isPhoneMatchedAndVerified = !phoneNumber || (user?.isPhoneVerified && user?.phoneNumber === phoneNumber);
 
   const fileInputRef = useRef(null)
 
@@ -221,6 +226,11 @@ function PersonalInfoTab({ user, onSuccess }) {
     // Khớp validation backend: SĐT Việt Nam phải đủ 10 số và bắt đầu bằng 0
     if (!/^0\d{9}$/.test(phoneNumber.trim())) {
       alert('Số điện thoại phải có 10 số và bắt đầu bằng 0')
+      return
+    }
+    
+    if (!isPhoneMatchedAndVerified) {
+      alert('Vui lòng xác minh số điện thoại trước khi lưu thông tin.')
       return
     }
 
@@ -303,7 +313,22 @@ function PersonalInfoTab({ user, onSuccess }) {
               />
             </div>
             <div>
-              <label className="mb-1 block text-xs text-gray-500">Số điện thoại</label>
+              <div className="mb-1 flex items-center justify-between">
+                <label className="block text-xs text-gray-500">Số điện thoại</label>
+                {isPhoneMatchedAndVerified ? (
+                  <Badge className="bg-green-100 text-green-700 hover:bg-green-100 border-none text-[10px] px-1.5 py-0 h-4">
+                    Đã xác minh <Check className="w-3 h-3 ml-0.5" />
+                  </Badge>
+                ) : (
+                  <button 
+                    type="button" 
+                    onClick={() => setIsVerifyPhoneOpen(true)} 
+                    className="text-[10px] text-blue-600 hover:underline font-medium"
+                  >
+                    Xác minh ngay
+                  </button>
+                )}
+              </div>
               <Input
                 value={phoneNumber}
                 onChange={(e) => setPhoneNumber(e.target.value)}
@@ -330,9 +355,9 @@ function PersonalInfoTab({ user, onSuccess }) {
           </div>
         </div>
         <Button
-          className="rounded-full bg-gray-900 text-sm text-white hover:bg-gray-800"
+          className="rounded-full bg-gray-900 text-sm text-white hover:bg-gray-800 disabled:bg-gray-400"
           onClick={handleSaveInfo}
-          disabled={savingInfo}
+          disabled={savingInfo || !isPhoneMatchedAndVerified}
         >
           {savingInfo ? 'Đang lưu...' : 'Lưu thông tin'}
         </Button>
@@ -439,6 +464,12 @@ function PersonalInfoTab({ user, onSuccess }) {
           />
         </div>
       </section>
+
+      <PhoneVerificationModal 
+        isOpen={isVerifyPhoneOpen}
+        onClose={() => setIsVerifyPhoneOpen(false)}
+        currentPhone={phoneNumber}
+      />
     </div>
   )
 }

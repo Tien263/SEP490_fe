@@ -41,6 +41,20 @@ export async function verifyOtp(data) {
 }
 
 /**
+ * Yêu cầu gửi mã OTP SMS để xác minh số điện thoại.
+ */
+export async function requestPhoneOtp(phoneNumber) {
+  return request('POST', '/auth/request-phone-otp', { phoneNumber })
+}
+
+/**
+ * Xác thực mã OTP SMS.
+ */
+export async function verifyPhoneOtp(otpCode, phoneNumber) {
+  return request('POST', '/auth/verify-phone-otp', { otpCode, phoneNumber })
+}
+
+/**
  * Gửi lại OTP (thực hiện bằng cách re-register với cùng email — tuỳ backend).
  * Ở đây ta gọi lại verify-otp với otpCode rỗng sẽ fail, nên ta cần một
  * endpoint riêng. Hiện tại dùng giải pháp gọi lại register để server gửi lại OTP.

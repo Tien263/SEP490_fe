@@ -155,7 +155,6 @@ export function AuthProvider({ children }) {
       await authService.register({
         fullName: formData.fullName,
         email: formData.email,
-        phoneNumber: formData.phone,
         password: formData.password,
         confirmPassword: formData.confirmPassword,
       })
@@ -213,6 +212,36 @@ export function AuthProvider({ children }) {
     }
   }, [])
 
+  // ─── Phone Verification ──────────────────────────────────────────────────
+  const requestPhoneOtp = useCallback(async (phoneNumber) => {
+    setError(null)
+    try {
+      await authService.requestPhoneOtp(phoneNumber)
+      return { success: true }
+    } catch (err) {
+      setError(err.message)
+      return { success: false, message: err.message }
+    }
+  }, [])
+
+  const verifyPhoneOtp = useCallback(async (otpCode, verifiedPhoneNumber) => {
+    setError(null)
+    try {
+      await authService.verifyPhoneOtp(otpCode, verifiedPhoneNumber)
+      // Cập nhật state user
+      const currentUser = readJson(USER_KEY)
+      if (currentUser) {
+        const updated = { ...currentUser, isPhoneVerified: true, phoneNumber: verifiedPhoneNumber }
+        writeJson(USER_KEY, updated)
+        setUser(updated)
+      }
+      return { success: true }
+    } catch (err) {
+      setError(err.message)
+      return { success: false, message: err.message }
+    }
+  }, [])
+
   const value = useMemo(() => ({
     user,
     loading,
@@ -223,12 +252,14 @@ export function AuthProvider({ children }) {
     logout,
     register,
     verifyOtp,
+    requestPhoneOtp,
+    verifyPhoneOtp,
     forgotPassword,
     resetPassword,
     completeProfile,
     updateUser,
     refreshProfileStatus,
-  }), [user, loading, error, login, loginWithGoogle, logout, register, verifyOtp, forgotPassword, resetPassword, completeProfile, updateUser, refreshProfileStatus])
+  }), [user, loading, error, login, loginWithGoogle, logout, register, verifyOtp, requestPhoneOtp, verifyPhoneOtp, forgotPassword, resetPassword, completeProfile, updateUser, refreshProfileStatus])
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
 }

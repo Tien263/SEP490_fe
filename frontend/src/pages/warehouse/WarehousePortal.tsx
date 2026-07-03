@@ -7,11 +7,12 @@ import {
 } from '../../components/sales-ui/dropdown-menu';
 import {
   LayoutDashboard, Bell, LogOut, ChevronDown,
-  Search, Settings, Package
+  Search, Settings, Package, ClipboardList
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import WarehouseOrdersPage from './WarehouseOrdersPage';
 import WarehouseOrderDetailPage from './WarehouseOrderDetailPage';
+import WarehouseReceiptsPage from './WarehouseReceiptsPage';
 
 interface NavItem {
   id: string;
@@ -33,6 +34,12 @@ const NAV_ITEMS: NavItem[] = [
     label: 'Quản lý Đóng gói',
     icon: <Package className="w-4 h-4" />,
     path: '/warehouse/orders',
+  },
+  {
+    id: 'receipts',
+    label: 'Nhập nguyên liệu',
+    icon: <ClipboardList className="w-4 h-4" />,
+    path: '/warehouse/receipts',
   }
 ];
 
@@ -175,6 +182,7 @@ export default function WarehousePortal() {
           <Routes>
             <Route path="orders" element={<WarehouseOrdersPage />} />
             <Route path="orders/:id" element={<WarehouseOrderDetailPage />} />
+            <Route path="receipts" element={<WarehouseReceiptsPage />} />
             <Route path="*" element={<div className="p-4">Chào mừng đến với hệ thống quản lý Kho. Vui lòng chọn menu bên trái.</div>} />
           </Routes>
         </main>
