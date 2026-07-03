@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react';
-import { FileText, Filter, RefreshCw, Search, ShoppingCart, CheckCircle, Eye } from 'lucide-react';
+import { FileText, Filter, RefreshCw, Search, ShoppingCart, CheckCircle, Eye, XCircle } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { exportInvoiceToPdf } from '../../utils/exportPdf';
+import SalesOrderDetailModal from './SalesOrderDetailModal';
 
 const PRIMARY = '#1F3B64';
 const INFO = '#2563EB';
@@ -112,6 +113,11 @@ export default function SalesOrdersPage() {
   const [statusFilter, setStatusFilter] = useState('all');
   const [paymentFilter, setPaymentFilter] = useState('all');
   const [page, setPage] = useState(1);
+  const [viewingOrderId, setViewingOrderId] = useState<string | null>(null);
+
+  const handleCancelOrder = (orderId: string) => {
+    alert('Tính năng hủy đơn chưa được triển khai.');
+  };
 
   const fetchDashboard = async () => {
     try {
@@ -402,20 +408,45 @@ export default function SalesOrdersPage() {
                       </td>
                       <td className="px-4 py-3 text-center">
                         {order.orderStatus === 'New' ? (
-                          <button
-                            onClick={() => handleConfirmOrder(order.id)}
-                            disabled={confirmingId === order.id}
-                            className="inline-flex items-center gap-1 rounded bg-[#2563EB] px-2 py-1 text-[11px] font-semibold text-white hover:bg-[#1D4ED8] disabled:opacity-50"
-                          >
-                            {confirmingId === order.id ? (
-                              <RefreshCw className="h-3 w-3 animate-spin" />
-                            ) : (
-                              <CheckCircle className="h-3 w-3" />
-                            )}
-                            Xác nhận
-                          </button>
+                          <div className="flex items-center justify-center gap-2">
+                            <button
+                              onClick={() => setViewingOrderId(order.id)}
+                              className="inline-flex items-center gap-1 rounded bg-gray-500 px-2 py-1 text-[11px] font-semibold text-white hover:bg-gray-600"
+                              title="Xem chi tiết"
+                            >
+                              <FileText className="h-3 w-3" />
+                            </button>
+                            <button
+                              onClick={() => handleConfirmOrder(order.id)}
+                              disabled={confirmingId === order.id}
+                              className="inline-flex items-center gap-1 rounded bg-[#2563EB] px-2 py-1 text-[11px] font-semibold text-white hover:bg-[#1D4ED8] disabled:opacity-50"
+                              title="Xác nhận đơn"
+                            >
+                              {confirmingId === order.id ? (
+                                <RefreshCw className="h-3 w-3 animate-spin" />
+                              ) : (
+                                <CheckCircle className="h-3 w-3" />
+                              )}
+                            </button>
+                            <button
+                              onClick={() => handleCancelOrder(order.id)}
+                              className="inline-flex items-center gap-1 rounded bg-red-600 px-2 py-1 text-[11px] font-semibold text-white hover:bg-red-700"
+                              title="Hủy đơn"
+                            >
+                              <XCircle className="h-3 w-3" />
+                            </button>
+                          </div>
                         ) : (
-                          <span className="text-[11px] text-gray-400 italic">Không có thao tác</span>
+                          <div className="flex justify-center">
+                            <button
+                              onClick={() => setViewingOrderId(order.id)}
+                              className="inline-flex items-center gap-1 rounded bg-gray-500 px-2 py-1 text-[11px] font-semibold text-white hover:bg-gray-600"
+                              title="Xem chi tiết"
+                            >
+                              <FileText className="h-3 w-3" />
+                              Xem
+                            </button>
+                          </div>
                         )}
                       </td>
                     </tr>
@@ -448,6 +479,10 @@ export default function SalesOrdersPage() {
           )}
         </div>
       </div>
+
+      {viewingOrderId && (
+        <SalesOrderDetailModal orderId={viewingOrderId} onClose={() => setViewingOrderId(null)} />
+      )}
     </div>
   );
 }

@@ -13,7 +13,6 @@ export default function Register() {
   const [formData, setFormData] = useState({
     fullName: '',
     email: '',
-    phone: '',
     password: '',
     confirmPassword: '',
   })
@@ -117,22 +116,6 @@ export default function Register() {
                   placeholder="you@example.com"
                   value={formData.email}
                   onChange={(event) => handleChange('email', event.target.value)}
-                  className="h-12 pl-11"
-                  required
-                />
-              </div>
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="phone">Số điện thoại</Label>
-              <div className="relative">
-                <Phone className="absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-gray-400" />
-                <Input
-                  id="phone"
-                  type="tel"
-                  placeholder="+84 123 456 789"
-                  value={formData.phone}
-                  onChange={(event) => handleChange('phone', event.target.value)}
                   className="h-12 pl-11"
                   required
                 />
