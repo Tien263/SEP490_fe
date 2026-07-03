@@ -31,6 +31,8 @@ export default function Login() {
       navigate('/warehouse')
     } else if (user?.role === 'AccountingStaff') {
       navigate('/accounting')
+    } else if (user?.role === 'CEO') {
+      navigate('/ceo')
     } else if (user?.role === 'Admin') {
       navigate('/admin')
     } else {

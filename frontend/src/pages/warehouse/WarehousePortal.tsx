@@ -13,6 +13,7 @@ import { useAuth } from '../../context/AuthContext';
 import WarehouseOrdersPage from './WarehouseOrdersPage';
 import WarehouseOrderDetailPage from './WarehouseOrderDetailPage';
 import WarehouseReceiptsPage from './WarehouseReceiptsPage';
+import WarehousePOReceivePage from './WarehousePOReceivePage';
 
 interface NavItem {
   id: string;
@@ -40,6 +41,12 @@ const NAV_ITEMS: NavItem[] = [
     label: 'Nhập nguyên liệu',
     icon: <ClipboardList className="w-4 h-4" />,
     path: '/warehouse/receipts',
+  },
+  {
+    id: 'po-receive',
+    label: 'Nhận hàng NCC (PO)',
+    icon: <Package className="w-4 h-4" />,
+    path: '/warehouse/po-receive',
   }
 ];
 
@@ -183,6 +190,7 @@ export default function WarehousePortal() {
             <Route path="orders" element={<WarehouseOrdersPage />} />
             <Route path="orders/:id" element={<WarehouseOrderDetailPage />} />
             <Route path="receipts" element={<WarehouseReceiptsPage />} />
+            <Route path="po-receive" element={<WarehousePOReceivePage setActiveTab={() => {}} setSelectPOId={() => {}} />} />
             <Route path="*" element={<div className="p-4">Chào mừng đến với hệ thống quản lý Kho. Vui lòng chọn menu bên trái.</div>} />
           </Routes>
         </main>
