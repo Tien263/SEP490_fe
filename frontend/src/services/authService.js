@@ -1,6 +1,31 @@
 // ─── Base config ─────────────────────────────────────────────────────────────
 const API_BASE = '/api'  // Vite proxy → http://localhost:5112
 
+export async function fetchWithToken(method, url, body) {
+  const accessToken = localStorage.getItem('accessToken');
+  const headers = { 'Content-Type': 'application/json' };
+  if (accessToken) headers['Authorization'] = `Bearer ${accessToken}`;
+
+  const res = await fetch(`${API_BASE}${url}`, {
+    method,
+    headers,
+    body: body ? JSON.stringify(body) : undefined,
+  });
+
+  const text = await res.text();
+  const json = text ? JSON.parse(text) : {};
+
+  if (!res.ok) {
+    if (res.status === 401) {
+      localStorage.removeItem('accessToken');
+      localStorage.removeItem('user');
+      window.location.href = '/login';
+    }
+    throw new Error(json.message || `Lỗi ${res.status}`);
+  }
+  return json;
+}
+
 async function request(method, url, body) {
   const accessToken = localStorage.getItem('accessToken')
 

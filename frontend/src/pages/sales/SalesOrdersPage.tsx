@@ -12,12 +12,30 @@ const ERROR = '#DC2626';
 const NEUTRAL = '#64748B';
 
 const ORDER_STATUS: Record<string, { label: string; bg: string }> = {
-  New: { label: 'Đơn mới', bg: NEUTRAL },
-  Received: { label: 'Đã nhận', bg: INFO },
+  // Trạng thái đơn mới / chờ xác nhận
+  Draft: { label: 'Chờ xác nhận', bg: WARNING },
+  New: { label: 'Chờ xác nhận', bg: WARNING },
+  PendingConfirmation: { label: 'Chờ xác nhận', bg: WARNING },
+  
+  // Thanh toán
+  PendingPayment: { label: 'Chờ thanh toán', bg: INFO },
+  PaidReviewRequired: { label: 'Chờ duyệt TT', bg: '#8B5CF6' },
+  
+  // Xác nhận & Xử lý kho
+  Confirmed: { label: 'Đã xác nhận', bg: '#2563EB' },
+  Received: { label: 'Đã nhận đơn', bg: '#2563EB' },
+  Processing: { label: 'Đang đóng gói', bg: '#8B5CF6' },
   Packing: { label: 'Đang đóng gói', bg: '#8B5CF6' },
   Shortage: { label: 'Thiếu hàng', bg: ERROR },
-  InTransit: { label: 'Đang giao', bg: WARNING },
+  
+  // Giao hàng
+  InTransit: { label: 'Đang giao hàng', bg: WARNING },
   Delivered: { label: 'Đã giao', bg: SUCCESS },
+  Completed: { label: 'Hoàn thành', bg: SUCCESS },
+  
+  // Hủy đơn
+  CancelRequested: { label: 'Yêu cầu hủy', bg: ERROR },
+  CancelledReallocated: { label: 'Đã hủy', bg: ERROR },
   Cancelled: { label: 'Đã hủy', bg: ERROR },
 };
 
@@ -400,51 +418,55 @@ export default function SalesOrdersPage() {
                       <td className="px-4 py-3 text-center">
                         <button
                           onClick={() => handleExportPdf(order.id)}
-                          className="inline-flex rounded p-1.5 text-[#9CA3AF] transition-colors hover:bg-blue-100 hover:text-[#1F3B64]"
-                          title="Xem PDF Hóa đơn"
+                          className="inline-flex items-center gap-1 rounded bg-blue-50 border border-blue-200 px-2 py-1 text-[11px] font-semibold text-[#1F3B64] hover:bg-blue-100 transition-colors"
+                          title="In / Xem PDF Hóa đơn"
                         >
-                          <Eye className="h-4 w-4" />
+                          <FileText className="h-3 w-3 text-blue-600" />
+                          Hóa đơn
                         </button>
                       </td>
                       <td className="px-4 py-3 text-center">
-                        {order.orderStatus === 'New' ? (
-                          <div className="flex items-center justify-center gap-2">
-                            <button
-                              onClick={() => setViewingOrderId(order.id)}
-                              className="inline-flex items-center gap-1 rounded bg-gray-500 px-2 py-1 text-[11px] font-semibold text-white hover:bg-gray-600"
-                              title="Xem chi tiết"
-                            >
-                              <FileText className="h-3 w-3" />
-                            </button>
+                        {(order.orderStatus === 'Draft' || order.orderStatus === 'New' || order.orderStatus === 'PendingConfirmation') ? (
+                          <div className="flex items-center justify-center gap-1.5">
                             <button
                               onClick={() => handleConfirmOrder(order.id)}
                               disabled={confirmingId === order.id}
-                              className="inline-flex items-center gap-1 rounded bg-[#2563EB] px-2 py-1 text-[11px] font-semibold text-white hover:bg-[#1D4ED8] disabled:opacity-50"
-                              title="Xác nhận đơn"
+                              className="inline-flex items-center gap-1 rounded bg-[#2563EB] px-2.5 py-1 text-[11px] font-semibold text-white hover:bg-[#1D4ED8] disabled:opacity-50 shadow-sm"
+                              title="Xác nhận đơn hàng mới"
                             >
                               {confirmingId === order.id ? (
                                 <RefreshCw className="h-3 w-3 animate-spin" />
                               ) : (
                                 <CheckCircle className="h-3 w-3" />
                               )}
+                              Xác nhận
+                            </button>
+                            <button
+                              onClick={() => setViewingOrderId(order.id)}
+                              className="inline-flex items-center gap-1 rounded bg-gray-600 px-2 py-1 text-[11px] font-semibold text-white hover:bg-gray-700"
+                              title="Xem chi tiết đơn hàng"
+                            >
+                              <FileText className="h-3 w-3" />
+                              Chi tiết
                             </button>
                             <button
                               onClick={() => handleCancelOrder(order.id)}
-                              className="inline-flex items-center gap-1 rounded bg-red-600 px-2 py-1 text-[11px] font-semibold text-white hover:bg-red-700"
-                              title="Hủy đơn"
+                              className="inline-flex items-center gap-1 rounded bg-red-100 border border-red-200 px-2 py-1 text-[11px] font-semibold text-red-600 hover:bg-red-200"
+                              title="Hủy đơn hàng"
                             >
                               <XCircle className="h-3 w-3" />
+                              Hủy
                             </button>
                           </div>
                         ) : (
-                          <div className="flex justify-center">
+                          <div className="flex justify-center gap-1.5">
                             <button
                               onClick={() => setViewingOrderId(order.id)}
-                              className="inline-flex items-center gap-1 rounded bg-gray-500 px-2 py-1 text-[11px] font-semibold text-white hover:bg-gray-600"
-                              title="Xem chi tiết"
+                              className="inline-flex items-center gap-1 rounded bg-gray-600 px-2.5 py-1 text-[11px] font-semibold text-white hover:bg-gray-700"
+                              title="Xem chi tiết đơn hàng"
                             >
                               <FileText className="h-3 w-3" />
-                              Xem
+                              Chi tiết
                             </button>
                           </div>
                         )}

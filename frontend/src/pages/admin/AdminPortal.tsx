@@ -149,6 +149,7 @@ function ComingSoon({ label }: { label: string }) {
 // ─── Admin Portal ─────────────────────────────────────────────────────────────
 export default function AdminPortal() {
   const [activeTab, setActiveTab] = useState('dashboard');
+  const [selectPOId, setSelectPOId] = useState<string>('');
   const { user, logout } = useAuth() as any;
   const navigate = useNavigate();
 
