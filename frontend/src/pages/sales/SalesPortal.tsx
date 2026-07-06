@@ -19,7 +19,9 @@ import {
   Search,
   Settings,
   ShoppingCart,
+  Shuffle,
   Truck,
+  Users,
 } from 'lucide-react';
 import SalesDashboardPage from './SalesDashboardPage';
 import SalesNegotiationPage from './SalesNegotiationPage';
@@ -29,6 +31,8 @@ import SalesDeliveryPage from './SalesDeliveryPage';
 import SalesWarehouseCoordPage from './SalesWarehouseCoordPage';
 import SalesDeliveryArrangementPage from './SalesDeliveryArrangementPage';
 import SalesDeliveryCollectionPage from './SalesDeliveryCollectionPage';
+import SalesMyCustomersPage from './SalesMyCustomersPage';
+import SalesRoundRobinPage from './SalesRoundRobinPage';
 import { useAuth } from '../../context/AuthContext';
 
 interface NavItem {
@@ -38,6 +42,7 @@ interface NavItem {
   path: string;
   badge?: number;
   children?: NavItem[];
+  roles?: string[]; // Không khai báo = hiện cho mọi role vào được portal
 }
 
 const NAV_ITEMS: NavItem[] = [
@@ -48,10 +53,25 @@ const NAV_ITEMS: NavItem[] = [
     path: '/sales/dashboard',
   },
   {
+    id: 'my-customers',
+    label: 'Khách hàng của tôi',
+    icon: <Users className="w-4 h-4" />,
+    path: '/sales/my-customers',
+    roles: ['SalesStaff', 'Admin'],
+  },
+  {
+    id: 'round-robin',
+    label: 'Quản lý Round-robin',
+    icon: <Shuffle className="w-4 h-4" />,
+    path: '/sales/round-robin',
+    roles: ['SalesManager', 'Admin'],
+  },
+  {
     id: 'orders',
     label: 'Quản lý đơn hàng',
     icon: <FileText className="w-4 h-4" />,
     path: '/sales/orders',
+    roles: ['SalesStaff', 'Admin'],
   },
   {
     id: 'negotiation',
@@ -59,18 +79,21 @@ const NAV_ITEMS: NavItem[] = [
     icon: <MessageSquare className="w-4 h-4" />,
     path: '/sales/negotiation',
     badge: 3,
+    roles: ['SalesStaff', 'Admin'],
   },
   {
     id: 'direct-purchase',
     label: 'Mua hàng trực tiếp',
     icon: <ShoppingCart className="w-4 h-4" />,
     path: '/sales/direct-purchase',
+    roles: ['SalesStaff', 'Admin'],
   },
   {
     id: 'delivery',
     label: 'Giao hàng',
     icon: <Truck className="w-4 h-4" />,
     path: '/sales/delivery',
+    roles: ['SalesStaff', 'Admin'],
     children: [
       {
         id: 'delivery-warehouse',
@@ -183,6 +206,8 @@ export default function SalesPortal() {
   const navigate = useNavigate();
   const { user, logout } = useAuth() as any;
   const totalBadge = 5;
+  const role: string = user?.role || '';
+  const visibleNavItems = NAV_ITEMS.filter((item) => !item.roles || item.roles.includes(role));
 
   const handleLogout = async () => {
     await logout();
@@ -217,7 +242,7 @@ export default function SalesPortal() {
         </div>
 
         <nav className="flex-1 space-y-px overflow-y-auto px-1.5 py-2">
-          {NAV_ITEMS.map((item) => (
+          {visibleNavItems.map((item) => (
             <NavItemRow key={item.id} item={item} onNavigate={navigate} />
           ))}
         </nav>
@@ -300,6 +325,8 @@ export default function SalesPortal() {
         <main className="flex-1 overflow-auto">
           <Routes>
             <Route path="dashboard" element={<SalesDashboardPage />} />
+            <Route path="my-customers" element={<SalesMyCustomersPage />} />
+            <Route path="round-robin" element={<SalesRoundRobinPage />} />
             <Route path="orders" element={<SalesOrdersPage />} />
             <Route path="negotiation" element={<SalesNegotiationPage />} />
             <Route path="direct-purchase" element={<DirectPurchasePage />} />
