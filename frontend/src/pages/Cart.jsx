@@ -10,23 +10,24 @@ import { formatPrice } from '../services/productService.js'
 import { useCart } from '../context/CartContext.jsx'
 import { useAuth } from '../context/AuthContext.jsx'
 
-// Lấy giá đàm phán đã được chấp thuận từ quotation Accepted
+// Lấy giá đàm phán đã được chấp thuận từ quotation CustomerAccepted
 async function fetchNegotiatedPrices() {
   try {
     const { getQuotations, getQuotationById } = await import('../services/quotationService.js');
     const data = await getQuotations();
     const list = Array.isArray(data) ? data : [];
-    // Tìm quotation được Accepted (admin đã duyệt)
-    const acceptedList = list.filter(q => q.status === 'Accepted');
+    // Tìm quotation được CustomerAccepted
+    const acceptedList = list.filter(q => q.status === 'CustomerAccepted');
     if (acceptedList.length === 0) return {};
     // Lấy full detail của quotation mới nhất
     const latest = acceptedList[0];
     const full = await getQuotationById(latest.id);
-    const items = full.items || full.products || [];
+    const version = full.versions?.find(v => v.id === full.acceptedVersionId) || full.versions?.[0];
+    const items = version?.items || [];
     // Build map: productId -> proposedUnitPrice
     const map = {};
     for (const item of items) {
-      const proposedPrice = item.salesProposedUnitPrice ?? item.salesProposedPrice;
+      const proposedPrice = item.proposedUnitPrice;
       if (proposedPrice) {
         map[item.productId] = proposedPrice;
       }
@@ -80,13 +81,16 @@ export default function Cart() {
   function goToCheckout() {
     navigate('/checkout', {
       state: {
-        cartItems: cartItems.map(item => ({
-          productId: item.productId,
-          productName: item.productName,
-          imageUrl: item.imageUrl,
-          quantity: item.quantity,
-          unitPrice: item.unitPrice
-        })),
+        cartItems: cartItems.map(item => {
+          const price = (applyNegotiation && negotiatedPrices[item.productId]) ? negotiatedPrices[item.productId] : item.unitPrice;
+          return {
+            productId: item.productId,
+            productName: item.productName,
+            imageUrl: item.imageUrl,
+            quantity: item.quantity,
+            unitPrice: price
+          };
+        }),
       },
     })
   }

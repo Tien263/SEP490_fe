@@ -1,6 +1,5 @@
 const API_BASE = '/api';
 
-
 async function fetchWithToken(method, url, body) {
   const accessToken = localStorage.getItem('accessToken');
   const headers = { 'Content-Type': 'application/json' };
@@ -37,26 +36,30 @@ export async function pickUpQuotation(id) {
   return fetchWithToken('POST', `/Quotation/${id}/pickup`);
 }
 
-export async function updateProposedPrice(id, payload) {
-  return fetchWithToken('PUT', `/Quotation/${id}/propose-price`, payload);
+export async function createVersion(id, payload) {
+  return fetchWithToken('POST', `/Quotation/${id}/versions`, payload);
 }
 
-export async function acceptQuotation(id) {
-  return fetchWithToken('POST', `/Quotation/${id}/accept`);
+export async function managerReview(id, payload) {
+  return fetchWithToken('POST', `/Quotation/${id}/manager-decision`, payload);
 }
 
-export async function rejectQuotation(id) {
-  return fetchWithToken('POST', `/Quotation/${id}/reject`);
+export async function ceoReview(id, payload) {
+  return fetchWithToken('POST', `/Quotation/${id}/ceo-decision`, payload);
 }
 
-export async function adminApproveQuotation(id) {
-  return fetchWithToken('POST', `/Quotation/${id}/admin-approve`);
+export async function customerDecision(id, payload) {
+  return fetchWithToken('POST', `/Quotation/${id}/customer-decision`, payload);
 }
 
-export async function adminRejectQuotation(id) {
-  return fetchWithToken('POST', `/Quotation/${id}/admin-reject`);
+export async function cancelQuotation(id) {
+  return fetchWithToken('POST', `/Quotation/${id}/cancel`);
 }
 
 export async function getMessages(id) {
   return fetchWithToken('GET', `/Quotation/${id}/messages`);
+}
+
+export async function sendMessage(id, payload) {
+  return fetchWithToken('POST', `/Quotation/${id}/messages`, payload);
 }

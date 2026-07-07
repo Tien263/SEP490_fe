@@ -7,15 +7,18 @@ import {
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext.jsx';
 import { useChat } from '../../hooks/useChat.js';
-import { getQuotations, getQuotationById, getMessages, pickUpQuotation, updateProposedPrice } from '../../services/quotationService.js';
+import { getQuotations, getQuotationById, getMessages, pickUpQuotation, createVersion } from '../../services/quotationService.js';
 
 const STATUS_CONFIG: Record<string, { label: string; bg: string }> = {
-  Pending:                  { label: 'Chờ xử lý',       bg: '#64748B' },
-  SalesResponded:           { label: 'Đã báo giá',       bg: '#2563EB' },
+  Draft:                    { label: 'Chờ xử lý',       bg: '#64748B' },
   Negotiating:              { label: 'Đang đàm phán',    bg: '#7C3AED' },
-  WaitingForAdminApproval:  { label: 'Chờ Admin duyệt', bg: '#F97316' },
-  Accepted:                 { label: 'Đã chấp nhận',    bg: '#16A34A' },
-  Rejected:                 { label: 'Từ chối',          bg: '#DC2626' },
+  PendingManager:           { label: 'Chờ Manager duyệt', bg: '#F97316' },
+  PendingCeo:               { label: 'Chờ CEO duyệt',     bg: '#F97316' },
+  Approved:                 { label: 'Chờ Khách chốt',    bg: '#2563EB' },
+  CustomerAccepted:         { label: 'Đã chấp nhận',    bg: '#16A34A' },
+  CustomerRejected:         { label: 'Từ chối',          bg: '#DC2626' },
+  Expired:                  { label: 'Hết hạn',          bg: '#9CA3AF' },
+  Cancelled:                { label: 'Đã hủy',           bg: '#6B7280' },
 };
 
 export default function SalesNegotiationPage() {
@@ -93,22 +96,22 @@ export default function SalesNegotiationPage() {
     }
     try {
       const itemsPayload = items.map((it: any) => ({
-        quotationItemId: it.id,
-        proposedUnitPrice: newPrices[it.id] ? Number(newPrices[it.id]) : (it.salesProposedUnitPrice || it.originalUnitPrice)
+        productId: it.productId,
+        proposedUnitPrice: newPrices[it.productId] ? Number(newPrices[it.productId]) : it.originalUnitPrice
       }));
 
       const newTotal = itemsPayload.reduce((sum: number, it: any) => {
-        const qty = items.find((x: any) => x.id === it.quotationItemId)?.quantity || 0;
+        const qty = items.find((x: any) => x.productId === it.productId)?.quantity || 0;
         return sum + it.proposedUnitPrice * qty;
       }, 0);
 
-      await updateProposedPrice(active.id, {
+      await createVersion(active.id, {
         proposedTotal: newTotal,
-        salesResponse: salesNote || 'Sales đã cập nhật giá đề xuất',
+        salesNote: salesNote || 'Sales đã gửi phiên bản báo giá đề xuất',
         items: itemsPayload
       });
       setProposePrice(false);
-      alert('Đã gửi bảng giá đề xuất tới khách hàng!');
+      alert('Đã tạo phiên bản báo giá gửi Manager duyệt!');
       handleSelectQuotation(active);
       loadData();
     } catch (err: any) {
@@ -116,9 +119,10 @@ export default function SalesNegotiationPage() {
     }
   };
 
-  const items = active?.items || [];
+  const latestVersion = active?.versions?.[0];
+  const items = latestVersion ? latestVersion.items : (active?.items || []);
   const totalOriginal = active?.originalTotal || 0;
-  const totalProposed = active?.salesProposedTotal || totalOriginal;
+  const totalProposed = latestVersion ? latestVersion.proposedTotal : totalOriginal;
   const discount = totalOriginal - totalProposed;
 
   return (
@@ -202,11 +206,11 @@ export default function SalesNegotiationPage() {
                   </p>
                 </div>
                 <div className="flex items-center gap-2">
-                  {active.status === 'Pending' ? (
+                  {active.status === 'Draft' ? (
                     <Button size="sm" className="h-7 text-xs gap-1" style={{ backgroundColor: '#16A34A' }} onClick={handlePickUp}>
                       <Check className="w-3.5 h-3.5" /> Nhận xử lý
                     </Button>
-                  ) : (
+                  ) : active.status === 'Negotiating' ? (
                     <Button
                       size="sm"
                       variant="outline"
@@ -214,9 +218,9 @@ export default function SalesNegotiationPage() {
                       onClick={() => setProposePrice(!proposePrice)}
                     >
                       <DollarSign className="w-3.5 h-3.5" />
-                      {proposePrice ? 'Đang đề xuất...' : 'Đề xuất giá'}
+                      {proposePrice ? 'Đang đề xuất...' : 'Tạo Version Đề xuất giá'}
                     </Button>
-                  )}
+                  ) : null}
                 </div>
               </div>
             </div>
@@ -230,14 +234,14 @@ export default function SalesNegotiationPage() {
                 <div className="mb-2">
                   <Input
                     className="h-7 text-xs bg-white"
-                    placeholder="Ghi chú gửi kèm cho khách hàng (tuỳ chọn)..."
+                    placeholder="Ghi chú gửi cho Manager và Khách hàng (bắt buộc)..."
                     value={salesNote}
                     onChange={e => setSalesNote(e.target.value)}
                   />
                 </div>
                 <div className="flex items-center gap-2">
                   <Button size="sm" className="h-7 text-xs" style={{ backgroundColor: '#1F3B64' }} onClick={handleProposePriceSubmit}>
-                    Gửi bảng giá
+                    Tạo phiên bản gửi duyệt
                   </Button>
                   <Button size="sm" variant="outline" className="h-7 text-xs border-[#D1D5DB] text-[#374151]" onClick={() => { setProposePrice(false); setNewPrices({}); }}>
                     Hủy
@@ -255,7 +259,7 @@ export default function SalesNegotiationPage() {
                       <th className="text-left px-3 py-2 text-gray-500 font-medium">Sản phẩm</th>
                       <th className="text-center px-3 py-2 text-gray-500 font-medium w-16">SL</th>
                       <th className="text-right px-3 py-2 text-gray-500 font-medium w-28">Giá gốc</th>
-                      <th className="text-right px-3 py-2 text-gray-500 font-medium w-32">Giá đề xuất</th>
+                      <th className="text-right px-3 py-2 text-gray-500 font-medium w-32">Giá mới nhất</th>
                       <th className="text-right px-3 py-2 text-gray-500 font-medium w-28">Thành tiền</th>
                     </tr>
                   </thead>
@@ -268,11 +272,11 @@ export default function SalesNegotiationPage() {
                       </tr>
                     ) : (
                       items.map((item: any) => {
-                        const originalPrice = item.originalUnitPrice ?? item.originalPrice ?? 0;
-                        const proposedPrice = item.salesProposedUnitPrice ?? item.salesProposedPrice;
+                        const originalPrice = item.originalUnitPrice;
+                        const proposedPrice = item.proposedUnitPrice;
                         const currentPrice = proposedPrice || originalPrice;
                         return (
-                          <tr key={item.id} className="hover:bg-gray-50/50">
+                          <tr key={item.productId} className="hover:bg-gray-50/50">
                             <td className="px-3 py-2.5">
                               <p className="font-medium text-gray-800 truncate max-w-[200px]">{item.productName}</p>
                             </td>
@@ -289,8 +293,8 @@ export default function SalesNegotiationPage() {
                                 <Input
                                   className="h-6 text-xs text-right w-full"
                                   placeholder={currentPrice.toLocaleString('vi-VN')}
-                                  value={newPrices[item.id] || ''}
-                                  onChange={e => setNewPrices({ ...newPrices, [item.id]: e.target.value })}
+                                  value={newPrices[item.productId] || ''}
+                                  onChange={e => setNewPrices({ ...newPrices, [item.productId]: e.target.value })}
                                 />
                               ) : (
                                 <span className={`font-semibold ${proposedPrice ? 'text-green-600' : 'text-gray-700'}`}>
@@ -332,6 +336,30 @@ export default function SalesNegotiationPage() {
                 <div className="mt-3 bg-yellow-50 border border-yellow-200 rounded-lg px-3 py-2">
                   <p className="text-[11px] font-semibold text-yellow-800 mb-0.5">Ghi chú từ khách hàng:</p>
                   <p className="text-xs text-yellow-700">{active.generalNote}</p>
+                </div>
+              )}
+
+              {/* Lịch sử phiên bản */}
+              {active.versions && active.versions.length > 0 && (
+                <div className="mt-3 bg-white border border-gray-200 rounded-lg p-3">
+                  <p className="text-[11px] font-semibold text-gray-900 mb-2">Lịch sử Phiên bản Báo giá</p>
+                  <div className="space-y-2">
+                    {active.versions.map((v: any) => (
+                      <div key={v.id} className="text-xs border-b border-gray-100 pb-2 last:border-0 last:pb-0">
+                        <div className="flex justify-between items-center mb-1">
+                          <span className="font-semibold text-[#1F3B64]">Version {v.versionNumber}</span>
+                          <span className="text-gray-500">{new Date(v.createdAt).toLocaleString('vi-VN')}</span>
+                        </div>
+                        <div className="flex gap-4 mb-1">
+                          <span className="text-gray-600">Tổng: <strong>{(v.proposedTotal / 1e6).toFixed(2)}tr</strong></span>
+                          <span className="text-gray-600">Trạng thái: <strong>{v.status}</strong></span>
+                        </div>
+                        {v.salesNote && <p className="text-gray-500 italic">Sales: {v.salesNote}</p>}
+                        {v.managerNote && <p className="text-orange-600 italic">Manager: {v.managerNote}</p>}
+                        {v.ceoNote && <p className="text-purple-600 italic">CEO: {v.ceoNote}</p>}
+                      </div>
+                    ))}
+                  </div>
                 </div>
               )}
             </div>

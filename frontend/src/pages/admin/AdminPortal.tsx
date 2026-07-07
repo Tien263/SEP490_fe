@@ -1,10 +1,9 @@
 import { useState } from 'react';
 import AdminDashboard from './AdminDashboard';
-import AdminPriceNegotiation from './AdminPriceNegotiation';
 import { useAuth } from '../../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import {
-  LayoutDashboard, DollarSign, FileText, CheckSquare,
+  LayoutDashboard, FileText, CheckSquare,
   Package, XCircle, AlertTriangle, Users, ShieldCheck,
   Wallet, BarChart2, Sparkles, History, Settings, CreditCard,
   LogOut, Bell,
@@ -81,8 +80,6 @@ function AdminSidebar({ activeTab, setActiveTab }: { activeTab: string; setActiv
           active={activeTab === 'dashboard'} onClick={() => setActiveTab('dashboard')} />
 
         <NavGroup title="Quản lý & Duyệt giá">
-          <NavItem icon={<DollarSign className="w-4 h-4" />} label="Báo giá đàm phán"
-            active={activeTab === 'price-negotiation'} onClick={() => setActiveTab('price-negotiation')} badge={3} />
           <NavItem icon={<FileText className="w-4 h-4" />} label="Cập nhật giá hàng loạt"
             active={activeTab === 'bulk-price'} onClick={() => setActiveTab('bulk-price')} />
           <NavItem icon={<CheckSquare className="w-4 h-4" />} label="Duyệt giá đề xuất"
@@ -149,7 +146,6 @@ function ComingSoon({ label }: { label: string }) {
 // ─── Admin Portal ─────────────────────────────────────────────────────────────
 export default function AdminPortal() {
   const [activeTab, setActiveTab] = useState('dashboard');
-  const [selectPOId, setSelectPOId] = useState<string>('');
   const { user, logout } = useAuth() as any;
   const navigate = useNavigate();
 
@@ -164,7 +160,6 @@ export default function AdminPortal() {
   const renderContent = () => {
     switch (activeTab) {
       case 'dashboard': return <AdminDashboard />;
-      case 'price-negotiation': return <AdminPriceNegotiation />;
       default: return <ComingSoon label={activeTab} />;
     }
   };
