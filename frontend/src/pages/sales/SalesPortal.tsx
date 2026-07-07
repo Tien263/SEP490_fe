@@ -23,6 +23,7 @@ import {
   Shuffle,
   Truck,
   Users,
+  AlertTriangle,
 } from 'lucide-react';
 import SalesDashboardPage from './SalesDashboardPage';
 import SalesNegotiationPage from './SalesNegotiationPage';
@@ -34,6 +35,7 @@ import SalesDeliveryArrangementPage from './SalesDeliveryArrangementPage';
 import SalesDeliveryCollectionPage from './SalesDeliveryCollectionPage';
 import SalesMyCustomersPage from './SalesMyCustomersPage';
 import SalesRoundRobinPage from './SalesRoundRobinPage';
+import SalesSePayExceptionPage from './SalesSePayExceptionPage'; // MGR-05
 import ManagerPriceNegotiation from './ManagerPriceNegotiation';
 import { useAuth } from '../../context/AuthContext';
 
@@ -74,6 +76,14 @@ const NAV_ITEMS: NavItem[] = [
     icon: <CheckSquare className="w-4 h-4" />,
     path: '/sales/manager-negotiation',
     badge: 2,
+    roles: ['SalesManager', 'Admin'],
+  },
+  {
+    // MGR-05: Chỉ hiện cho SalesManager
+    id: 'sepay-exceptions',
+    label: 'Ngoại lệ SePay',
+    icon: <AlertTriangle className="w-4 h-4" />,
+    path: '/sales/sepay-exceptions',
     roles: ['SalesManager', 'Admin'],
   },
   {
@@ -337,6 +347,7 @@ export default function SalesPortal() {
             <Route path="dashboard" element={<SalesDashboardPage />} />
             <Route path="my-customers" element={<SalesMyCustomersPage />} />
             <Route path="round-robin" element={<SalesRoundRobinPage />} />
+            <Route path="sepay-exceptions" element={<SalesSePayExceptionPage />} /> {/* MGR-05 */}
             <Route path="manager-negotiation" element={<ManagerPriceNegotiation />} />
             <Route path="orders" element={<SalesOrdersPage />} />
             <Route path="negotiation" element={<SalesNegotiationPage />} />
