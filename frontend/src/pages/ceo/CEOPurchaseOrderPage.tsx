@@ -2,8 +2,10 @@ import { useState, useEffect } from 'react';
 import { getPurchaseOrders } from '../../services/purchaseOrderService.js';
 import { Plus, Search, Eye } from 'lucide-react';
 import CEOPurchaseOrderCreateModal from './CEOPurchaseOrderCreateModal';
+import { useToast } from '../../context/ToastContext';
 
 export default function CEOPurchaseOrderPage({ setActiveTab, setSelectPOId }: any) {
+  const { toast } = useToast();
   const [pos, setPos] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [isCreateOpen, setIsCreateOpen] = useState(false);
@@ -15,7 +17,7 @@ export default function CEOPurchaseOrderPage({ setActiveTab, setSelectPOId }: an
       const data = await getPurchaseOrders(statusFilter);
       setPos(data || []);
     } catch (err: any) {
-      alert(err.message);
+      toast.error(err.message);
     } finally {
       setLoading(false);
     }

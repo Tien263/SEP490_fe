@@ -1,8 +1,22 @@
 import { useEffect, useState } from 'react';
-import { FileText, Filter, RefreshCw, Search, ShoppingCart, CheckCircle, Eye, XCircle } from 'lucide-react';
+import {
+  FileText,
+  Search,
+  CheckCircle,
+  XCircle,
+  TrendingUp,
+  Package,
+  Clock,
+  Printer,
+  Filter,
+  RefreshCw,
+  ShoppingCart,
+  Eye,
+} from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { exportInvoiceToPdf } from '../../utils/exportPdf';
 import SalesOrderDetailModal from './SalesOrderDetailModal';
+import ConfirmModal from '../../components/ui/ConfirmModal';
 
 const PRIMARY = '#1F3B64';
 const INFO = '#2563EB';
@@ -133,6 +147,8 @@ export default function SalesOrdersPage() {
   const [page, setPage] = useState(1);
   const [viewingOrderId, setViewingOrderId] = useState<string | null>(null);
 
+  const [orderToConfirm, setOrderToConfirm] = useState<string | null>(null);
+
   const handleCancelOrder = (orderId: string) => {
     alert('Tính năng hủy đơn chưa được triển khai.');
   };
@@ -186,10 +202,17 @@ export default function SalesOrdersPage() {
     }
   };
 
-  const handleConfirmOrder = async (orderId: string) => {
-    if (!window.confirm('Bạn có chắc muốn xác nhận đơn hàng này và chuyển xuống kho?')) return;
+  const handleConfirmOrder = (orderId: string) => {
+    setOrderToConfirm(orderId);
+  };
+
+  const executeConfirmOrder = async () => {
+    if (!orderToConfirm) return;
     
-    setConfirmingId(orderId);
+    setConfirmingId(orderToConfirm);
+    const orderId = orderToConfirm;
+    setOrderToConfirm(null);
+
     try {
       const response = await fetch(`/api/orders/sales/${orderId}/confirm`, {
         method: 'POST',
@@ -505,6 +528,14 @@ export default function SalesOrdersPage() {
       {viewingOrderId && (
         <SalesOrderDetailModal orderId={viewingOrderId} onClose={() => setViewingOrderId(null)} />
       )}
+
+      <ConfirmModal
+        isOpen={!!orderToConfirm}
+        title="Xác nhận đơn hàng"
+        message="Bạn có chắc muốn xác nhận đơn hàng này và chuyển xuống kho?"
+        onConfirm={executeConfirmOrder}
+        onCancel={() => setOrderToConfirm(null)}
+      />
     </div>
   );
 }
