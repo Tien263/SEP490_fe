@@ -265,9 +265,12 @@ export default function OrderDetail() {
                 </div>
 
                 <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-                  <InfoRow icon={Package}     label="Mã đơn hàng"  value={order.orderCode} />
-                  <InfoRow icon={CalendarDays} label="Ngày đặt"     value={formatDate(order.createdAt)} />
-                  <InfoRow icon={CreditCard}   label="Thanh toán"   value={order.paymentMethod} />
+                  <InfoRow icon={Package}      label="Mã đơn hàng"       value={order.orderCode} />
+                  <InfoRow icon={CalendarDays}  label="Ngày đặt"          value={formatDate(order.createdAt)} />
+                  <InfoRow icon={CreditCard}    label="Thanh toán"        value={order.paymentMethod} />
+                  <InfoRow icon={User}          label="Người nhận"        value={order.customerName || order.receiverName} />
+                  <InfoRow icon={Phone}         label="Số điện thoại"     value={order.customerPhone || order.receiverPhone} />
+                  <InfoRow icon={MapPin}        label="Địa chỉ giao hàng" value={order.shippingAddress || order.address} />
                   {order.deliveryShift && (
                     <InfoRow icon={MapPin} label="Ca giao hàng" value={order.deliveryShift} />
                   )}
@@ -384,9 +387,14 @@ export default function OrderDetail() {
                   )}
                   <div className="flex items-center justify-between">
                     <span>Trạng thái hóa đơn VAT</span>
-                    <span className={`font-medium ${order.canRequestVat ? 'text-blue-600' : vatMeta.badgeClass.includes('emerald') ? 'text-emerald-600' : 'text-gray-500'}`}>
-                      {vatMeta.label}
-                    </span>
+                    <div className="flex items-center gap-2">
+                      <span className={`font-medium ${order.canRequestVat ? 'text-blue-600' : vatMeta.badgeClass.includes('emerald') ? 'text-emerald-600' : 'text-gray-500'}`}>
+                        {vatMeta.label}
+                      </span>
+                      <Link to="/profile?tab=tax" target="_blank" className="text-xs text-blue-600 hover:underline inline-flex items-center gap-0.5">
+                        <ExternalLink className="h-3 w-3" /> Hồ sơ MST
+                      </Link>
+                    </div>
                   </div>
                   <div className="border-t border-gray-100 pt-4">
                     <div className="flex items-center justify-between">

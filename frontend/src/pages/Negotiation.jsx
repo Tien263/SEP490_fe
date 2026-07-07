@@ -18,6 +18,7 @@ import { Badge } from "../components/ui/Badge.jsx";
 import { formatPrice } from "../services/productService.js";
 import ChatInterface from "../components/ChatInterface.jsx";
 import { getQuotationById, acceptQuotation, rejectQuotation } from "../services/quotationService.js";
+import ConfirmModal from "../components/ui/ConfirmModal.jsx";
 
 const mockQuotation = {
   id: "QT-2026-001",
@@ -57,6 +58,7 @@ export default function Negotiation() {
   const [quotation, setQuotation] = useState(null);
   const [showChat, setShowChat] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const [showRejectConfirm, setShowRejectConfirm] = useState(false);
   const isDemoMode = id === "demo";
 
   useEffect(() => {
@@ -112,22 +114,25 @@ export default function Negotiation() {
     }
   };
 
-  const handleReject = async () => {
+  const handleRejectClick = () => {
     if (!quotation) return;
-    const confirmed = window.confirm("Bạn có chắc muốn từ chối bảng giá này?");
-    if (confirmed) {
-      if (isDemoMode) {
-        updateQuotation({ status: "Rejected" });
-        alert("Demo: đã từ chối báo giá.");
-        return;
-      }
-      try {
-        await rejectQuotation(quotation.id);
-        updateQuotation({ status: "Rejected" });
-        alert("Đã từ chối đàm phán.");
-      } catch (error) {
-        alert("Có lỗi xảy ra: " + error.message);
-      }
+    setShowRejectConfirm(true);
+  };
+
+  const executeReject = async () => {
+    setShowRejectConfirm(false);
+    if (!quotation) return;
+    if (isDemoMode) {
+      updateQuotation({ status: "Rejected" });
+      alert("Demo: đã từ chối báo giá.");
+      return;
+    }
+    try {
+      await rejectQuotation(quotation.id);
+      updateQuotation({ status: "Rejected" });
+      alert("Đã từ chối đàm phán.");
+    } catch (error) {
+      alert("Có lỗi xảy ra: " + error.message);
     }
   };
 
@@ -177,7 +182,6 @@ export default function Negotiation() {
     );
   }
 
-  // Normalize status to handle both PascalCase (API) and snake_case (mock)
   const normalizedStatus = (quotation.status || "").toLowerCase().replace(/_/g, "");
 
   const statusBadge = {
@@ -221,7 +225,6 @@ export default function Negotiation() {
       <Header />
 
       <div className="pt-20">
-        {/* Breadcrumb */}
         <div className="border-b border-gray-100 bg-white">
           <div className="max-w-7xl mx-auto px-6 lg:px-8 py-6">
             <div className="flex items-center gap-2 text-sm">
@@ -241,7 +244,6 @@ export default function Negotiation() {
           </div>
         </div>
 
-        {/* Header */}
         <div className="bg-white border-b border-gray-100">
           <div className="max-w-7xl mx-auto px-6 lg:px-8 py-8">
             <Link
@@ -279,9 +281,7 @@ export default function Negotiation() {
           </div>
         </div>
 
-        {/* Content */}
         <div className="max-w-7xl mx-auto px-6 lg:px-8 py-8 space-y-8">
-          {/* Summary Cards */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             <motion.div
               initial={{ opacity: 0, y: 20 }}
@@ -329,7 +329,6 @@ export default function Negotiation() {
             )}
           </div>
 
-          {/* Sales Response */}
           {quotation.salesResponse && (
             <motion.div
               initial={{ opacity: 0, y: 20 }}
@@ -349,7 +348,6 @@ export default function Negotiation() {
             </motion.div>
           )}
 
-          {/* Product Comparison Table */}
           <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden">
             <div className="p-6 border-b border-gray-100">
               <h2 className="text-xl font-bold text-gray-900">
@@ -452,7 +450,6 @@ export default function Negotiation() {
             </div>
           </div>
 
-          {/* General Note */}
           {quotation.generalNote && (
             <div className="bg-white rounded-2xl border border-gray-100 p-6">
               <h3 className="font-semibold text-gray-900 mb-2">
@@ -462,7 +459,6 @@ export default function Negotiation() {
             </div>
           )}
 
-          {/* Action Buttons */}
           {(normalizedStatus === "salesresponded" || normalizedStatus === "negotiating") && (
             <div className="bg-white rounded-2xl border border-gray-100 p-6">
               <div className="flex items-center justify-between gap-4">
@@ -484,7 +480,7 @@ export default function Negotiation() {
                     Chưa hài lòng - Chat
                   </Button>
                   <Button
-                    onClick={handleReject}
+                    onClick={handleRejectClick}
                     variant="outline"
                     className="rounded-full gap-2 text-red-600 border-red-200 hover:bg-red-50 bg-white"
                   >
@@ -552,6 +548,14 @@ export default function Negotiation() {
       </div>
 
       <Footer />
+
+      <ConfirmModal
+        isOpen={showRejectConfirm}
+        title="Xác nhận từ chối"
+        message="Bạn có chắc muốn từ chối bảng giá này?"
+        onConfirm={executeReject}
+        onCancel={() => setShowRejectConfirm(false)}
+      />
     </div>
   );
 }

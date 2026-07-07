@@ -19,11 +19,22 @@ import {
   XCircle,
   Home,
   Download,
+  Search,
+  Loader2,
+  ExternalLink,
 } from 'lucide-react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import AddressModal, { buildFullAddress, emptyAddressForm } from '../components/AddressModal.jsx'
 import Footer from '../components/Footer.jsx'
 import Header from '../components/Header.jsx'
+
+export function getDisplayAddress(addr) {
+  if (!addr) return '—'
+  if (addr.fullAddress && addr.fullAddress.trim()) return addr.fullAddress
+  if (addr.address && addr.address.trim()) return addr.address
+  const parts = [addr.addressLine, addr.ward, addr.district, addr.city].filter(Boolean)
+  return parts.length > 0 ? parts.join(', ') : '—'
+}
 import SuccessToast from '../components/SuccessToast.jsx'
 import { Badge } from '../components/ui/Badge.jsx'
 import { Button } from '../components/ui/Button.jsx'
@@ -185,7 +196,7 @@ function InvoicePreview({ cartProducts, selectedAddress, discountRate, discountA
         <div style={{ display: 'flex' }}>
           <span style={{ whiteSpace: 'nowrap' }}>Địa chỉ giao hàng:&nbsp;</span>
           <span style={{ borderBottom: '1px dotted black', flex: 1 }}>
-            {selectedAddress?.address || ''}
+            {getDisplayAddress(selectedAddress)}
           </span>
         </div>
         {(customerPhone || selectedAddress?.phone) && (
@@ -354,6 +365,7 @@ export default function Checkout() {
   const [vatInfo, setVatInfo] = useState(defaultVatInfo)
   const [vatForm, setVatForm] = useState(defaultVatInfo)
   const [isEditingVat, setIsEditingVat] = useState(false)
+  const [searchingMst, setSearchingMst] = useState(false)
 
   // ── Payment ────────────────────────────────────────────────────────────────
   const [paymentMethod, setPaymentMethod] = useState('cod')
@@ -705,33 +717,6 @@ export default function Checkout() {
       showSuccess('Lưu địa chỉ thành công')
     } catch (err) {
       alert(err.message || 'Lỗi khi lưu địa chỉ')
-    }
-  }
-
-  async function handleSaveVatInfo(event) {
-    event.preventDefault()
-    try {
-      const res = await fetch('/api/customer-profile', {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('accessToken')}`,
-        },
-        body: JSON.stringify({
-          taxCode: vatForm.taxCode,
-          companyName: vatForm.companyName,
-          companyAddress: vatForm.companyAddress,
-          invoiceEmail: vatForm.invoiceEmail,
-          representative: profileFull?.representative || '',
-          companyPhone: profileFull?.companyPhone || '',
-        }),
-      })
-      if (!res.ok) throw new Error('Lỗi cập nhật hồ sơ MST')
-      setVatInfo(vatForm)
-      setIsEditingVat(false)
-      showSuccess('Cập nhật hồ sơ MST thành công')
-    } catch (err) {
-      alert(err.message)
     }
   }
 
@@ -1120,7 +1105,7 @@ export default function Checkout() {
                             </Badge>
                             {addr.isDefault && <Badge className="bg-gray-900 text-[10px] text-white hover:bg-gray-900">Mặc định</Badge>}
                           </div>
-                          <p className="text-sm text-gray-600">{addr.address}</p>
+                          <p className="text-sm font-medium text-gray-700 mt-1">{getDisplayAddress(addr)}</p>
                         </div>
                         <button type="button" onClick={() => openEditAddressModal(addr)} className="self-start text-gray-400 hover:text-gray-700">
                           <Edit2 className="h-4 w-4" />
@@ -1160,26 +1145,15 @@ export default function Checkout() {
                           <AlertCircle className="mt-0.5 h-3.5 w-3.5 flex-shrink-0" />
                           <span>Khách có thể yêu cầu hóa đơn VAT tối đa 7 ngày sau khi giao hàng thành công.</span>
                         </div>
-                        <Button variant="outline" size="sm" className="rounded-full text-xs" onClick={() => { setVatForm(vatInfo); setIsEditingVat(true) }}>
-                          <Edit2 className="h-3 w-3" />
-                          Cập nhật thông tin MST
-                        </Button>
-                        <AnimatePresence>
-                          {isEditingVat && (
-                            <motion.form initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 8 }} onSubmit={handleSaveVatInfo} className="mt-4 space-y-4 rounded-[1.25rem] border border-gray-200 p-4">
-                              <div className="grid gap-4 sm:grid-cols-2">
-                                <Input placeholder="Mã số thuế" value={vatForm.taxCode} onChange={(e) => setVatForm((v) => ({ ...v, taxCode: e.target.value }))} required />
-                                <Input placeholder="Tên công ty" value={vatForm.companyName} onChange={(e) => setVatForm((v) => ({ ...v, companyName: e.target.value }))} required />
-                              </div>
-                              <Input placeholder="Địa chỉ công ty" value={vatForm.companyAddress} onChange={(e) => setVatForm((v) => ({ ...v, companyAddress: e.target.value }))} required />
-                              <Input type="email" placeholder="Email nhận hóa đơn" value={vatForm.invoiceEmail} onChange={(e) => setVatForm((v) => ({ ...v, invoiceEmail: e.target.value }))} required />
-                              <div className="flex gap-3">
-                                <Button type="button" variant="outline" className="flex-1" onClick={() => setIsEditingVat(false)}>Hủy</Button>
-                                <Button type="submit" className="flex-1 bg-gray-900 text-white hover:bg-gray-800">Lưu thông tin MST</Button>
-                              </div>
-                            </motion.form>
-                          )}
-                        </AnimatePresence>
+                        <div className="flex flex-wrap items-center gap-3">
+                          <Link to="/profile?tab=tax" target="_blank">
+                            <Button variant="outline" size="sm" className="rounded-full text-xs gap-1.5 hover:bg-gray-100">
+                              <Edit2 className="h-3 w-3" />
+                              Cập nhật thông tin MST trong Hồ sơ
+                              <ExternalLink className="h-3 w-3 text-gray-400" />
+                            </Button>
+                          </Link>
+                        </div>
                       </motion.div>
                     )}
                   </AnimatePresence>
@@ -1311,7 +1285,7 @@ export default function Checkout() {
                     <div className="space-y-2 text-sm text-gray-600">
                       <div className="flex gap-2">
                         <MapPin className="h-4 w-4 text-gray-400 mt-0.5 flex-shrink-0" />
-                        <span>{selectedAddress?.address || '—'}</span>
+                        <span>{getDisplayAddress(selectedAddress)}</span>
                       </div>
                       {selectedAddress?.phone && (
                         <div className="flex gap-2">
@@ -1453,7 +1427,7 @@ export default function Checkout() {
                     <div className="mb-4 rounded-[1rem] bg-white border border-gray-200 p-3 text-xs text-gray-600 space-y-1">
                       <div className="flex items-center gap-2">
                         <MapPin className="h-3.5 w-3.5 text-gray-400 flex-shrink-0" />
-                        <span className="line-clamp-2">{selectedAddress?.address}</span>
+                        <span className="line-clamp-2">{getDisplayAddress(selectedAddress)}</span>
                       </div>
                       <div className="flex items-center gap-2">
                         <CreditCard className="h-3.5 w-3.5 text-gray-400 flex-shrink-0" />

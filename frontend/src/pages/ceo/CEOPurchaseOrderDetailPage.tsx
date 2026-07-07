@@ -9,6 +9,7 @@ import {
   getGoodsReceipts 
 } from '../../services/purchaseOrderService.js';
 import { ArrowLeft } from 'lucide-react';
+import ConfirmModal from '../../components/ui/ConfirmModal.jsx';
 
 export default function CEOPurchaseOrderDetailPage({ poId, onBack }: any) {
   const [po, setPo] = useState<any>(null);
@@ -18,6 +19,7 @@ export default function CEOPurchaseOrderDetailPage({ poId, onBack }: any) {
   // Discrepancy Modal
   const [showDiscrepancyModal, setShowDiscrepancyModal] = useState(false);
   const [resData, setResData] = useState({ resolutionType: 'AcceptExcess', reason: '' });
+  const [confirmConfig, setConfirmConfig] = useState<{ fn: any, msg: string } | null>(null);
 
   const loadData = async () => {
     setLoading(true);
@@ -40,12 +42,26 @@ export default function CEOPurchaseOrderDetailPage({ poId, onBack }: any) {
   }, [poId]);
 
   const handleAction = async (actionFn: any, confirmMsg?: string) => {
-    if (confirmMsg && !window.confirm(confirmMsg)) return;
+    if (confirmMsg) {
+      setConfirmConfig({ fn: actionFn, msg: confirmMsg });
+      return;
+    }
+    await executeAction(actionFn);
+  };
+
+  const executeAction = async (actionFn: any) => {
     try {
       await actionFn(poId);
       loadData();
     } catch (err: any) {
       alert(err.message);
+    }
+  };
+
+  const handleConfirmExecute = () => {
+    if (confirmConfig) {
+      executeAction(confirmConfig.fn);
+      setConfirmConfig(null);
     }
   };
 
@@ -197,6 +213,14 @@ export default function CEOPurchaseOrderDetailPage({ poId, onBack }: any) {
           </div>
         </div>
       )}
+
+      <ConfirmModal
+        isOpen={!!confirmConfig}
+        title="Xác nhận thao tác"
+        message={confirmConfig?.msg}
+        onConfirm={handleConfirmExecute}
+        onCancel={() => setConfirmConfig(null)}
+      />
     </div>
   );
 }

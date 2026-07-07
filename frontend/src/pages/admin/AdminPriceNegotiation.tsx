@@ -1,9 +1,11 @@
 import { useEffect, useState } from 'react';
 import { getQuotations, adminApproveQuotation, adminRejectQuotation } from '../../services/quotationService.js';
+import ConfirmModal from '../../components/ui/ConfirmModal.jsx';
 
 export default function AdminPriceNegotiation() {
   const [rows, setRows] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [rejectId, setRejectId] = useState<string | null>(null);
 
   const fetchQuotations = async () => {
     try {
@@ -31,9 +33,15 @@ export default function AdminPriceNegotiation() {
     }
   };
 
-  const handleReject = async (id: string) => {
+  const handleRejectClick = (id: string) => {
+    setRejectId(id);
+  };
+
+  const executeReject = async () => {
+    if (!rejectId) return;
+    const id = rejectId;
+    setRejectId(null);
     try {
-      if (!window.confirm('Bạn có chắc chắn muốn từ chối báo giá này?')) return;
       await adminRejectQuotation(id);
       alert('Đã từ chối báo giá!');
       fetchQuotations();
@@ -85,7 +93,7 @@ export default function AdminPriceNegotiation() {
                       Duyệt
                     </button>
                     <button 
-                      onClick={() => handleReject(row.id)}
+                      onClick={() => handleRejectClick(row.id)}
                       className="bg-white border border-[#dc2626] text-[#dc2626] px-[12px] py-[4px] rounded-[4px] text-[11px] font-medium hover:bg-[#dc2626] hover:text-white transition-colors"
                     >
                       Từ chối
@@ -97,6 +105,14 @@ export default function AdminPriceNegotiation() {
           </tbody>
         </table>
       </div>
+
+      <ConfirmModal
+        isOpen={!!rejectId}
+        title="Xác nhận từ chối"
+        message="Bạn có chắc chắn muốn từ chối báo giá này?"
+        onConfirm={executeReject}
+        onCancel={() => setRejectId(null)}
+      />
     </div>
   );
 }

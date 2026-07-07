@@ -22,14 +22,16 @@ import AdminPortal from './pages/admin/AdminPortal.tsx'
 import CEOPortal from './pages/ceo/CEOPortal.tsx'
 import WarehousePortal from './pages/warehouse/WarehousePortal.tsx'
 import ProtectedRouteImport from './components/ProtectedRoute.jsx'
+import { ToastProvider } from './context/ToastContext.tsx'
 const ProtectedRoute = ProtectedRouteImport as any;
 
 function App() {
   return (
     <BrowserRouter>
-      <AuthProvider>
-        <CartProvider>
-          <Routes>
+      <ToastProvider>
+        <AuthProvider>
+          <CartProvider>
+            <Routes>
             {/* Public Routes */}
             <Route path="/" element={<Landing />} />
             <Route path="/home" element={<Home />} />
@@ -67,8 +69,9 @@ function App() {
           </Routes>
         </CartProvider>
       </AuthProvider>
-    </BrowserRouter>
-  )
+    </ToastProvider>
+  </BrowserRouter>
+)
 }
 
 export default App
