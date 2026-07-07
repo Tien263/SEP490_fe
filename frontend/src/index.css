@@ -1,5 +1,9 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@300;400;500;600;700;800&family=Inter:wght@300;400;500;600;700;800;900&display=swap');
 @import 'tailwindcss';
+
+@theme {
+  --font-sans: 'Be Vietnam Pro', 'Inter', 'Segoe UI', Roboto, Arial, sans-serif;
+}
 
 @keyframes toastProgress {
   from { width: 100%; }
@@ -14,9 +18,11 @@
   body {
     margin: 0;
     min-width: 320px;
-    font-family: 'Inter', 'Segoe UI', sans-serif;
+    font-family: var(--font-sans);
     background: #ffffff;
     color: #111827;
+    text-rendering: optimizeLegibility;
+    font-synthesis: none;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
   }
