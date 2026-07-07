@@ -103,14 +103,23 @@ export default function WarehouseHandover() {
     return ms && mst;
   });
 
-  const confirmWarehouse = (id: string) => {
-    setData(p => p.map(d => d.id === id ? { ...d, warehouseConfirmed: true, status: 'waiting_sales' as const } : d));
-    setDetail(prev => prev?.id === id ? { ...prev, warehouseConfirmed: true, status: 'waiting_sales' } : prev);
+  const confirmWarehouse = async (id: string) => {
+    try {
+      const { warehouseConfirmHandover } = await import('../../services/warehouseService.js');
+      await warehouseConfirmHandover(id);
+      alert('Kho xác nhận bàn giao thành công!');
+      setData(p => p.map(d => d.id === id ? { ...d, warehouseConfirmed: true, status: 'waiting_sales' as const } : d));
+      setDetail(prev => prev?.id === id ? { ...prev, warehouseConfirmed: true, status: 'waiting_sales' } : prev);
+    } catch (err: any) { alert(err.message); }
   };
 
-  const confirmSales = (id: string) => {
-    setData(p => p.map(d => d.id === id ? { ...d, salesConfirmed: true, status: 'completed' as const } : d));
-    setDetail(prev => prev?.id === id ? { ...prev, salesConfirmed: true, status: 'completed' } : prev);
+  const confirmSales = async (id: string) => {
+    try {
+      // NOTE: Using a hypothetical salesConfirmHandover API or just mocking for now since the flow says Sales flow is separate
+      alert('Sales xác nhận thành công (MOCK)!');
+      setData(p => p.map(d => d.id === id ? { ...d, salesConfirmed: true, status: 'completed' as const } : d));
+      setDetail(prev => prev?.id === id ? { ...prev, salesConfirmed: true, status: 'completed' } : prev);
+    } catch (err: any) { alert(err.message); }
   };
 
   return (

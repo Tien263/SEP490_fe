@@ -91,6 +91,7 @@ export default function WarehouseProductionIssue() {
   const [showUpload, setShowUpload] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [uploaded, setUploaded] = useState(false);
+  const [fileToUpload, setFileToUpload] = useState<File | null>(null);
 
   const filtered = items.filter(d => {
     const q = search.toLowerCase();
@@ -102,14 +103,23 @@ export default function WarehouseProductionIssue() {
   const toggleSelect = (id: string) => setSelected(p => p.includes(id) ? p.filter(x => x !== id) : [...p, id]);
   const toggleAll = () => setSelected(p => p.length === filtered.length ? [] : filtered.map(d => d.id));
 
-  const postGoods = (id: string) => {
-    setItems(p => p.map(i => i.id === id ? { ...i, status: 'posted', hasProof: true } : i));
-    setDetail(p => p?.id === id ? { ...p, status: 'posted', hasProof: true } : p);
+  const postGoods = async (id: string) => {
+    try {
+      if (!fileToUpload) return alert('Vui lòng upload chứng từ!');
+      const { postProductionMaterialIssue } = await import('../../services/warehouseService.js');
+      await postProductionMaterialIssue(id, fileToUpload);
+      alert('Đăng sổ thành công!');
+      setItems(p => p.map(i => i.id === id ? { ...i, status: 'posted', hasProof: true } : i));
+      setDetail(p => p?.id === id ? { ...p, status: 'posted', hasProof: true } : p);
+    } catch (err: any) { alert(err.message); }
   };
 
-  const simulateUpload = () => {
-    setUploading(true);
-    setTimeout(() => { setUploading(false); setUploaded(true); }, 1500);
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setFileToUpload(file);
+      setUploaded(true);
+    }
   };
 
   return (
@@ -315,9 +325,9 @@ export default function WarehouseProductionIssue() {
             {!uploaded ? (
               <>
                 <div
-                  className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center hover:border-blue-400 transition-colors cursor-pointer"
-                  onClick={!uploading ? simulateUpload : undefined}
+                  className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center hover:border-blue-400 transition-colors cursor-pointer relative"
                 >
+                  <input type="file" accept="image/*,.pdf" className="absolute inset-0 w-full h-full opacity-0 cursor-pointer" onChange={handleFileChange} />
                   {uploading ? (
                     <>
                       <div className="w-8 h-8 border-2 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto mb-2" />
