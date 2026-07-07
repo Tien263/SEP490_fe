@@ -9,6 +9,7 @@ import {
 } from '../../components/sales-ui/dropdown-menu';
 import {
   Bell,
+  CheckSquare,
   ChevronDown,
   DollarSign,
   FileText,
@@ -35,6 +36,7 @@ import SalesDeliveryCollectionPage from './SalesDeliveryCollectionPage';
 import SalesMyCustomersPage from './SalesMyCustomersPage';
 import SalesRoundRobinPage from './SalesRoundRobinPage';
 import SalesSePayExceptionPage from './SalesSePayExceptionPage'; // MGR-05
+import ManagerPriceNegotiation from './ManagerPriceNegotiation';
 import { useAuth } from '../../context/AuthContext';
 
 interface NavItem {
@@ -66,6 +68,14 @@ const NAV_ITEMS: NavItem[] = [
     label: 'Quản lý Round-robin',
     icon: <Shuffle className="w-4 h-4" />,
     path: '/sales/round-robin',
+    roles: ['SalesManager', 'Admin'],
+  },
+  {
+    id: 'manager-negotiation',
+    label: 'Duyệt Báo giá (Quản lý)',
+    icon: <CheckSquare className="w-4 h-4" />,
+    path: '/sales/manager-negotiation',
+    badge: 2,
     roles: ['SalesManager', 'Admin'],
   },
   {
@@ -338,6 +348,7 @@ export default function SalesPortal() {
             <Route path="my-customers" element={<SalesMyCustomersPage />} />
             <Route path="round-robin" element={<SalesRoundRobinPage />} />
             <Route path="sepay-exceptions" element={<SalesSePayExceptionPage />} /> {/* MGR-05 */}
+            <Route path="manager-negotiation" element={<ManagerPriceNegotiation />} />
             <Route path="orders" element={<SalesOrdersPage />} />
             <Route path="negotiation" element={<SalesNegotiationPage />} />
             <Route path="direct-purchase" element={<DirectPurchasePage />} />

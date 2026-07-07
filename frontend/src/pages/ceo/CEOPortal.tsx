@@ -1,14 +1,14 @@
 import { useState } from 'react';
 import CEODashboard from './CEODashboard';
-import AdminPriceNegotiation from '../admin/AdminPriceNegotiation';
+import CEOPriceNegotiation from './CEOPriceNegotiation';
 import CEOPurchaseOrderPage from './CEOPurchaseOrderPage';
 import CEOSupplierManagementPage from './CEOSupplierManagementPage';
 import CEOPurchaseOrderDetailPage from './CEOPurchaseOrderDetailPage';
 import { useAuth } from '../../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import {
-  LayoutDashboard, DollarSign, FileText, CheckSquare,
-  Package, Users, LogOut, Bell, Settings
+  LayoutDashboard, DollarSign,
+  Package, Users, LogOut, Bell
 } from 'lucide-react';
 
 // ─── Sidebar primitives (Same as Admin) ───────────────────────────────────────
@@ -116,7 +116,7 @@ export default function CEOPortal() {
       case 'dashboard': 
         return <CEODashboard setActiveTab={setActiveTab} />;
       case 'price-negotiation': 
-        return <AdminPriceNegotiation />;
+        return <CEOPriceNegotiation />;
       case 'purchase-orders': 
         return <CEOPurchaseOrderPage setActiveTab={setActiveTab} setSelectPOId={setSelectPOId} />;
       case 'po-detail': 

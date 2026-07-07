@@ -26,6 +26,31 @@ export async function fetchWithToken(method, url, body) {
   return json;
 }
 
+export async function fetchFormDataWithToken(method, url, formData) {
+  const accessToken = localStorage.getItem('accessToken');
+  const headers = {};
+  if (accessToken) headers['Authorization'] = `Bearer ${accessToken}`;
+
+  const res = await fetch(`${API_BASE}${url}`, {
+    method,
+    headers, // Let browser set Content-Type with boundary for FormData
+    body: formData,
+  });
+
+  const text = await res.text();
+  const json = text ? JSON.parse(text) : {};
+
+  if (!res.ok) {
+    if (res.status === 401) {
+      localStorage.removeItem('accessToken');
+      localStorage.removeItem('user');
+      window.location.href = '/login';
+    }
+    throw new Error(json.message || `Lỗi ${res.status}`);
+  }
+  return json;
+}
+
 async function request(method, url, body) {
   const accessToken = localStorage.getItem('accessToken')
 

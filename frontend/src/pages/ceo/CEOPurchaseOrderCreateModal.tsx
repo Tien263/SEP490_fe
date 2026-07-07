@@ -1,14 +1,17 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { getSuppliers } from '../../services/supplierService.js';
-import { createPurchaseOrder, getWarehouses } from '../../services/purchaseOrderService.js';
 import { getProducts } from '../../services/productService.js';
-import { X, Plus, Trash2 } from 'lucide-react';
+import { createPurchaseOrder, getWarehouses, importPOFromExcel, importPOFromImage } from '../../services/purchaseOrderService.js';
+import { X, Plus, Trash2, Upload, FileSpreadsheet, Image as ImageIcon } from 'lucide-react';
 
 export default function CEOPurchaseOrderCreateModal({ onClose, onSuccess }: any) {
   const [suppliers, setSuppliers] = useState<any[]>([]);
   const [warehouses, setWarehouses] = useState<any[]>([]);
   const [products, setProducts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [importing, setImporting] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const imageInputRef = useRef<HTMLInputElement>(null);
 
   const [formData, setFormData] = useState({
     supplierId: '',
@@ -102,6 +105,38 @@ export default function CEOPurchaseOrderCreateModal({ onClose, onSuccess }: any)
     }
   };
 
+  const handleImportExcel = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    try {
+      setImporting(true);
+      await importPOFromExcel(file);
+      alert('Import PO từ Excel thành công!');
+      onSuccess();
+    } catch (err: any) {
+      alert(err.message || 'Lỗi khi import Excel');
+    } finally {
+      setImporting(false);
+      if (fileInputRef.current) fileInputRef.current.value = '';
+    }
+  };
+
+  const handleImportImage = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    try {
+      setImporting(true);
+      await importPOFromImage(file);
+      alert('Import PO từ hình ảnh thành công!');
+      onSuccess();
+    } catch (err: any) {
+      alert(err.message || 'Lỗi khi import hình ảnh');
+    } finally {
+      setImporting(false);
+      if (imageInputRef.current) imageInputRef.current.value = '';
+    }
+  };
+
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
       <div className="bg-white rounded-lg shadow-xl w-full max-w-[850px] max-h-[90vh] flex flex-col">
@@ -115,6 +150,25 @@ export default function CEOPurchaseOrderCreateModal({ onClose, onSuccess }: any)
             <div className="py-8 text-center text-sm text-gray-500">Đang tải danh mục nhà cung cấp & sản phẩm...</div>
           ) : (
             <>
+              <div className="flex gap-3 pb-4 border-b">
+                <input type="file" accept=".xlsx, .xls" className="hidden" ref={fileInputRef} onChange={handleImportExcel} />
+                <input type="file" accept="image/*" className="hidden" ref={imageInputRef} onChange={handleImportImage} />
+                <button 
+                  onClick={() => fileInputRef.current?.click()}
+                  disabled={importing}
+                  className="flex items-center gap-2 px-4 py-2 border border-green-600 text-green-600 rounded text-sm hover:bg-green-50 font-medium"
+                >
+                  <FileSpreadsheet className="w-4 h-4" /> {importing ? 'Đang xử lý...' : 'Import từ Excel'}
+                </button>
+                <button 
+                  onClick={() => imageInputRef.current?.click()}
+                  disabled={importing}
+                  className="flex items-center gap-2 px-4 py-2 border border-purple-600 text-purple-600 rounded text-sm hover:bg-purple-50 font-medium"
+                >
+                  <ImageIcon className="w-4 h-4" /> {importing ? 'Đang xử lý...' : 'Upload Hóa đơn (Ảnh)'}
+                </button>
+              </div>
+
               <div className="grid grid-cols-2 gap-4">
                 <div className="flex flex-col gap-1">
                   <label className="text-xs font-medium text-gray-600">Nhà cung cấp *</label>

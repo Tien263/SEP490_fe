@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Link, useParams, useSearchParams } from "react-router-dom";
+import { Link, useParams, useSearchParams, useNavigate } from "react-router-dom";
 import { motion } from "motion/react";
 import {
   ArrowLeft,
@@ -10,6 +10,7 @@ import {
   TrendingDown,
   Calendar,
   User,
+  ShoppingCart
 } from "lucide-react";
 import Header from "../components/Header.jsx";
 import Footer from "../components/Footer.jsx";
@@ -17,120 +18,58 @@ import { Button } from "../components/ui/Button.jsx";
 import { Badge } from "../components/ui/Badge.jsx";
 import { formatPrice } from "../services/productService.js";
 import ChatInterface from "../components/ChatInterface.jsx";
-import { getQuotationById, acceptQuotation, rejectQuotation } from "../services/quotationService.js";
+import { getQuotationById, customerDecision } from "../services/quotationService.js";
 import ConfirmModal from "../components/ui/ConfirmModal.jsx";
-
-const mockQuotation = {
-  id: "QT-2026-001",
-  requestDate: "2026-06-01",
-  originalTotal: 115000000,
-  salesProposedTotal: 103500000,
-  finalTotal: undefined,
-  status: "sales_responded",
-  salesStaffName: "Trần Minh Tuấn",
-  salesStaffEmail: "tuan.tran@viettien.com",
-  validUntil: "2026-06-15",
-  products: [
-    {
-      productId: "1",
-      productName: "Băng Keo Trong Cao Cấp",
-      quantity: 2000,
-      originalPrice: 45000,
-      salesProposedPrice: 40000,
-      finalPrice: 40000,
-    },
-    {
-      productId: "2",
-      productName: "Dập Ghim Chuyên Nghiệp",
-      quantity: 100,
-      originalPrice: 125000,
-      salesProposedPrice: 115000,
-      finalPrice: 115000,
-    },
-  ],
-  generalNote: "Yêu cầu báo giá cho đơn hàng lớn",
-  salesResponse: "Chúng tôi đã xem xét đơn hàng của bạn và đề xuất mức giá đặc biệt cho khách hàng lớn. Đây là mức giá ưu đãi tốt nhất cho số lượng này.",
-};
 
 export default function Negotiation() {
   const { id } = useParams();
   const [searchParams, setSearchParams] = useSearchParams();
+  const navigate = useNavigate();
   const [quotation, setQuotation] = useState(null);
   const [showChat, setShowChat] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [showRejectConfirm, setShowRejectConfirm] = useState(false);
-  const isDemoMode = id === "demo";
+  const [showAcceptConfirm, setShowAcceptConfirm] = useState(false);
 
   useEffect(() => {
     if (id) {
-      if (isDemoMode) {
-        setQuotation(mockQuotation);
+      fetchQuotation();
+    }
+  }, [id, searchParams]);
+
+  const fetchQuotation = () => {
+    getQuotationById(id)
+      .then(data => {
+        setQuotation(data);
         setIsLoading(false);
-        setShowChat(searchParams.get("chat") === "1");
-        return;
-      }
-
-      getQuotationById(id)
-        .then(data => {
-          setQuotation(data);
-          setIsLoading(false);
-          const status = (data.status || "").toLowerCase().replace(/_/g, "");
-          if (searchParams.get("chat") === "1" || status === "negotiating") {
-            setShowChat(true);
-          } else {
-            setShowChat(false);
-          }
-        })
-        .catch(err => {
-          console.error(err);
-          setIsLoading(false);
-        });
-    }
-  }, [id, isDemoMode, searchParams]);
-
-  const updateQuotation = (updates) => {
-    setQuotation((prev) => ({ ...prev, ...updates }));
-  };
-
-  const handleAccept = async () => {
-    if (!quotation) return;
-    if (isDemoMode) {
-      updateQuotation({
-        status: "WaitingForAdminApproval",
-        finalTotal: quotation.salesProposedTotal || quotation.originalTotal,
+        const status = (data.status || "").toLowerCase();
+        if (searchParams.get("chat") === "1" || status === "negotiating") {
+          setShowChat(true);
+        } else {
+          setShowChat(false);
+        }
+      })
+      .catch(err => {
+        console.error(err);
+        setIsLoading(false);
       });
-      alert("Demo: đã chấp nhận bảng giá và chuyển sang trạng thái chờ Admin duyệt.");
-      return;
-    }
-    try {
-      await acceptQuotation(quotation.id);
-      updateQuotation({
-        status: "WaitingForAdminApproval",
-        finalTotal: quotation.salesProposedTotal || quotation.originalTotal,
-      });
-      alert("Bảng giá đã được chấp nhận. Đang chờ Admin duyệt.");
-    } catch (error) {
-      alert("Có lỗi xảy ra: " + error.message);
-    }
   };
 
-  const handleRejectClick = () => {
-    if (!quotation) return;
-    setShowRejectConfirm(true);
-  };
+  const handleAcceptClick = () => setShowAcceptConfirm(true);
+  const handleRejectClick = () => setShowRejectConfirm(true);
 
-  const executeReject = async () => {
+  const executeDecision = async (isAccepted) => {
+    setShowAcceptConfirm(false);
     setShowRejectConfirm(false);
     if (!quotation) return;
-    if (isDemoMode) {
-      updateQuotation({ status: "Rejected" });
-      alert("Demo: đã từ chối báo giá.");
-      return;
-    }
+
+    const latestVersion = quotation.versions?.[0];
+    if (!latestVersion) return;
+
     try {
-      await rejectQuotation(quotation.id);
-      updateQuotation({ status: "Rejected" });
-      alert("Đã từ chối đàm phán.");
+      await customerDecision(quotation.id, { isAccepted });
+      alert(isAccepted ? "Bảng giá đã được chấp nhận!" : "Đã từ chối đàm phán.");
+      fetchQuotation(); // Refresh data
     } catch (error) {
       alert("Có lỗi xảy ra: " + error.message);
     }
@@ -138,7 +77,6 @@ export default function Negotiation() {
 
   const handleNegotiate = () => {
     if (!quotation) return;
-    updateQuotation({ status: "negotiating" });
     setSearchParams({ chat: "1" });
     setShowChat(true);
   };
@@ -146,6 +84,7 @@ export default function Negotiation() {
   const handleCloseChat = () => {
     setShowChat(false);
     setSearchParams({});
+    fetchQuotation();
   };
 
   if (isLoading) {
@@ -182,40 +121,45 @@ export default function Negotiation() {
     );
   }
 
-  const normalizedStatus = (quotation.status || "").toLowerCase().replace(/_/g, "");
-
+  const normalizedStatus = (quotation.status || "").toLowerCase();
+  
   const statusBadge = {
-    pending: "bg-yellow-100 text-yellow-700",
-    salesresponded: "bg-blue-100 text-blue-700",
+    draft: "bg-gray-100 text-gray-700",
     negotiating: "bg-purple-100 text-purple-700",
-    waitingforadminapproval: "bg-orange-100 text-orange-700",
-    accepted: "bg-green-100 text-green-700",
-    rejected: "bg-red-100 text-red-700",
+    pendingmanager: "bg-yellow-100 text-yellow-700",
+    pendingceo: "bg-orange-100 text-orange-700",
+    approved: "bg-blue-100 text-blue-700",
+    customeraccepted: "bg-green-100 text-green-700",
+    customerrejected: "bg-red-100 text-red-700",
+    expired: "bg-red-100 text-red-700",
+    cancelled: "bg-gray-200 text-gray-800",
   };
 
   const statusLabel = {
-    pending: "Đang chờ Sales phản hồi",
-    salesresponded: "Sales đã gửi bảng giá",
-    negotiating: "Đang trao đổi",
-    waitingforadminapproval: "Chờ Admin duyệt",
-    accepted: "Đã chấp nhận",
-    rejected: "Đã hủy",
+    draft: "Chờ Sales tiếp nhận",
+    negotiating: "Đang đàm phán",
+    pendingmanager: "Chờ Quản lý duyệt",
+    pendingceo: "Chờ Giám đốc duyệt",
+    approved: "Chờ bạn quyết định",
+    customeraccepted: "Đã chấp nhận",
+    customerrejected: "Đã từ chối",
+    expired: "Đã hết hạn",
+    cancelled: "Đã hủy",
   };
 
-  const totalSavings = quotation.salesProposedTotal
-    ? quotation.originalTotal - quotation.salesProposedTotal
-    : 0;
+  const latestVersion = quotation.versions?.[0];
+  const displayItems = latestVersion ? latestVersion.items : quotation.items;
+  const proposedTotal = latestVersion ? latestVersion.proposedTotal : null;
 
-  const savingsPercent = quotation.salesProposedTotal
-    ? ((totalSavings / quotation.originalTotal) * 100).toFixed(1)
-    : 0;
+  const totalSavings = proposedTotal ? quotation.originalTotal - proposedTotal : 0;
+  const savingsPercent = proposedTotal ? ((totalSavings / quotation.originalTotal) * 100).toFixed(1) : 0;
 
   if (showChat) {
     return (
       <ChatInterface
         quotation={quotation}
         onClose={handleCloseChat}
-        onAccept={handleAccept}
+        onAccept={handleAcceptClick}
       />
     );
   }
@@ -262,7 +206,7 @@ export default function Negotiation() {
                 <div className="flex items-center gap-4 text-sm text-gray-600">
                   <div className="flex items-center gap-1.5">
                     <Calendar className="w-4 h-4" />
-                    <span>Ngày gửi: {quotation.requestDate}</span>
+                    <span>Ngày gửi: {new Date(quotation.requestDate).toLocaleDateString("vi-VN")}</span>
                   </div>
                   {quotation.salesStaffName && (
                     <div className="flex items-center gap-1.5">
@@ -294,7 +238,7 @@ export default function Negotiation() {
               </p>
             </motion.div>
 
-            {quotation.salesProposedTotal && (
+            {proposedTotal > 0 && (
               <>
                 <motion.div
                   initial={{ opacity: 0, y: 20 }}
@@ -302,9 +246,9 @@ export default function Negotiation() {
                   transition={{ delay: 0.1 }}
                   className="bg-white rounded-2xl border border-gray-100 p-6"
                 >
-                  <p className="text-sm text-gray-500 mb-2">Tổng giá mới (Sales)</p>
+                  <p className="text-sm text-gray-500 mb-2">Tổng giá mới đề xuất</p>
                   <p className="text-2xl font-bold text-green-600">
-                    {formatPrice(quotation.salesProposedTotal)}
+                    {formatPrice(proposedTotal)}
                   </p>
                 </motion.div>
 
@@ -329,7 +273,7 @@ export default function Negotiation() {
             )}
           </div>
 
-          {quotation.salesResponse && (
+          {latestVersion?.salesNote && (
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
@@ -337,12 +281,12 @@ export default function Negotiation() {
             >
               <h3 className="font-semibold text-gray-900 mb-2 flex items-center gap-2">
                 <MessageSquare className="w-5 h-5 text-blue-600" />
-                Phản hồi từ Sales
+                Ghi chú từ Sales
               </h3>
-              <p className="text-gray-700">{quotation.salesResponse}</p>
-              {quotation.validUntil && (
+              <p className="text-gray-700">{latestVersion.salesNote}</p>
+              {latestVersion.validUntil && (
                 <p className="text-sm text-gray-600 mt-2">
-                  <strong>Hiệu lực đến:</strong> {quotation.validUntil}
+                  <strong>Hiệu lực đến:</strong> {new Date(latestVersion.validUntil).toLocaleString("vi-VN")}
                 </p>
               )}
             </motion.div>
@@ -363,8 +307,8 @@ export default function Negotiation() {
                       "Sản phẩm",
                       "Số lượng",
                       "Giá gốc (đơn vị)",
-                      quotation.salesProposedTotal && "Giá mới (đơn vị)",
-                      quotation.salesProposedTotal && "Tiết kiệm/sp",
+                      proposedTotal && "Giá mới (đơn vị)",
+                      proposedTotal && "Tiết kiệm/sp",
                       "Tổng tiền",
                     ]
                       .filter(Boolean)
@@ -379,15 +323,15 @@ export default function Negotiation() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-50">
-                  {(quotation.items || quotation.products || []).map((product, index) => {
-                    const originalPrice = product.originalUnitPrice ?? product.originalPrice;
-                    const salesProposedPrice = product.salesProposedUnitPrice ?? product.salesProposedPrice;
+                  {displayItems.map((product, index) => {
+                    const originalPrice = product.originalUnitPrice;
+                    const salesProposedPrice = product.proposedUnitPrice;
                     const finalPrice = salesProposedPrice || originalPrice;
                     const totalPrice = finalPrice * product.quantity;
                     const savingsPerUnit = salesProposedPrice
                       ? originalPrice - salesProposedPrice
                       : 0;
-                    const totalSavings = savingsPerUnit * product.quantity;
+                    const itemTotalSavings = savingsPerUnit * product.quantity;
 
                     return (
                       <tr
@@ -399,9 +343,6 @@ export default function Negotiation() {
                             <p className="font-semibold text-gray-900">
                               {product.productName}
                             </p>
-                            <p className="text-xs text-gray-500">
-                              Mã: {String(product.productId).padStart(6, "0")}
-                            </p>
                           </div>
                         </td>
                         <td className="px-6 py-4 text-sm font-medium text-gray-900">
@@ -412,7 +353,7 @@ export default function Negotiation() {
                             {formatPrice(originalPrice)}
                           </p>
                         </td>
-                        {quotation.salesProposedTotal && (
+                        {proposedTotal > 0 && (
                           <>
                             <td className="px-6 py-4">
                               <p className="text-sm font-semibold text-green-600">
@@ -435,9 +376,9 @@ export default function Negotiation() {
                             <p className="text-sm font-bold text-gray-900">
                               {formatPrice(totalPrice)}
                             </p>
-                            {totalSavings > 0 && (
+                            {itemTotalSavings > 0 && (
                               <p className="text-xs text-green-600">
-                                Tiết kiệm {formatPrice(totalSavings)}
+                                Tiết kiệm {formatPrice(itemTotalSavings)}
                               </p>
                             )}
                           </div>
@@ -453,13 +394,13 @@ export default function Negotiation() {
           {quotation.generalNote && (
             <div className="bg-white rounded-2xl border border-gray-100 p-6">
               <h3 className="font-semibold text-gray-900 mb-2">
-                Ghi chú của bạn
+                Ghi chú chung của bạn
               </h3>
               <p className="text-gray-700">{quotation.generalNote}</p>
             </div>
           )}
 
-          {(normalizedStatus === "salesresponded" || normalizedStatus === "negotiating") && (
+          {normalizedStatus === "approved" && (
             <div className="bg-white rounded-2xl border border-gray-100 p-6">
               <div className="flex items-center justify-between gap-4">
                 <div>
@@ -467,79 +408,110 @@ export default function Negotiation() {
                     Quyết định của bạn
                   </h3>
                   <p className="text-sm text-gray-600">
-                    Chấp nhận bảng giá để áp dụng vào giỏ hàng, hoặc chat với Sales để thương lượng giá sản phẩm nào chưa hài lòng
+                    Chấp nhận bảng giá để áp dụng vào đơn hàng hoặc đàm phán lại
                   </p>
                 </div>
                 <div className="flex gap-3 flex-shrink-0">
                   <Button
                     onClick={handleNegotiate}
                     variant="outline"
-                    className="rounded-full gap-2 bg-white text-gray-900"
+                    className="rounded-xl gap-2 bg-white text-gray-900"
                   >
                     <MessageSquare className="w-4 h-4" />
-                    Chưa hài lòng - Chat
+                    Thương lượng lại
                   </Button>
                   <Button
                     onClick={handleRejectClick}
                     variant="outline"
-                    className="rounded-full gap-2 text-red-600 border-red-200 hover:bg-red-50 bg-white"
+                    className="rounded-xl gap-2 text-red-600 border-red-200 hover:bg-red-50 bg-white"
                   >
                     <X className="w-4 h-4" />
-                    Không chấp nhận
+                    Từ chối
                   </Button>
                   <Button
-                    onClick={handleAccept}
-                    className="rounded-full gap-2 bg-gray-900 text-white hover:bg-gray-800"
+                    onClick={handleAcceptClick}
+                    className="rounded-xl gap-2 bg-gray-900 text-white hover:bg-gray-800"
                   >
                     <Check className="w-4 h-4" />
-                    Chấp nhận bảng giá
+                    Chấp nhận mức giá
                   </Button>
                 </div>
               </div>
             </div>
           )}
 
-          {normalizedStatus === "pending" && (
+          {normalizedStatus === "customeraccepted" && (
+            <div className="bg-green-50 rounded-2xl border border-green-200 p-6">
+              <div className="flex items-center justify-between gap-4">
+                <div className="flex items-center gap-3">
+                  <Check className="w-6 h-6 text-green-600" />
+                  <div>
+                    <p className="font-semibold text-green-900">
+                      Đã chốt giá thành công
+                    </p>
+                    <p className="text-sm text-green-700">
+                      Bạn có thể thanh toán đơn hàng này ngay bây giờ
+                    </p>
+                  </div>
+                </div>
+                <Button
+                  onClick={() => navigate(`/checkout`)}
+                  className="rounded-xl gap-2 bg-green-600 text-white hover:bg-green-700"
+                >
+                  <ShoppingCart className="w-4 h-4" />
+                  Tiến hành Thanh toán
+                </Button>
+              </div>
+            </div>
+          )}
+
+          {["pendingmanager", "pendingceo"].includes(normalizedStatus) && (
             <div className="bg-yellow-50 rounded-2xl border border-yellow-200 p-6">
               <div className="flex items-center gap-3">
                 <AlertCircle className="w-6 h-6 text-yellow-600" />
                 <div>
                   <p className="font-semibold text-yellow-900">
-                    Đang chờ Sales phản hồi
+                    Bảng giá đang được xét duyệt
                   </p>
                   <p className="text-sm text-yellow-700">
-                    Chúng tôi sẽ phản hồi yêu cầu của bạn trong vòng 24 giờ
+                    Bảng giá này đang chờ ban giám đốc công ty duyệt. Vui lòng quay lại sau.
                   </p>
                 </div>
               </div>
             </div>
           )}
-
-          {normalizedStatus === "accepted" && (
-            <div className="bg-green-50 rounded-2xl border border-green-200 p-6">
-              <div className="flex items-center gap-3">
-                <Check className="w-6 h-6 text-green-600" />
-                <div>
-                  <p className="font-semibold text-green-900">
-                    Đã chấp nhận bảng giá
-                  </p>
-                  <p className="text-sm text-green-700">
-                    Giá đã được áp dụng vào giỏ hàng của bạn
-                  </p>
+          
+          {(normalizedStatus === "draft" || normalizedStatus === "negotiating") && (
+            <div className="bg-blue-50 rounded-2xl border border-blue-200 p-6">
+              <div className="flex items-center justify-between gap-4">
+                <div className="flex items-center gap-3">
+                  <MessageSquare className="w-6 h-6 text-blue-600" />
+                  <div>
+                    <p className="font-semibold text-blue-900">
+                      Đang trong quá trình trao đổi
+                    </p>
+                    <p className="text-sm text-blue-700">
+                      Vui lòng thảo luận qua chat để Sales báo lại mức giá mới
+                    </p>
+                  </div>
                 </div>
+                <Button
+                  onClick={handleNegotiate}
+                  className="rounded-xl gap-2 bg-blue-600 text-white hover:bg-blue-700"
+                >
+                  <MessageSquare className="w-4 h-4" />
+                  Mở khung Chat
+                </Button>
               </div>
             </div>
           )}
 
-          {normalizedStatus === "rejected" && (
+          {normalizedStatus === "customerrejected" && (
             <div className="bg-red-50 rounded-2xl border border-red-200 p-6">
               <div className="flex items-center gap-3">
                 <X className="w-6 h-6 text-red-600" />
                 <div>
-                  <p className="font-semibold text-red-900">Đã hủy</p>
-                  <p className="text-sm text-red-700">
-                    Yêu cầu báo giá này đã bị hủy
-                  </p>
+                  <p className="font-semibold text-red-900">Bạn đã từ chối bảng giá này</p>
                 </div>
               </div>
             </div>
@@ -551,10 +523,18 @@ export default function Negotiation() {
 
       <ConfirmModal
         isOpen={showRejectConfirm}
-        title="Xác nhận từ chối"
-        message="Bạn có chắc muốn từ chối bảng giá này?"
-        onConfirm={executeReject}
+        title="Từ chối báo giá"
+        message="Bạn có chắc chắn muốn từ chối mức giá này? Báo giá sẽ được chuyển lại cho Sales để đàm phán thêm."
+        onConfirm={() => executeDecision(false)}
         onCancel={() => setShowRejectConfirm(false)}
+      />
+
+      <ConfirmModal
+        isOpen={showAcceptConfirm}
+        title="Chấp nhận báo giá"
+        message="Bạn đồng ý với mức giá này? Đơn hàng sẽ được áp dụng mức giá này và bạn có thể thanh toán."
+        onConfirm={() => executeDecision(true)}
+        onCancel={() => setShowAcceptConfirm(false)}
       />
     </div>
   );
