@@ -96,20 +96,37 @@ function CreateForm({ onClose }: { onClose: () => void }) {
   const [items, setItems] = useState<TransferItem[]>([
     { sku: '', product: '', availableQty: 0, transferQty: 0, unit: 'cái' },
   ]);
+  const [formData, setFormData] = useState({ sourceWarehouseId: '', targetWarehouseId: '', reason: '' });
+  
+  const handleCreate = async () => {
+    try {
+      const payload = {
+        sourceWarehouseId: formData.sourceWarehouseId, // from state
+        targetWarehouseId: formData.targetWarehouseId,
+        reason: formData.reason,
+        items: items.map(i => ({ productId: i.sku, transferQuantity: i.transferQty }))
+      };
+      const { createStockTransfer } = await import('../../services/warehouseService.js');
+      await createStockTransfer(payload);
+      alert('Tạo lệnh thành công!');
+      onClose();
+    } catch (err: any) { alert(err.message); }
+  };
+
   return (
     <div className="space-y-4 text-xs">
       <div className="grid grid-cols-2 gap-3">
         <div className="space-y-1.5">
           <label className="text-gray-500">Kho nguồn *</label>
-          <select className="w-full h-7 text-xs border border-gray-200 rounded px-2 bg-white"><option>Kho Hà Nội</option><option>Kho HCM</option><option>Kho Đà Nẵng</option></select>
+          <Input className="w-full h-7 text-xs border border-gray-200 rounded px-2 bg-white" placeholder="ID kho nguồn" value={formData.sourceWarehouseId} onChange={e => setFormData({...formData, sourceWarehouseId: e.target.value})} />
         </div>
         <div className="space-y-1.5">
           <label className="text-gray-500">Kho đích *</label>
-          <select className="w-full h-7 text-xs border border-gray-200 rounded px-2 bg-white"><option>Kho HCM</option><option>Kho Hà Nội</option><option>Kho Đà Nẵng</option></select>
+          <Input className="w-full h-7 text-xs border border-gray-200 rounded px-2 bg-white" placeholder="ID kho đích" value={formData.targetWarehouseId} onChange={e => setFormData({...formData, targetWarehouseId: e.target.value})} />
         </div>
         <div className="space-y-1.5">
           <label className="text-gray-500">Lý do chuyển</label>
-          <Input className="h-7 text-xs" placeholder="Bổ sung tồn kho chi nhánh..." />
+          <Input className="h-7 text-xs" placeholder="Bổ sung tồn kho chi nhánh..." value={formData.reason} onChange={e => setFormData({...formData, reason: e.target.value})} />
         </div>
         <div className="space-y-1.5">
           <label className="text-gray-500">Ưu tiên</label>
@@ -132,11 +149,11 @@ function CreateForm({ onClose }: { onClose: () => void }) {
           </Button>
         </div>
         <table className="w-full border border-gray-200 rounded overflow-hidden">
-          <thead><tr className="bg-gray-50 border-b border-gray-200"><th className="text-left px-3 py-2 text-gray-700 font-semibold">SKU</th><th className="text-left px-3 py-2 text-gray-700 font-semibold">Sản phẩm</th><th className="text-center px-3 py-2 text-gray-700 font-semibold">Tồn kho</th><th className="text-center px-3 py-2 text-gray-700 font-semibold">SL chuyển</th><th className="text-center px-3 py-2 text-gray-700 font-semibold">ĐVT</th><th className="w-8" /></tr></thead>
+          <thead><tr className="bg-gray-50 border-b border-gray-200"><th className="text-left px-3 py-2 text-gray-700 font-semibold">Product ID</th><th className="text-left px-3 py-2 text-gray-700 font-semibold">Sản phẩm</th><th className="text-center px-3 py-2 text-gray-700 font-semibold">Tồn kho</th><th className="text-center px-3 py-2 text-gray-700 font-semibold">SL chuyển</th><th className="text-center px-3 py-2 text-gray-700 font-semibold">ĐVT</th><th className="w-8" /></tr></thead>
           <tbody className="divide-y divide-gray-100">
             {items.map((item, idx) => (
               <tr key={idx}>
-                <td className="px-2 py-1.5"><Input className="h-6 text-xs" value={item.sku} onChange={e => setItems(p => p.map((i, x) => x === idx ? { ...i, sku: e.target.value } : i))} placeholder="VT-CT-001" /></td>
+                <td className="px-2 py-1.5"><Input className="h-6 text-xs" value={item.sku} onChange={e => setItems(p => p.map((i, x) => x === idx ? { ...i, sku: e.target.value } : i))} placeholder="ID Product" /></td>
                 <td className="px-2 py-1.5"><Input className="h-6 text-xs" value={item.product} onChange={e => setItems(p => p.map((i, x) => x === idx ? { ...i, product: e.target.value } : i))} placeholder="Tên sản phẩm" /></td>
                 <td className="px-2 py-1.5 text-center"><Input type="number" className="h-6 text-xs text-center w-16 mx-auto" value={item.availableQty} onChange={e => setItems(p => p.map((i, x) => x === idx ? { ...i, availableQty: +e.target.value } : i))} /></td>
                 <td className="px-2 py-1.5 text-center"><Input type="number" className="h-6 text-xs text-center w-16 mx-auto" value={item.transferQty} onChange={e => setItems(p => p.map((i, x) => x === idx ? { ...i, transferQty: +e.target.value } : i))} /></td>
@@ -149,7 +166,7 @@ function CreateForm({ onClose }: { onClose: () => void }) {
       </div>
       <div className="flex gap-2 pt-2 border-t border-gray-100">
         <Button variant="outline" size="sm" className="h-7 text-xs">Lưu nháp</Button>
-        <Button size="sm" className="h-7 text-xs gap-1.5" style={{ backgroundColor: PRIMARY }}><CheckCircle className="w-3.5 h-3.5" /> Gửi yêu cầu</Button>
+        <Button size="sm" className="h-7 text-xs gap-1.5" style={{ backgroundColor: PRIMARY }} onClick={handleCreate}><CheckCircle className="w-3.5 h-3.5" /> Gửi yêu cầu</Button>
         <Button variant="outline" size="sm" className="h-7 text-xs ml-auto" onClick={onClose}>Hủy</Button>
       </div>
     </div>
@@ -180,8 +197,25 @@ export default function WarehouseStockTransfer() {
     return ms && tabFilters[tab](t) && (statusFilter === 'all' || t.status === statusFilter);
   });
 
-  const dispatch = (id: string) => setTransfers(p => p.map(t => t.id === id ? { ...t, status: 'dispatched', dispatchTime: new Date().toLocaleString('vi-VN') } : t));
-  const receive  = (id: string) => setTransfers(p => p.map(t => t.id === id ? { ...t, status: 'completed', arrivalTime: new Date().toLocaleString('vi-VN') } : t));
+  const dispatch = async (id: string) => {
+    try {
+      const { dispatchStockTransfer } = await import('../../services/warehouseService.js');
+      await dispatchStockTransfer(id);
+      alert('Xuất kho thành công!');
+      setTransfers(p => p.map(t => t.id === id ? { ...t, status: 'dispatched', dispatchTime: new Date().toLocaleString('vi-VN') } : t));
+      setDetail(prev => prev?.id === id ? { ...prev, status: 'dispatched', dispatchTime: new Date().toLocaleString('vi-VN') } : prev);
+    } catch (err: any) { alert(err.message); }
+  };
+
+  const receive = async (id: string) => {
+    try {
+      const { receiveStockTransfer } = await import('../../services/warehouseService.js');
+      await receiveStockTransfer(id);
+      alert('Xác nhận nhận hàng thành công!');
+      setTransfers(p => p.map(t => t.id === id ? { ...t, status: 'completed', arrivalTime: new Date().toLocaleString('vi-VN') } : t));
+      setDetail(prev => prev?.id === id ? { ...prev, status: 'completed', arrivalTime: new Date().toLocaleString('vi-VN') } : prev);
+    } catch (err: any) { alert(err.message); }
+  };
 
   const toggleSelect = (id: string) => setSelected(p => p.includes(id) ? p.filter(x => x !== id) : [...p, id]);
   const toggleAll = () => setSelected(selected.length === filtered.length ? [] : filtered.map(t => t.id));

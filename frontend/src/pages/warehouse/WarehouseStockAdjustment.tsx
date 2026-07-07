@@ -80,17 +80,34 @@ export default function WarehouseStockAdjustment() {
   const toggleSelect = (id: string) => setSelected(p => p.includes(id) ? p.filter(x => x !== id) : [...p, id]);
   const toggleAll = () => setSelected(p => p.length === filtered.length ? [] : filtered.map(d => d.id));
 
-  const approve = (id: string) => {
-    setItems(p => p.map(i => i.id === id ? { ...i, status: 'approved', approverNote } : i));
-    setDetail(p => p?.id === id ? { ...p, status: 'approved', approverNote } : p);
+  const approve = async (id: string) => {
+    try {
+      const { ceoDecisionStockAdjustment } = await import('../../services/warehouseService.js');
+      await ceoDecisionStockAdjustment(id, { decision: 'approved', notes: approveNote });
+      alert('Đã duyệt điều chỉnh!');
+      setItems(p => p.map(i => i.id === id ? { ...i, status: 'approved', approverNote: approveNote } : i));
+      setDetail(p => p?.id === id ? { ...p, status: 'approved', approverNote: approveNote } : p);
+    } catch (err: any) { alert(err.message); }
   };
-  const reject = (id: string) => {
-    setItems(p => p.map(i => i.id === id ? { ...i, status: 'rejected', approverNote } : i));
-    setDetail(p => p?.id === id ? { ...p, status: 'rejected', approverNote } : p);
+  const reject = async (id: string) => {
+    try {
+      if (!approveNote) return alert('Vui lòng nhập ghi chú khi từ chối!');
+      const { ceoDecisionStockAdjustment } = await import('../../services/warehouseService.js');
+      await ceoDecisionStockAdjustment(id, { decision: 'rejected', notes: approveNote });
+      alert('Đã từ chối điều chỉnh!');
+      setItems(p => p.map(i => i.id === id ? { ...i, status: 'rejected', approverNote: approveNote } : i));
+      setDetail(p => p?.id === id ? { ...p, status: 'rejected', approverNote: approveNote } : p);
+    } catch (err: any) { alert(err.message); }
   };
-  const recount = (id: string) => {
-    setItems(p => p.map(i => i.id === id ? { ...i, status: 'recount' } : i));
-    setDetail(p => p?.id === id ? { ...p, status: 'recount' } : p);
+  const recount = async (id: string) => {
+    try {
+      if (!approveNote) return alert('Vui lòng nhập ghi chú yêu cầu kiểm lại!');
+      const { ceoDecisionStockAdjustment } = await import('../../services/warehouseService.js');
+      await ceoDecisionStockAdjustment(id, { decision: 'recount', notes: approveNote });
+      alert('Đã yêu cầu kiểm lại!');
+      setItems(p => p.map(i => i.id === id ? { ...i, status: 'recount', approverNote: approveNote } : i));
+      setDetail(p => p?.id === id ? { ...p, status: 'recount', approverNote: approveNote } : p);
+    } catch (err: any) { alert(err.message); }
   };
 
   return (

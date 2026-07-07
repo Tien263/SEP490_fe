@@ -1,8 +1,20 @@
-import { fetchWithToken } from './authService.js';
+import { fetchWithToken, fetchFormDataWithToken } from './authService.js';
 
 export async function getPurchaseOrders(status) {
   const url = status ? `/purchase-orders?status=${status}` : '/purchase-orders';
   return fetchWithToken('GET', url);
+}
+
+export async function importPOFromExcel(file) {
+  const formData = new FormData();
+  formData.append('file', file);
+  return fetchFormDataWithToken('POST', '/purchase-orders/import/excel', formData);
+}
+
+export async function importPOFromImage(file) {
+  const formData = new FormData();
+  formData.append('file', file);
+  return fetchFormDataWithToken('POST', '/purchase-orders/import/image', formData);
 }
 
 export async function getWarehouses() {

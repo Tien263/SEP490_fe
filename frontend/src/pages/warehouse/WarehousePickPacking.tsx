@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { Button } from '../../components/sales-ui/button';
 import { Input } from '../../components/sales-ui/input';
 import { Search, Eye, Download, RefreshCw, Play, CheckCircle, Printer, Upload, X, Package } from 'lucide-react';
@@ -116,6 +116,9 @@ export default function WarehousePickPacking() {
   const [detail, setDetail] = useState<PickTask | null>(null);
   const [tasks, setTasks] = useState(TASKS);
 
+  const [uploadingTask, setUploadingTask] = useState<string | null>(null);
+  const fileInputRef = React.useRef<HTMLInputElement>(null);
+
   const filtered = tasks.filter(t => {
     const q = search.toLowerCase();
     const ms = !q || t.id.toLowerCase().includes(q) || t.fulfillmentId.toLowerCase().includes(q) || t.picker.toLowerCase().includes(q);
@@ -129,6 +132,22 @@ export default function WarehousePickPacking() {
   const updateStatus = (id: string, status: PickTask['status']) => {
     setTasks(p => p.map(t => t.id === id ? { ...t, status } : t));
     setDetail(prev => prev?.id === id ? { ...prev, status } : prev);
+  };
+
+  const handleCompletePick = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !uploadingTask) return;
+    try {
+      const { completePickTask } = await import('../../services/warehouseService.js');
+      await completePickTask(uploadingTask, file);
+      alert('Hoàn tất Pick Task và upload ảnh thành công!');
+      updateStatus(uploadingTask, 'picked');
+    } catch (err: any) {
+      alert(err.message || 'Lỗi khi hoàn tất Pick Task');
+    } finally {
+      setUploadingTask(null);
+      if (fileInputRef.current) fileInputRef.current.value = '';
+    }
   };
 
   return (
@@ -317,18 +336,21 @@ export default function WarehousePickPacking() {
                   </Button>
                 )}
                 {detail.status === 'picking' && (
-                  <Button size="sm" className="h-7 text-xs gap-1.5" style={{ backgroundColor: SUCCESS }} onClick={() => updateStatus(detail.id, 'picked')}>
-                    <CheckCircle className="w-3.5 h-3.5" /> Hoàn tất Picking
-                  </Button>
+                  <>
+                    <input type="file" accept="image/*" className="hidden" ref={fileInputRef} onChange={handleCompletePick} />
+                    <Button size="sm" className="h-7 text-xs gap-1.5" style={{ backgroundColor: SUCCESS }} onClick={() => {
+                      setUploadingTask(detail.id);
+                      fileInputRef.current?.click();
+                    }}>
+                      <CheckCircle className="w-3.5 h-3.5" /> Upload & Hoàn tất Picking
+                    </Button>
+                  </>
                 )}
                 {(detail.status === 'picked' || detail.status === 'packing') && (
                   <Button size="sm" className="h-7 text-xs gap-1.5" style={{ backgroundColor: PURPLE }} onClick={() => updateStatus(detail.id, 'completed')}>
                     <CheckCircle className="w-3.5 h-3.5" /> Hoàn tất Packing
                   </Button>
                 )}
-                <Button variant="outline" size="sm" className="h-7 text-xs gap-1.5">
-                  <Upload className="w-3.5 h-3.5" /> Upload hình ảnh
-                </Button>
                 <Button variant="outline" size="sm" className="h-7 text-xs gap-1.5">
                   <Printer className="w-3.5 h-3.5" /> In Pick List
                 </Button>

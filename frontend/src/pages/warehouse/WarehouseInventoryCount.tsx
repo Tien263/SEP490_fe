@@ -67,12 +67,23 @@ function Badge({ status }: { status: string }) {
 }
 
 function CreateDialog({ onClose }: { onClose: () => void }) {
+  const [formData, setFormData] = useState({ warehouseId: '', notes: '' });
+  
+  const handleCreateSession = async () => {
+    try {
+      const { createStockCountSession } = await import('../../services/warehouseService.js');
+      await createStockCountSession({ warehouseId: formData.warehouseId, notes: formData.notes });
+      alert('Mở phiên kiểm kê thành công!');
+      onClose();
+    } catch (err: any) { alert(err.message); }
+  };
+
   return (
     <div className="space-y-4 text-xs">
       <div className="grid grid-cols-2 gap-3">
         <div className="space-y-1.5">
           <label className="text-gray-500">Kho *</label>
-          <select className="w-full h-7 text-xs border border-gray-200 rounded px-2 bg-white"><option>Kho Hà Nội</option><option>Kho HCM</option><option>Kho Đà Nẵng</option></select>
+          <Input className="w-full h-7 text-xs border border-gray-200 rounded px-2 bg-white" placeholder="ID kho" value={formData.warehouseId} onChange={e => setFormData({...formData, warehouseId: e.target.value})} />
         </div>
         <div className="space-y-1.5">
           <label className="text-gray-500">Loại kiểm kê</label>
@@ -84,14 +95,14 @@ function CreateDialog({ onClose }: { onClose: () => void }) {
         </div>
         <div className="col-span-2 space-y-1.5">
           <label className="text-gray-500">Ghi chú</label>
-          <Input className="h-7 text-xs" placeholder="Ghi chú thêm..." />
+          <Input className="h-7 text-xs" placeholder="Ghi chú thêm..." value={formData.notes} onChange={e => setFormData({...formData, notes: e.target.value})} />
         </div>
       </div>
       <div className="p-3 bg-amber-50 border border-amber-200 rounded text-amber-800 text-[11px]">
         <strong>Lưu ý:</strong> Khi mở phiên kiểm kê, hệ thống sẽ chụp ảnh tồn kho tại thời điểm đó (Snapshot). Số liệu snapshot sẽ không thay đổi trong suốt quá trình kiểm kê.
       </div>
       <div className="flex gap-2 pt-2 border-t border-gray-100 justify-end">
-        <Button size="sm" className="h-7 text-xs gap-1.5" style={{ backgroundColor: PRIMARY }}><CheckCircle className="w-3.5 h-3.5" /> Mở phiên kiểm kê</Button>
+        <Button size="sm" className="h-7 text-xs gap-1.5" style={{ backgroundColor: PRIMARY }} onClick={handleCreateSession}><CheckCircle className="w-3.5 h-3.5" /> Mở phiên kiểm kê</Button>
         <Button variant="outline" size="sm" className="h-7 text-xs" onClick={onClose}>Hủy</Button>
       </div>
     </div>
@@ -120,6 +131,21 @@ export default function WarehouseInventoryCount() {
   const openDetail = (s: CountSession) => { setDetail(s); setEditLines(s.lines.map(l => ({ ...l }))); };
   const updatePhysical = (idx: number, val: number) => {
     setEditLines(p => p.map((l, i) => i === idx ? { ...l, physicalQty: val, variance: val - l.systemQty, diffPct: l.systemQty > 0 ? ((val - l.systemQty) / l.systemQty) * 100 : 0 } : l));
+  };
+
+  const handleSubmitCount = async () => {
+    if (!detail) return;
+    try {
+      const payload = editLines.map(l => ({
+        productId: l.sku,
+        actualQuantity: l.physicalQty,
+        reason: l.reason
+      }));
+      const { submitStockCount } = await import('../../services/warehouseService.js');
+      await submitStockCount(detail.id, payload);
+      alert('Nộp kết quả kiểm kê thành công!');
+      setDetail(null);
+    } catch (err: any) { alert(err.message); }
   };
 
   return (
@@ -314,7 +340,7 @@ export default function WarehouseInventoryCount() {
                 {detail.status === 'counting' && (
                   <>
                     <Button size="sm" className="h-7 text-xs gap-1.5" variant="outline"><X className="w-3.5 h-3.5" /> Lưu nháp</Button>
-                    <Button size="sm" className="h-7 text-xs gap-1.5" style={{ backgroundColor: PRIMARY }}><CheckCircle className="w-3.5 h-3.5" /> Nộp kết quả</Button>
+                    <Button size="sm" className="h-7 text-xs gap-1.5" style={{ backgroundColor: PRIMARY }} onClick={handleSubmitCount}><CheckCircle className="w-3.5 h-3.5" /> Nộp kết quả</Button>
                     <Button size="sm" className="h-7 text-xs gap-1.5" variant="outline"><Printer className="w-3.5 h-3.5" /> In bảng kiểm</Button>
                   </>
                 )}

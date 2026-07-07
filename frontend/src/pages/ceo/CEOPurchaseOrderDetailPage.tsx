@@ -67,7 +67,11 @@ export default function CEOPurchaseOrderDetailPage({ poId, onBack }: any) {
 
   const handleResolve = async () => {
     try {
-      await resolveDiscrepancy(poId, resData);
+      const payload = {
+        decision: resData.resolutionType,
+        notes: resData.reason
+      };
+      await resolveDiscrepancy(poId, payload);
       setShowDiscrepancyModal(false);
       loadData();
     } catch (err: any) {
