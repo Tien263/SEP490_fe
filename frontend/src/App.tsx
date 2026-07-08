@@ -21,6 +21,7 @@ import SalesPortal from './pages/sales/SalesPortal.tsx'
 import AdminPortal from './pages/admin/AdminPortal.tsx'
 import CEOPortal from './pages/ceo/CEOPortal.tsx'
 import WarehousePortal from './pages/warehouse/WarehousePortal.tsx'
+import SalesManagerPortal from './pages/sales-manager/SalesManagerPortal.tsx'
 import ProtectedRouteImport from './components/ProtectedRoute.jsx'
 import { ToastProvider } from './context/ToastContext.tsx'
 const ProtectedRoute = ProtectedRouteImport as any;
@@ -54,7 +55,10 @@ function App() {
             <Route path="/negotiations" element={<ProtectedRoute allowedRoles={['Customer']}><NegotiationList /></ProtectedRoute>} />
 
             {/* Sales Routes */}
-            <Route path="/sales/*" element={<ProtectedRoute allowedRoles={['SalesStaff', 'SalesManager', 'Admin']}><SalesPortal /></ProtectedRoute>} />
+            <Route path="/sales/*" element={<ProtectedRoute allowedRoles={['SalesStaff', 'Admin']}><SalesPortal /></ProtectedRoute>} />
+
+            {/* Manager Routes */}
+            <Route path="/sales-manager/*" element={<ProtectedRoute allowedRoles={['SalesManager', 'Admin']}><SalesManagerPortal /></ProtectedRoute>} />
 
             {/* Admin Routes */}
             <Route path="/admin/*" element={<ProtectedRoute allowedRoles={['Admin']}><AdminPortal /></ProtectedRoute>} />

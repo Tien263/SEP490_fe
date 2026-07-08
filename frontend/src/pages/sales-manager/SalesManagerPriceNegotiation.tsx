@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react';
-import { getQuotations, ceoReview } from '../../services/quotationService.js';
+import { useNavigate } from 'react-router-dom';
+import { getQuotations } from '../../services/quotationService.js';
 import { Eye } from 'lucide-react';
+
 const getStatusLabel = (status: string) => {
   switch (status) {
     case 'Draft': return <span className="text-gray-500 font-medium">Bản nháp</span>;
@@ -16,7 +18,8 @@ const getStatusLabel = (status: string) => {
   }
 };
 
-export default function CEOPriceNegotiation({ setActiveTab, setSelectNegotiationId }: any) {
+export default function ManagerPriceNegotiation() {
+  const navigate = useNavigate();
   const [rows, setRows] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -36,18 +39,13 @@ export default function CEOPriceNegotiation({ setActiveTab, setSelectNegotiation
     fetchQuotations();
   }, []);
 
-  useEffect(() => {
-    fetchQuotations();
-  }, []);
-
   const handleViewDetail = (id: string) => {
-    setSelectNegotiationId(id);
-    setActiveTab('price-negotiation-detail');
+    navigate(`/sales-manager/manager-negotiation/${id}`);
   };
 
   return (
     <div className="flex flex-col gap-[20px] p-[24px]">
-      <h1 className="font-semibold text-[20px] text-[#1f3b64]">Phê duyệt Báo giá đặc biệt</h1>
+      <h1 className="font-semibold text-[20px] text-[#1f3b64]">Phê duyệt Báo giá (Cấp Quản lý)</h1>
       <div className="bg-white border border-[#e5e7eb] rounded-[8px] overflow-hidden">
         <table className="w-full">
           <thead>
@@ -66,11 +64,11 @@ export default function CEOPriceNegotiation({ setActiveTab, setSelectNegotiation
               </tr>
             ) : rows.length === 0 ? (
               <tr>
-                <td colSpan={7} className="text-center py-4 text-sm text-gray-500">Không có báo giá nào chờ duyệt</td>
+                <td colSpan={8} className="text-center py-4 text-sm text-gray-500">Không có báo giá nào</td>
               </tr>
             ) : (
               rows.map((row) => {
-                const latestVersion = row.versions?.[row.versions.length - 1] || row.versions?.[0]; // Lấy version mới nhất
+                const latestVersion = row.versions?.[row.versions.length - 1] || row.versions?.[0];
 
                 return (
                   <tr key={row.id} className="border-b border-[#f5f7fa] hover:bg-[#f5f7fa] transition-colors">

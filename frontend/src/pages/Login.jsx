@@ -28,7 +28,7 @@ export default function Login() {
     if (user?.role === 'SalesStaff') {
       navigate('/sales')
     } else if (user?.role === 'SalesManager') {
-      navigate('/sales/round-robin')
+      navigate('/sales-manager/dashboard')
     } else if (user?.role === 'WarehouseStaff') {
       navigate('/warehouse')
     } else if (user?.role === 'AccountingStaff') {
