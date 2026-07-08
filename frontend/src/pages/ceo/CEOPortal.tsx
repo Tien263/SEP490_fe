@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import CEODashboard from './CEODashboard';
 import CEOPriceNegotiation from './CEOPriceNegotiation';
+import CEOPriceNegotiationDetail from './CEOPriceNegotiationDetail';
 import CEOPurchaseOrderPage from './CEOPurchaseOrderPage';
 import CEOSupplierManagementPage from './CEOSupplierManagementPage';
 import CEOPurchaseOrderDetailPage from './CEOPurchaseOrderDetailPage';
@@ -99,7 +100,8 @@ function CEOSidebar({ activeTab, setActiveTab }: { activeTab: string; setActiveT
 // ─── CEO Portal ───────────────────────────────────────────────────────────────
 export default function CEOPortal() {
   const [activeTab, setActiveTab] = useState('dashboard');
-  const [selectPOId, setSelectPOId] = useState<string>('');
+  const [selectPOId, setSelectPOId] = useState<string | null>(null);
+  const [selectNegotiationId, setSelectNegotiationId] = useState<string | null>(null);
   const { user, logout } = useAuth() as any;
   const navigate = useNavigate();
 
@@ -116,7 +118,9 @@ export default function CEOPortal() {
       case 'dashboard': 
         return <CEODashboard setActiveTab={setActiveTab} />;
       case 'price-negotiation': 
-        return <CEOPriceNegotiation />;
+        return <CEOPriceNegotiation setActiveTab={setActiveTab} setSelectNegotiationId={setSelectNegotiationId} />;
+      case 'price-negotiation-detail': 
+        return <CEOPriceNegotiationDetail negotiationId={selectNegotiationId} onBack={() => setActiveTab('price-negotiation')} />;
       case 'purchase-orders': 
         return <CEOPurchaseOrderPage setActiveTab={setActiveTab} setSelectPOId={setSelectPOId} />;
       case 'po-detail': 
