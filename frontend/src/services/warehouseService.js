@@ -35,28 +35,55 @@ export async function acceptWarehouseOrder(orderId) {
   return request('POST', `/warehouse/orders/${orderId}/accept`);
 }
 
+export async function consolidateWarehouseOrder(orderId) {
+  return request('POST', `/warehouse/orders/${orderId}/consolidate`);
+}
+
+export async function handoverWarehouseOrder(orderId, signature) {
+  return request('POST', `/warehouse/orders/${orderId}/handover`, { signature });
+}
+
+export async function postGoodsIssueWarehouseOrder(orderId) {
+  return request('POST', `/warehouse/orders/${orderId}/goods-issue`);
+}
+
 export async function reportShortage(orderId, data) {
   return request('POST', `/warehouse/orders/${orderId}/shortage-alert`, data);
 }
 
 // ─── Advanced Warehouse (v6.0) ───────────────────────────────────────────────
 
+export async function getPickTasks() {
+  return request('GET', `/warehouse/orders?tabType=InProgress`);
+}
+
+export async function getPickTaskById(id) {
+  return request('GET', `/warehouse/orders/${id}/detail`);
+}
+
 export async function completePickTask(id, imageFile) {
+  // WarehouseController CompletePickTask uses POST /warehouse/orders/{id}/complete-pick
   const formData = new FormData();
-  formData.append('imageProof', imageFile);
-  // Need to use fetchFormDataWithToken instead of request
-  // Let's import fetchFormDataWithToken at the top of warehouseService or just use fetch here
+  if (imageFile) formData.append('imageProof', imageFile);
   const accessToken = localStorage.getItem('accessToken');
   const headers = {};
   if (accessToken) headers['Authorization'] = `Bearer ${accessToken}`;
 
-  const res = await fetch(`${API_BASE}/pick-tasks/${id}/complete`, {
+  const res = await fetch(`${API_BASE}/warehouse/orders/${id}/complete-pick`, {
     method: 'POST',
     headers,
     body: formData,
   });
   if (!res.ok) throw new Error(`Lỗi ${res.status}`);
   return res.json();
+}
+
+export async function getStockTransfers(status) {
+  return request('GET', `/stock-transfers?status=${status || ''}`);
+}
+
+export async function getStockTransferById(id) {
+  return request('GET', `/stock-transfers/${id}`);
 }
 
 export async function createStockTransfer(data) {
@@ -71,12 +98,32 @@ export async function receiveStockTransfer(id) {
   return request('POST', `/stock-transfers/${id}/receive`);
 }
 
+export async function getHandoverById(id) {
+  return request('GET', `/handover-records/${id}`);
+}
+
+export async function createHandover(data) {
+  return request('POST', `/handover-records`, data);
+}
+
 export async function warehouseConfirmHandover(id) {
   return request('POST', `/handover-records/${id}/warehouse-confirm`);
 }
 
 export async function salesConfirmHandover(id) {
   return request('POST', `/handover-records/${id}/sales-confirm`);
+}
+
+export async function getGoodsIssues(type) {
+  return request('GET', `/goods-issues?type=${type || ''}`);
+}
+
+export async function getGoodsIssueById(id) {
+  return request('GET', `/goods-issues/${id}`);
+}
+
+export async function createGoodsIssue(data) {
+  return request('POST', `/goods-issues`, data);
 }
 
 export async function postGoodsIssue(id) {

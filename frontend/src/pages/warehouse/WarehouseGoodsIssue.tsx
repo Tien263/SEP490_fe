@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { Button } from '../../components/sales-ui/button';
 import { Input } from '../../components/sales-ui/input';
-import { Search, Eye, RefreshCw, Download, CheckCircle2, ShieldCheck, CheckCircle, Package2, Clock, AlertTriangle, Truck, X } from 'lucide-react';
+import { Search, Eye, RefreshCw, Download, ArrowUpFromLine, CheckCircle, Package2, ShieldCheck, X } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../../components/sales-ui/dialog';
-import { getWarehouseOrders, handoverWarehouseOrder } from '../../services/warehouseService';
+import { getWarehouseOrders, postGoodsIssueWarehouseOrder } from '../../services/warehouseService';
 
 const PRIMARY = '#1F3B64';
 const SUCCESS = '#16A34A';
@@ -13,21 +13,26 @@ const INFO    = '#2563EB';
 const NEUTRAL = '#64748B';
 
 const STATUS_CFG: Record<string, { label: string; bg: string }> = {
-  waiting_warehouse: { label: 'Chờ kho xác nhận',  bg: WARNING },
-  waiting_sales:     { label: 'Chờ Sales xác nhận',bg: INFO    },
-  completed:         { label: 'Đã hoàn tất',       bg: SUCCESS },
-  cancelled:         { label: 'Đã hủy',            bg: ERROR   },
+  draft:     { label: 'Nháp',             bg: NEUTRAL },
+  ready:     { label: 'Sẵn sàng Post',    bg: INFO },
+  posted:    { label: 'Đã Post (Trừ TK)', bg: SUCCESS },
+  cancelled: { label: 'Đã hủy',           bg: ERROR },
 };
 
-interface Handover {
-  id: string; fulfillmentId: string; warehouseStaff: string; salesStaff: string;
-  vehicle: string; packageCount: number;
-  warehouseConfirmed: boolean; salesConfirmed: boolean;
-  handoverTime: string;
-  status: 'waiting_warehouse' | 'waiting_sales' | 'completed' | 'cancelled';
-  packages: { boxNo: string; weight: string; items: string }[];
+interface GoodsIssue {
+  id: string; 
+  fulfillmentId: string;
+  orderId: string;
+  warehouse: string;
+  type: string;
+  creator: string;
+  totalQuantity: number;
+  status: 'draft' | 'ready' | 'posted' | 'cancelled';
+  createdAt: string;
+  postedAt: string;
+  items: { sku: string; name: string; qty: number; actualQty: number; unit: string }[];
+  proofImage: string;
   notes: string;
-  timeline: { time: string; event: string; user: string }[];
 }
 
 function Badge({ status }: { status: string }) {
@@ -35,38 +40,38 @@ function Badge({ status }: { status: string }) {
   return <span className="text-[10px] font-semibold text-white px-2 py-0.5 inline-block whitespace-nowrap" style={{ backgroundColor: c.bg, borderRadius: 4 }}>{c.label}</span>;
 }
 
-export default function WarehouseHandover() {
-  const [data, setData] = useState<Handover[]>([]);
+export default function WarehouseGoodsIssue() {
+  const [data, setData] = useState<GoodsIssue[]>([]);
   const [loading, setLoading] = useState(false);
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [dateFrom, setDateFrom] = useState('');
   const [dateTo, setDateTo] = useState('');
   const [selected, setSelected] = useState<string[]>([]);
-  const [detail, setDetail] = useState<Handover | null>(null);
+  const [detail, setDetail] = useState<GoodsIssue | null>(null);
 
   const fetchOrders = async () => {
     setLoading(true);
     try {
-      const result = await getWarehouseOrders('Handover');
+      const result = await getWarehouseOrders('GoodsIssue');
       const mapped = result.map((d: any) => ({
-        id: d.orderId,
+        id: 'GI-' + d.orderCode,
         fulfillmentId: d.orderCode,
-        warehouseStaff: 'Chưa xác nhận',
-        salesStaff: 'Chưa xác nhận',
-        vehicle: 'Xe giao hàng',
-        packageCount: d.totalQuantity,
-        warehouseConfirmed: false,
-        salesConfirmed: false,
-        handoverTime: '',
-        status: 'waiting_warehouse',
-        packages: [],
-        notes: '',
-        timeline: []
+        orderId: d.orderId,
+        warehouse: 'Kho Chính',
+        type: 'Xuất Bán Hàng',
+        creator: 'Hệ thống',
+        totalQuantity: d.totalQuantity,
+        status: 'ready',
+        createdAt: new Date(d.confirmedAt).toLocaleString('vi-VN'),
+        postedAt: '',
+        items: [],
+        proofImage: '',
+        notes: ''
       }));
       setData(mapped);
     } catch (e: any) {
-      alert('Không lấy được danh sách bàn giao: ' + e.message);
+      alert('Không lấy được danh sách Phiếu Xuất: ' + e.message);
     } finally {
       setLoading(false);
     }
@@ -76,13 +81,11 @@ export default function WarehouseHandover() {
     fetchOrders();
   }, []);
 
-  const handleHandover = async (id: string) => {
-    const signature = prompt('Vui lòng nhập chữ ký (hoặc OTP) của Sales để xác nhận kép:');
-    if (!signature) return;
-    
+  const handlePost = async (orderId: string) => {
+    if (!window.confirm('Bạn có chắc chắn muốn POST phiếu xuất này không? Hành động này sẽ trừ tồn kho vĩnh viễn và không thể hoàn tác.')) return;
     try {
-      await handoverWarehouseOrder(id, signature);
-      alert('Bàn giao thành công!');
+      await postGoodsIssueWarehouseOrder(orderId);
+      alert('Phát hành phiếu xuất và trừ tồn kho thành công!');
       setDetail(null);
       fetchOrders();
     } catch (e: any) {
@@ -98,21 +101,20 @@ export default function WarehouseHandover() {
   });
 
   const STATS = [
-    { label: 'Chờ kho XN',  value: data.filter(d => d.status === 'waiting_warehouse').length, icon: <Clock className="w-4 h-4" />, color: WARNING },
-    { label: 'Chờ Sales XN',value: data.filter(d => d.status === 'waiting_sales').length,     icon: <ShieldCheck className="w-4 h-4" />, color: INFO },
-    { label: 'Đã hoàn tất', value: data.filter(d => d.status === 'completed').length,         icon: <CheckCircle className="w-4 h-4" />, color: SUCCESS },
+    { label: 'Sẵn sàng Post', value: data.filter(d => d.status === 'ready').length,  icon: <Package2 className="w-4 h-4" />, color: INFO },
+    { label: 'Đã Post',       value: data.filter(d => d.status === 'posted').length, icon: <CheckCircle className="w-4 h-4" />, color: SUCCESS },
   ];
 
   return (
     <div className="flex flex-col h-full">
       <div className="bg-white border-b border-gray-200 px-5 py-3 flex-shrink-0">
         <div className="flex items-center gap-1.5 text-[11px] mb-0.5">
-          <span className="text-gray-400">Kho hàng</span> <span className="text-gray-300">/</span> <span className="text-gray-400">Xuất kho (Outbound)</span> <span className="text-gray-300">/</span> <span className="text-gray-800 font-semibold">Bàn giao Sales</span>
+          <span className="text-gray-400">Kho hàng</span> <span className="text-gray-300">/</span> <span className="text-gray-400">Xuất kho (Outbound)</span> <span className="text-gray-300">/</span> <span className="text-gray-800 font-semibold">Phiếu xuất kho</span>
         </div>
         <div className="flex items-center justify-between mb-3">
           <div>
-            <h2 className="text-base font-bold text-gray-900">Xác nhận kép Bàn giao Sales</h2>
-            <p className="text-xs text-gray-500 mt-0.5">{data.length} phiếu chờ xử lý</p>
+            <h2 className="text-base font-bold text-gray-900">Phiếu xuất kho (Goods Issue)</h2>
+            <p className="text-xs text-gray-500 mt-0.5">{data.length} chứng từ</p>
           </div>
           <div className="flex items-center gap-2">
             <Button variant="outline" size="sm" className="h-7 text-xs gap-1.5" onClick={fetchOrders}><RefreshCw className="w-3 h-3" /> Làm mới</Button>
@@ -120,8 +122,7 @@ export default function WarehouseHandover() {
           </div>
         </div>
 
-        {/* Stats */}
-        <div className="grid grid-cols-3 gap-2 mb-3">
+        <div className="grid grid-cols-2 gap-2 mb-3 max-w-sm">
           {STATS.map(s => (
             <div key={s.label} className="flex items-center gap-2 bg-gray-50 rounded px-3 py-2 border border-gray-200">
               <span style={{ color: s.color }}>{s.icon}</span>
@@ -136,7 +137,7 @@ export default function WarehouseHandover() {
         <div className="flex items-center gap-2">
           <div className="relative flex-1 max-w-xs">
             <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400" />
-            <Input className="pl-8 h-7 text-xs bg-gray-50" placeholder="Mã biên bản, lệnh xuất..." value={search} onChange={e => setSearch(e.target.value)} />
+            <Input className="pl-8 h-7 text-xs bg-gray-50" placeholder="Mã phiếu xuất, lệnh xuất..." value={search} onChange={e => setSearch(e.target.value)} />
           </div>
           <select className="h-7 text-xs border border-gray-200 rounded px-2 bg-white text-gray-600" value={statusFilter} onChange={e => setStatusFilter(e.target.value)}>
             <option value="all">Tất cả trạng thái</option>
@@ -151,33 +152,35 @@ export default function WarehouseHandover() {
             <thead>
               <tr className="bg-gray-50 border-b border-gray-200">
                 <th className="px-3 py-2.5"><input type="checkbox" className="w-3.5 h-3.5" checked={selected.length === filtered.length && filtered.length > 0} onChange={e => setSelected(e.target.checked ? filtered.map(d => d.id) : [])} /></th>
-                <th className="text-left px-3 py-2.5 text-gray-700 font-semibold">Mã bàn giao</th>
-                <th className="text-left px-3 py-2.5 text-gray-700 font-semibold">Mã lệnh xuất</th>
-                <th className="text-left px-3 py-2.5 text-gray-700 font-semibold">Xe & Tuyến</th>
-                <th className="text-center px-3 py-2.5 text-gray-700 font-semibold">Tổng kiện</th>
-                <th className="text-center px-3 py-2.5 text-gray-700 font-semibold">NV Kho XN</th>
-                <th className="text-center px-3 py-2.5 text-gray-700 font-semibold">Sales XN</th>
+                <th className="text-left px-3 py-2.5 text-gray-700 font-semibold">Mã chứng từ (GI)</th>
+                <th className="text-left px-3 py-2.5 text-gray-700 font-semibold">Tham chiếu</th>
+                <th className="text-left px-3 py-2.5 text-gray-700 font-semibold">Loại xuất</th>
+                <th className="text-left px-3 py-2.5 text-gray-700 font-semibold">Kho xuất</th>
+                <th className="text-center px-3 py-2.5 text-gray-700 font-semibold">Tổng SL</th>
+                <th className="text-left px-3 py-2.5 text-gray-700 font-semibold">Ngày tạo</th>
                 <th className="text-center px-3 py-2.5 text-gray-700 font-semibold">Trạng thái</th>
                 <th className="text-center px-3 py-2.5 text-gray-700 font-semibold">Thao tác</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
               {filtered.length === 0 ? (
-                <tr><td colSpan={9} className="py-12 text-center"><div className="flex flex-col items-center gap-2"><div className="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center"><Truck className="w-5 h-5 text-gray-400" /></div><p className="text-sm font-medium text-gray-500">{loading ? 'Đang tải...' : 'Không có phiếu bàn giao'}</p></div></td></tr>
+                <tr><td colSpan={9} className="py-12 text-center"><div className="flex flex-col items-center gap-2"><div className="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center"><ArrowUpFromLine className="w-5 h-5 text-gray-400" /></div><p className="text-sm font-medium text-gray-500">{loading ? 'Đang tải...' : 'Không có chứng từ'}</p></div></td></tr>
               ) : filtered.map((d, i) => (
                 <tr key={d.id} className={`hover:bg-blue-50/30 transition-colors ${i % 2 === 1 ? 'bg-gray-50/50' : ''}`}>
                   <td className="px-3 py-2.5"><input type="checkbox" className="w-3.5 h-3.5" checked={selected.includes(d.id)} onChange={e => setSelected(prev => e.target.checked ? [...prev, d.id] : prev.filter(x => x !== d.id))} /></td>
                   <td className="px-3 py-2.5 font-semibold" style={{ color: PRIMARY }}>{d.id}</td>
                   <td className="px-3 py-2.5 text-gray-600">{d.fulfillmentId}</td>
-                  <td className="px-3 py-2.5 text-gray-700">{d.vehicle}</td>
-                  <td className="px-3 py-2.5 text-center font-semibold text-gray-800">{d.packageCount}</td>
-                  <td className="px-3 py-2.5 text-center">{d.warehouseConfirmed ? <CheckCircle2 className="w-4 h-4 text-green-500 mx-auto" /> : <Clock className="w-4 h-4 text-orange-400 mx-auto" />}</td>
-                  <td className="px-3 py-2.5 text-center">{d.salesConfirmed ? <CheckCircle2 className="w-4 h-4 text-green-500 mx-auto" /> : <Clock className="w-4 h-4 text-orange-400 mx-auto" />}</td>
+                  <td className="px-3 py-2.5 text-gray-700">{d.type}</td>
+                  <td className="px-3 py-2.5 text-gray-700">{d.warehouse}</td>
+                  <td className="px-3 py-2.5 text-center font-semibold text-gray-800">{d.totalQuantity}</td>
+                  <td className="px-3 py-2.5 text-gray-500">{d.createdAt}</td>
                   <td className="px-3 py-2.5 text-center"><Badge status={d.status} /></td>
                   <td className="px-3 py-2.5 text-center">
                     <div className="flex items-center justify-center gap-1">
                       <button className="p-1 rounded hover:bg-blue-50 text-gray-400 hover:text-blue-600" onClick={() => setDetail(d)}><Eye className="w-3.5 h-3.5" /></button>
-                      <button className="p-1 rounded hover:bg-green-50 text-gray-400 hover:text-green-600" title="Bàn giao (Xác nhận kép)" onClick={() => handleHandover(d.id)}><ShieldCheck className="w-3.5 h-3.5" /></button>
+                      {d.status === 'ready' && (
+                        <button className="p-1 rounded hover:bg-green-50 text-gray-400 hover:text-green-600" title="Post (Trừ kho)" onClick={() => handlePost(d.orderId)}><ArrowUpFromLine className="w-3.5 h-3.5" /></button>
+                      )}
                     </div>
                   </td>
                 </tr>
@@ -190,27 +193,29 @@ export default function WarehouseHandover() {
       <Dialog open={!!detail} onOpenChange={() => setDetail(null)}>
         <DialogContent className="max-w-xl max-h-[80vh] overflow-y-auto" aria-describedby={undefined}>
           <DialogHeader>
-            <DialogTitle className="text-sm font-bold">Chi tiết bàn giao</DialogTitle>
+            <DialogTitle className="text-sm font-bold">Chi tiết Phiếu xuất kho</DialogTitle>
           </DialogHeader>
           {detail && (
             <div className="space-y-4 text-xs">
               <div className="grid grid-cols-2 gap-3">
                 <div className="bg-gray-50 rounded p-3 space-y-1.5">
                   <p className="font-semibold text-gray-500 text-[10px] uppercase tracking-wide mb-2">Thông tin chung</p>
-                  <div className="flex justify-between"><span className="text-gray-500">Mã đơn hàng:</span><span className="font-semibold" style={{ color: PRIMARY }}>{detail.id}</span></div>
-                  <div className="flex justify-between"><span className="text-gray-500">Mã lệnh xuất:</span><span className="font-medium">{detail.fulfillmentId}</span></div>
+                  <div className="flex justify-between"><span className="text-gray-500">Mã chứng từ:</span><span className="font-semibold" style={{ color: PRIMARY }}>{detail.id}</span></div>
+                  <div className="flex justify-between"><span className="text-gray-500">Tham chiếu:</span><span className="font-medium">{detail.fulfillmentId}</span></div>
                   <div className="flex justify-between"><span className="text-gray-500">Trạng thái:</span><Badge status={detail.status} /></div>
                 </div>
                 <div className="bg-gray-50 rounded p-3 space-y-1.5">
-                  <p className="font-semibold text-gray-500 text-[10px] uppercase tracking-wide mb-2">Xác nhận kép</p>
-                  <div className="flex items-center justify-between"><span className="text-gray-500">Kho xác nhận:</span>{detail.warehouseConfirmed ? <span className="text-green-600 font-medium flex items-center gap-1"><CheckCircle2 className="w-3.5 h-3.5" /> Đã XN</span> : <span className="text-orange-500 flex items-center gap-1"><Clock className="w-3.5 h-3.5" /> Chờ XN</span>}</div>
-                  <div className="flex items-center justify-between"><span className="text-gray-500">Sales xác nhận:</span>{detail.salesConfirmed ? <span className="text-green-600 font-medium flex items-center gap-1"><CheckCircle2 className="w-3.5 h-3.5" /> Đã XN</span> : <span className="text-orange-500 flex items-center gap-1"><Clock className="w-3.5 h-3.5" /> Chờ XN</span>}</div>
+                  <p className="font-semibold text-gray-500 text-[10px] uppercase tracking-wide mb-2">Thông tin xuất</p>
+                  <div className="flex justify-between"><span className="text-gray-500">Loại xuất:</span><span className="font-semibold text-gray-800">{detail.type}</span></div>
+                  <div className="flex justify-between"><span className="text-gray-500">Tổng SL:</span><span className="font-semibold">{detail.totalQuantity}</span></div>
                 </div>
               </div>
               <div className="flex gap-2 pt-2 border-t border-gray-100">
-                <Button size="sm" className="h-7 text-xs gap-1.5" style={{ backgroundColor: SUCCESS }} onClick={() => handleHandover(detail.id)}>
-                  <ShieldCheck className="w-3.5 h-3.5" /> Xác nhận bàn giao
-                </Button>
+                {detail.status === 'ready' && (
+                  <Button size="sm" className="h-7 text-xs gap-1.5" style={{ backgroundColor: SUCCESS }} onClick={() => handlePost(detail.orderId)}>
+                    <ArrowUpFromLine className="w-3.5 h-3.5" /> Post Phiếu Xuất (Trừ kho)
+                  </Button>
+                )}
                 <Button variant="outline" size="sm" className="h-7 text-xs ml-auto" onClick={() => setDetail(null)}>Đóng</Button>
               </div>
             </div>

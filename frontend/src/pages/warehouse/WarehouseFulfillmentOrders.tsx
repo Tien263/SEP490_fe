@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Button } from '../../components/sales-ui/button';
 import { Input } from '../../components/sales-ui/input';
 import { Search, Eye, Download, RefreshCw, Filter, UserPlus, ClipboardList, X, Clock, CheckCircle, Package } from 'lucide-react';
@@ -38,79 +38,7 @@ interface FulfillmentOrder {
   timeline: { time: string; event: string; user: string }[];
 }
 
-const ORDERS: FulfillmentOrder[] = [
-  {
-    id: 'FO-2406-0134', soNo: 'SO-2406-0892', customer: 'Cty TNHH Minh Anh Textile',
-    warehouse: 'Kho Hà Nội', priority: 'urgent', delivery: 'Giao tận nơi',
-    allocatedQty: 450, reservedQty: 450, pickStatus: 'Chưa bắt đầu', packStatus: 'Chưa bắt đầu',
-    consolidation: 'Chưa', handover: 'Chưa', createdDate: '06/07/2026 08:15', assignedPicker: 'Nguyễn Văn Thành',
-    status: 'waiting',
-    products: [
-      { sku: 'VT-CT-001', name: 'Vải cotton khổ 1.5m', aisle: 'A', rack: '01', bin: '03', orderedQty: 200, allocatedQty: 200, reservedQty: 200 },
-      { sku: 'VT-SM-012', name: 'Sơ mi nam slim fit',   aisle: 'B', rack: '02', bin: '11', orderedQty: 150, allocatedQty: 150, reservedQty: 150 },
-      { sku: 'VT-QT-007', name: 'Quần tây slim fit',    aisle: 'B', rack: '03', bin: '05', orderedQty: 100, allocatedQty: 100, reservedQty: 100 },
-    ],
-    timeline: [
-      { time: '06/07 08:15', event: 'Tạo Fulfillment Order', user: 'Hệ thống' },
-      { time: '06/07 08:20', event: 'Phân bổ kho thành công', user: 'Hệ thống' },
-      { time: '06/07 08:25', event: 'Giao cho nhân viên Thành', user: 'Trần Văn Bình' },
-    ],
-  },
-  {
-    id: 'FO-2406-0133', soNo: 'SO-2406-0891', customer: 'Shop Vải Lan Anh',
-    warehouse: 'Kho Hà Nội', priority: 'high', delivery: 'Giao GHTK',
-    allocatedQty: 40, reservedQty: 40, pickStatus: 'Đang thực hiện', packStatus: 'Chưa bắt đầu',
-    consolidation: 'Chưa', handover: 'Chưa', createdDate: '06/07/2026 07:50', assignedPicker: 'Lê Văn Dũng',
-    status: 'picking',
-    products: [
-      { sku: 'VT-DP-021', name: 'Đồng phục VP nữ', aisle: 'C', rack: '01', bin: '02', orderedQty: 20, allocatedQty: 20, reservedQty: 20 },
-      { sku: 'VT-DP-020', name: 'Đồng phục VP nam', aisle: 'C', rack: '01', bin: '01', orderedQty: 20, allocatedQty: 20, reservedQty: 20 },
-    ],
-    timeline: [
-      { time: '06/07 07:50', event: 'Tạo Fulfillment Order', user: 'Hệ thống' },
-      { time: '06/07 08:00', event: 'Bắt đầu Pick Task', user: 'Lê Văn Dũng' },
-    ],
-  },
-  {
-    id: 'FO-2406-0132', soNo: 'SO-2406-0890', customer: 'May Mặc Tân Phú',
-    warehouse: 'Kho HCM', priority: 'normal', delivery: 'Giao J&T',
-    allocatedQty: 95, reservedQty: 95, pickStatus: 'Hoàn tất', packStatus: 'Hoàn tất',
-    consolidation: 'Hoàn tất', handover: 'Chờ xác nhận', createdDate: '05/07/2026 14:30', assignedPicker: 'Phạm Thị Hương',
-    status: 'ready',
-    products: [
-      { sku: 'VT-AK-009', name: 'Áo khoác công sở nữ', aisle: 'C', rack: '02', bin: '04', orderedQty: 15, allocatedQty: 15, reservedQty: 15 },
-      { sku: 'VT-DM-005', name: 'Vải denim cao cấp',    aisle: 'A', rack: '03', bin: '06', orderedQty: 80, allocatedQty: 80, reservedQty: 80 },
-    ],
-    timeline: [
-      { time: '05/07 14:30', event: 'Tạo Fulfillment Order', user: 'Hệ thống' },
-      { time: '05/07 15:00', event: 'Bắt đầu picking', user: 'Phạm Thị Hương' },
-      { time: '05/07 16:30', event: 'Hoàn tất picking', user: 'Phạm Thị Hương' },
-      { time: '05/07 17:00', event: 'Hoàn tất packing', user: 'Phạm Thị Hương' },
-      { time: '06/07 08:00', event: 'Chuyển khu consolidation', user: 'Hệ thống' },
-    ],
-  },
-  {
-    id: 'FO-2406-0131', soNo: 'SO-2406-0889', customer: 'Cửa hàng Đức Thịnh',
-    warehouse: 'Kho HCM', priority: 'urgent', delivery: 'Tự lấy',
-    allocatedQty: 780, reservedQty: 740, pickStatus: 'Đang thực hiện', packStatus: 'Chưa bắt đầu',
-    consolidation: 'Chưa', handover: 'Chưa', createdDate: '05/07/2026 13:00', assignedPicker: 'Nguyễn Văn Thành',
-    status: 'picking',
-    products: [],
-    timeline: [
-      { time: '05/07 13:00', event: 'Tạo Fulfillment Order', user: 'Hệ thống' },
-      { time: '05/07 13:30', event: 'Bắt đầu picking', user: 'Nguyễn Văn Thành' },
-    ],
-  },
-  {
-    id: 'FO-2406-0130', soNo: 'SO-2406-0888', customer: 'HTX Dệt Hà Đông',
-    warehouse: 'Kho Hà Nội', priority: 'normal', delivery: 'Giao tận nơi',
-    allocatedQty: 320, reservedQty: 320, pickStatus: 'Hoàn tất', packStatus: 'Hoàn tất',
-    consolidation: 'Hoàn tất', handover: 'Hoàn tất', createdDate: '04/07/2026 09:00', assignedPicker: 'Lê Văn Dũng',
-    status: 'transferred',
-    products: [],
-    timeline: [],
-  },
-];
+const ORDERS: FulfillmentOrder[] = []; // Replaced by API call
 
 function Breadcrumb() {
   return (
@@ -142,8 +70,46 @@ export default function WarehouseFulfillmentOrders() {
   const [dateTo, setDateTo] = useState('');
   const [detail, setDetail] = useState<FulfillmentOrder | null>(null);
   const [selected, setSelected] = useState<string[]>([]);
+  const [orders, setOrders] = useState<FulfillmentOrder[]>([]);
+  const [loading, setLoading] = useState(false);
 
-  const filtered = ORDERS.filter(o => {
+  const fetchOrders = async () => {
+    try {
+      setLoading(true);
+      const { getWarehouseOrders } = await import('../../services/warehouseService.js');
+      const data = await getWarehouseOrders('OnlinePending');
+      const mapped: FulfillmentOrder[] = data.map((d: any) => ({
+        id: d.orderId,
+        soNo: d.orderCode,
+        customer: 'Khách hàng',
+        warehouse: 'Kho Chính',
+        priority: 'normal',
+        delivery: 'Giao tận nơi',
+        allocatedQty: d.totalQuantity,
+        reservedQty: d.totalQuantity,
+        pickStatus: 'Chưa bắt đầu',
+        packStatus: 'Chưa bắt đầu',
+        consolidation: 'Chưa',
+        handover: 'Chưa',
+        createdDate: new Date(d.confirmedAt).toLocaleDateString('vi-VN'),
+        assignedPicker: 'Chưa phân công',
+        status: 'waiting',
+        products: [],
+        timeline: []
+      }));
+      setOrders(mapped);
+    } catch (e: any) {
+      alert('Không lấy được lệnh xuất kho: ' + e.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchOrders();
+  }, []);
+
+  const filtered = orders.filter(o => {
     const q = search.toLowerCase();
     const ms = !q || o.id.toLowerCase().includes(q) || o.soNo.toLowerCase().includes(q) || o.customer.toLowerCase().includes(q);
     const mst = statusFilter === 'all' || o.status === statusFilter;
@@ -163,11 +129,11 @@ export default function WarehouseFulfillmentOrders() {
           <div>
             <h2 className="text-base font-bold text-gray-900">Lệnh xuất kho (Fulfillment Orders)</h2>
             <p className="text-xs text-gray-500 mt-0.5">
-              {ORDERS.length} lệnh · {ORDERS.filter(o => o.status === 'waiting').length} chờ xử lý · {ORDERS.filter(o => o.status === 'picking').length} đang picking
+              {orders.length} lệnh · {orders.filter(o => o.status === 'waiting').length} chờ xử lý · {orders.filter(o => o.status === 'picking').length} đang picking
             </p>
           </div>
           <div className="flex items-center gap-2">
-            <Button variant="outline" size="sm" className="h-7 text-xs gap-1.5"><RefreshCw className="w-3 h-3" /> Làm mới</Button>
+            <Button variant="outline" size="sm" className="h-7 text-xs gap-1.5" onClick={fetchOrders}><RefreshCw className={`w-3 h-3 ${loading ? 'animate-spin' : ''}`} /> Làm mới</Button>
             <Button variant="outline" size="sm" className="h-7 text-xs gap-1.5"><Download className="w-3 h-3" /> Xuất Excel</Button>
             {selected.length > 0 && (
               <Button size="sm" className="h-7 text-xs gap-1.5" style={{ backgroundColor: PRIMARY }}>
@@ -253,9 +219,34 @@ export default function WarehouseFulfillmentOrders() {
                   <td className="px-3 py-2.5 text-gray-500">{o.createdDate}</td>
                   <td className="px-3 py-2.5 text-center">
                     <div className="flex items-center justify-center gap-1">
-                      <button className="p-1 rounded hover:bg-blue-50 text-gray-400 hover:text-blue-600" onClick={() => setDetail(o)} title="Xem chi tiết"><Eye className="w-3.5 h-3.5" /></button>
+                      <button className="p-1 rounded hover:bg-blue-50 text-gray-400 hover:text-blue-600" onClick={async () => {
+                        try {
+                          const { getWarehouseOrderDetail } = await import('../../services/warehouseService.js');
+                          const data = await getWarehouseOrderDetail(o.id);
+                          const mappedProducts = data.items.map((i: any) => ({
+                            sku: i.sku,
+                            name: i.productName,
+                            aisle: 'A', rack: '01', bin: '01',
+                            orderedQty: i.requestedQuantity,
+                            allocatedQty: i.requestedQuantity,
+                            reservedQty: i.requestedQuantity
+                          }));
+                          setDetail({ ...o, products: mappedProducts });
+                        } catch (e: any) {
+                          alert('Lỗi lấy chi tiết: ' + e.message);
+                        }
+                      }} title="Xem chi tiết"><Eye className="w-3.5 h-3.5" /></button>
                       {o.status === 'waiting' && (
-                        <button className="p-1 rounded hover:bg-green-50 text-gray-400 hover:text-green-600" title="Tạo Pick Task"><ClipboardList className="w-3.5 h-3.5" /></button>
+                        <button className="p-1 rounded hover:bg-green-50 text-gray-400 hover:text-green-600" title="Nhận đơn & Tạo Pick Task" onClick={async () => {
+                          try {
+                            const { acceptWarehouseOrder } = await import('../../services/warehouseService.js');
+                            await acceptWarehouseOrder(o.id);
+                            alert('Nhận đơn thành công! Lệnh đã được chuyển sang Pick Task.');
+                            fetchOrders();
+                          } catch (e: any) {
+                            alert('Lỗi nhận đơn: ' + e.message);
+                          }
+                        }}><ClipboardList className="w-3.5 h-3.5" /></button>
                       )}
                     </div>
                   </td>
@@ -264,7 +255,7 @@ export default function WarehouseFulfillmentOrders() {
             </tbody>
           </table>
           <div className="px-4 py-2.5 border-t border-gray-100 flex items-center justify-between bg-gray-50">
-            <span className="text-xs text-gray-500">Hiển thị {filtered.length} / {ORDERS.length} bản ghi</span>
+            <span className="text-xs text-gray-500">Hiển thị {filtered.length} / {orders.length} bản ghi</span>
             <div className="flex items-center gap-1">
               {[1].map(p => (
                 <button key={p} className="w-6 h-6 text-xs rounded font-medium text-white flex items-center justify-center" style={{ backgroundColor: PRIMARY }}>{p}</button>
@@ -365,8 +356,18 @@ export default function WarehouseFulfillmentOrders() {
 
               <div className="flex gap-2 pt-2 border-t border-gray-100">
                 {detail.status === 'waiting' && (
-                  <Button size="sm" className="h-7 text-xs gap-1.5" style={{ backgroundColor: PRIMARY }}>
-                    <ClipboardList className="w-3.5 h-3.5" /> Tạo Pick Task
+                  <Button size="sm" className="h-7 text-xs gap-1.5" style={{ backgroundColor: PRIMARY }} onClick={async () => {
+                    try {
+                      const { acceptWarehouseOrder } = await import('../../services/warehouseService.js');
+                      await acceptWarehouseOrder(detail.id);
+                      alert('Nhận đơn thành công! Lệnh đã được chuyển sang Pick Task.');
+                      setDetail(null);
+                      fetchOrders();
+                    } catch (e: any) {
+                      alert('Lỗi nhận đơn: ' + e.message);
+                    }
+                  }}>
+                    <ClipboardList className="w-3.5 h-3.5" /> Nhận đơn & Tạo Pick Task
                   </Button>
                 )}
                 {detail.status === 'waiting' && (
