@@ -37,47 +37,7 @@ interface PickTask {
   items: PickItem[];
 }
 
-const TASKS: PickTask[] = [
-  {
-    id: 'PT-2406-0067', fulfillmentId: 'FO-2406-0134', warehouse: 'Kho Hà Nội',
-    picker: 'Nguyễn Văn Thành', priority: 'urgent',
-    totalItems: 3, pickedItems: 0, packingStatus: 'Chưa bắt đầu',
-    startedTime: '—', completedTime: '—', status: 'waiting',
-    boxCount: 0, weight: '—', packingNotes: '',
-    items: [
-      { sku: 'VT-CT-001', name: 'Vải cotton khổ 1.5m', aisle: 'A', rack: '01', shelf: '2', bin: '03', barcode: '8938500123456', batch: 'B2406-01', lot: 'L001', requestedQty: 200, pickedQty: 0 },
-      { sku: 'VT-SM-012', name: 'Sơ mi nam slim fit',   aisle: 'B', rack: '02', shelf: '1', bin: '11', barcode: '8938500123457', batch: 'B2406-02', lot: 'L002', requestedQty: 150, pickedQty: 0 },
-      { sku: 'VT-QT-007', name: 'Quần tây slim fit',    aisle: 'B', rack: '03', shelf: '1', bin: '05', barcode: '8938500123458', batch: 'B2406-01', lot: 'L001', requestedQty: 100, pickedQty: 0 },
-    ],
-  },
-  {
-    id: 'PT-2406-0066', fulfillmentId: 'FO-2406-0133', warehouse: 'Kho Hà Nội',
-    picker: 'Lê Văn Dũng', priority: 'high',
-    totalItems: 2, pickedItems: 1, packingStatus: 'Chưa bắt đầu',
-    startedTime: '06/07 08:00', completedTime: '—', status: 'picking',
-    boxCount: 0, weight: '—', packingNotes: '',
-    items: [
-      { sku: 'VT-DP-021', name: 'Đồng phục VP nữ', aisle: 'C', rack: '01', shelf: '1', bin: '02', barcode: '8938500123459', batch: 'B2406-03', lot: 'L003', requestedQty: 20, pickedQty: 20 },
-      { sku: 'VT-DP-020', name: 'Đồng phục VP nam', aisle: 'C', rack: '01', shelf: '1', bin: '01', barcode: '8938500123460', batch: 'B2406-03', lot: 'L003', requestedQty: 20, pickedQty: 0 },
-    ],
-  },
-  {
-    id: 'PT-2406-0065', fulfillmentId: 'FO-2406-0132', warehouse: 'Kho HCM',
-    picker: 'Phạm Thị Hương', priority: 'normal',
-    totalItems: 2, pickedItems: 2, packingStatus: 'Hoàn tất',
-    startedTime: '05/07 15:00', completedTime: '05/07 16:30', status: 'completed',
-    boxCount: 3, weight: '24.5 kg', packingNotes: 'Hàng fragile, ghi chú nhẹ tay',
-    items: [],
-  },
-  {
-    id: 'PT-2406-0064', fulfillmentId: 'FO-2406-0131', warehouse: 'Kho HCM',
-    picker: 'Nguyễn Văn Thành', priority: 'urgent',
-    totalItems: 5, pickedItems: 3, packingStatus: 'Chưa bắt đầu',
-    startedTime: '05/07 13:30', completedTime: '—', status: 'picking',
-    boxCount: 0, weight: '—', packingNotes: '',
-    items: [],
-  },
-];
+const TASKS: PickTask[] = []; // Replaced by API call
 
 function Breadcrumb() {
   return (
@@ -114,10 +74,46 @@ export default function WarehousePickPacking() {
   const [dateTo, setDateTo] = useState('');
   const [selected, setSelected] = useState<string[]>([]);
   const [detail, setDetail] = useState<PickTask | null>(null);
-  const [tasks, setTasks] = useState(TASKS);
+  const [tasks, setTasks] = useState<PickTask[]>([]);
+  const [loading, setLoading] = useState(false);
 
   const [uploadingTask, setUploadingTask] = useState<string | null>(null);
   const fileInputRef = React.useRef<HTMLInputElement>(null);
+
+  const fetchTasks = async () => {
+    try {
+      setLoading(true);
+      const { getPickTasks } = await import('../../services/warehouseService.js');
+      const data = await getPickTasks();
+      const mapped: PickTask[] = data.map((d: any) => ({
+        id: d.orderId,
+        fulfillmentId: d.orderCode,
+        warehouse: 'Kho Chính',
+        picker: 'Nhân viên kho',
+        priority: 'normal',
+        totalItems: d.totalQuantity,
+        pickedItems: 0,
+        packingStatus: 'Đang Picking',
+        startedTime: new Date(d.confirmedAt).toLocaleDateString('vi-VN'),
+        completedTime: '—',
+        status: 'picking',
+        boxCount: 0,
+        weight: '—',
+        packingNotes: '',
+        items: []
+      }));
+      setTasks(mapped);
+    } catch (e: any) {
+      console.error(e);
+      alert('Không thể tải danh sách Pick Task: ' + e.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  React.useEffect(() => {
+    fetchTasks();
+  }, []);
 
   const filtered = tasks.filter(t => {
     const q = search.toLowerCase();
@@ -158,11 +154,11 @@ export default function WarehousePickPacking() {
           <div>
             <h2 className="text-base font-bold text-gray-900">Pick &amp; Packing</h2>
             <p className="text-xs text-gray-500 mt-0.5">
-              {tasks.length} tác vụ · {tasks.filter(t => t.status === 'waiting').length} chờ · {tasks.filter(t => t.status === 'picking').length} đang picking
+              {tasks.length} tác vụ · {tasks.filter(t => t.status === 'picking').length} đang picking
             </p>
           </div>
           <div className="flex items-center gap-2">
-            <Button variant="outline" size="sm" className="h-7 text-xs gap-1.5"><RefreshCw className="w-3 h-3" /> Làm mới</Button>
+            <Button variant="outline" size="sm" className="h-7 text-xs gap-1.5" onClick={fetchTasks}><RefreshCw className={`w-3 h-3 ${loading ? 'animate-spin' : ''}`} /> Làm mới</Button>
             <Button variant="outline" size="sm" className="h-7 text-xs gap-1.5"><Printer className="w-3 h-3" /> In Pick List</Button>
             <Button variant="outline" size="sm" className="h-7 text-xs gap-1.5"><Download className="w-3 h-3" /> Xuất Excel</Button>
           </div>
@@ -245,7 +241,23 @@ export default function WarehousePickPacking() {
                   <td className="px-3 py-2.5 text-center"><Badge status={t.status} /></td>
                   <td className="px-3 py-2.5 text-center">
                     <div className="flex items-center justify-center gap-1">
-                      <button className="p-1 rounded hover:bg-blue-50 text-gray-400 hover:text-blue-600" onClick={() => setDetail(t)}><Eye className="w-3.5 h-3.5" /></button>
+                      <button className="p-1 rounded hover:bg-blue-50 text-gray-400 hover:text-blue-600" onClick={async () => {
+                        try {
+                          const { getPickTaskById } = await import('../../services/warehouseService.js');
+                          const data = await getPickTaskById(t.id);
+                          const mappedItems = data.items.map((i: any) => ({
+                            sku: i.sku,
+                            name: i.productName,
+                            aisle: 'A', rack: '01', shelf: '1', bin: '01',
+                            barcode: '—', batch: '—', lot: '—',
+                            requestedQty: i.requestedQuantity,
+                            pickedQty: i.requestedQuantity // Auto fill for simplicity
+                          }));
+                          setDetail({ ...t, items: mappedItems, pickedItems: t.totalItems });
+                        } catch (e: any) {
+                          alert('Lỗi lấy chi tiết task: ' + e.message);
+                        }
+                      }}><Eye className="w-3.5 h-3.5" /></button>
                       {t.status === 'waiting' && <button className="p-1 rounded hover:bg-green-50 text-gray-400 hover:text-green-600" onClick={() => updateStatus(t.id, 'picking')}><Play className="w-3.5 h-3.5" /></button>}
                       {t.status === 'picking' && <button className="p-1 rounded hover:bg-blue-50 text-gray-400 hover:text-blue-600" onClick={() => updateStatus(t.id, 'picked')}><CheckCircle className="w-3.5 h-3.5" /></button>}
                     </div>

@@ -40,6 +40,7 @@ import WarehouseQuarantine from './WarehouseQuarantine';
 import WarehouseInventoryCount from './WarehouseInventoryCount';
 import WarehouseStockAdjustment from './WarehouseStockAdjustment';
 import WarehouseProductionIssue from './WarehouseProductionIssue';
+import WarehouseGoodsIssue from './WarehouseGoodsIssue';
 
 interface NavItem {
   id: string; label: string; icon: ReactNode; path: string;
@@ -56,6 +57,7 @@ const buildNavItems = (): NavItem[] => [
       { id: 'pick-packing',       label: 'Pick & Packing',   icon: <Package className="w-3.5 h-3.5" />, path: '/warehouse/fulfillment/pick-packing' },
       { id: 'consolidation',      label: 'Khu tập kết hàng', icon: <PackageCheck className="w-3.5 h-3.5" />, path: '/warehouse/fulfillment/consolidation' },
       { id: 'handover',           label: 'Bàn giao Sales',   icon: <Truck className="w-3.5 h-3.5" />, path: '/warehouse/fulfillment/handover' },
+      { id: 'goods-issue',        label: 'Phiếu xuất kho',   icon: <ArrowUpFromLine className="w-3.5 h-3.5" />, path: '/warehouse/fulfillment/goods-issue' },
     ],
   },
   {
@@ -277,6 +279,7 @@ export default function WarehousePortal() {
             <Route path="fulfillment/pick-packing"               element={<WarehousePickPacking />} />
             <Route path="fulfillment/consolidation"              element={<WarehouseConsolidation />} />
             <Route path="fulfillment/handover"                   element={<WarehouseHandover />} />
+            <Route path="fulfillment/goods-issue"                element={<WarehouseGoodsIssue />} />
             <Route path="purchase/orders"                        element={<WarehousePurchaseOrders />} />
             <Route path="purchase/goods-receipt"                 element={<WarehouseGoodsReceipt />} />
             <Route path="purchase/receiving-comparison"          element={<WarehouseReceivingComparison />} />
