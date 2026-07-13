@@ -124,7 +124,7 @@ const formatDateTime = (dateStr?: string) => {
   });
 };
 
-export default function SalesOrdersPage() {
+export default function SalesManagerOrdersPage() {
   const navigate = useNavigate();
   const [dashboard, setDashboard] = useState<SalesDashboardPayload | null>(null);
   const [orders, setOrders] = useState<SalesOrder[]>([]);
@@ -229,7 +229,6 @@ export default function SalesOrdersPage() {
 
   const handleExportPdf = async (orderId: string) => {
     try {
-      // 1. Lấy thông tin chi tiết đơn hàng (vì list không có đủ item và giá)
       const response = await fetch(`/api/orders/sales/${orderId}`, {
         headers: { Authorization: `Bearer ${localStorage.getItem('accessToken')}` },
       });
@@ -239,8 +238,6 @@ export default function SalesOrdersPage() {
       }
 
       const orderDetail = await response.json();
-
-      // 2. Gọi hàm xuất PDF (chế độ xem trước)
       await exportInvoiceToPdf(orderDetail, 'view');
     } catch (err) {
       alert(err instanceof Error ? err.message : 'Có lỗi xảy ra khi xuất PDF.');
@@ -274,7 +271,7 @@ export default function SalesOrdersPage() {
             Làm mới
           </button>
           <button
-            onClick={() => navigate('/sales/direct-purchase')}
+            onClick={() => navigate('/sales-manager/direct-purchase')}
             className="flex h-7 items-center gap-1.5 rounded px-3 text-[12px] text-white transition-opacity hover:opacity-90"
             style={{ backgroundColor: PRIMARY }}
           >
@@ -409,7 +406,11 @@ export default function SalesOrdersPage() {
                         background: index % 2 === 1 ? '#FAFAFA' : '#FFFFFF',
                       }}
                     >
-                      <td className="px-4 py-3 font-bold whitespace-nowrap cursor-pointer hover:underline" style={{ color: PRIMARY }} onClick={() => navigate(`/sales/orders/${order.id}`)}>
+                      <td 
+                        className="px-4 py-3 font-bold cursor-pointer hover:text-blue-700 underline" 
+                        style={{ color: PRIMARY }}
+                        onClick={() => navigate(`/sales-manager/orders/${order.id}`)}
+                      >
                         {order.orderCode}
                       </td>
                       <td className="max-w-[240px] truncate px-4 py-3 text-[#374151]">
@@ -458,7 +459,7 @@ export default function SalesOrdersPage() {
                               Xác nhận
                             </button>
                             <button
-                              onClick={() => navigate(`/sales/orders/${order.id}`)}
+                              onClick={() => navigate(`/sales-manager/orders/${order.id}`)}
                               className="inline-flex items-center gap-1 rounded bg-gray-600 px-2 py-1 text-[11px] font-semibold text-white hover:bg-gray-700"
                               title="Xem chi tiết đơn hàng"
                             >
@@ -477,7 +478,7 @@ export default function SalesOrdersPage() {
                         ) : (
                           <div className="flex justify-center gap-1.5">
                             <button
-                              onClick={() => navigate(`/sales/orders/${order.id}`)}
+                              onClick={() => navigate(`/sales-manager/orders/${order.id}`)}
                               className="inline-flex items-center gap-1 rounded bg-gray-600 px-2.5 py-1 text-[11px] font-semibold text-white hover:bg-gray-700"
                               title="Xem chi tiết đơn hàng"
                             >
