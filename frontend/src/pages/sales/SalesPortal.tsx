@@ -26,6 +26,7 @@ import SalesDashboardPage from './SalesDashboardPage';
 import SalesNegotiationPage from './SalesNegotiationPage';
 import DirectPurchasePage from './DirectPurchasePage';
 import SalesOrdersPage from './SalesOrdersPage';
+import SalesOrderDetailPage from './SalesOrderDetailPage';
 import SalesDeliveryPage from './SalesDeliveryPage';
 import SalesWarehouseCoordPage from './SalesWarehouseCoordPage';
 import SalesDeliveryArrangementPage from './SalesDeliveryArrangementPage';
@@ -318,6 +319,7 @@ export default function SalesPortal() {
             <Route path="dashboard" element={<SalesDashboardPage />} />
             <Route path="my-customers" element={<SalesMyCustomersPage />} />
             <Route path="orders" element={<SalesOrdersPage />} />
+            <Route path="orders/:id" element={<SalesOrderDetailPage />} />
             <Route path="negotiation" element={<SalesNegotiationPage />} />
             <Route path="direct-purchase" element={<DirectPurchasePage />} />
             <Route path="delivery" element={<SalesDeliveryPage />} />

@@ -52,7 +52,7 @@ export default function CEOPriceNegotiation({ setActiveTab, setSelectNegotiation
         <table className="w-full">
           <thead>
             <tr className="bg-[#f5f7fa] border-b border-[#e5e7eb]">
-              {['Mã đơn', 'Khách hàng', 'NV Bán hàng', 'Version', 'Trạng thái', 'Giá niêm yết', 'Giá đề xuất', 'Thao tác'].map((h) => (
+              {['Mã báo giá', 'Khách hàng', 'NV Bán hàng', 'Version', 'Trạng thái', 'Giá niêm yết', 'Giá đề xuất', 'Thao tác'].map((h) => (
                 <th key={h} className="text-left px-[16px] py-[12px] text-[11px] font-medium text-[#64748b] uppercase whitespace-nowrap">
                   {h}
                 </th>
@@ -74,7 +74,9 @@ export default function CEOPriceNegotiation({ setActiveTab, setSelectNegotiation
 
                 return (
                   <tr key={row.id} className="border-b border-[#f5f7fa] hover:bg-[#f5f7fa] transition-colors">
-                    <td className="px-[16px] py-[12px] text-[12px] font-medium text-[#1f3b64]">{row.id}</td>
+                    <td className="px-[16px] py-[12px] text-[12px] font-medium text-[#1f3b64] font-mono">
+                      {row.id?.split('-')[0].toUpperCase()}
+                    </td>
                     <td className="px-[16px] py-[12px] text-[12px] text-[#1f3b64]">{row.customerName}</td>
                     <td className="px-[16px] py-[12px] text-[12px] text-[#64748b]">{row.salesStaffName || 'Chưa có'}</td>
                     <td className="px-[16px] py-[12px] text-[12px] text-[#1f3b64] text-center">

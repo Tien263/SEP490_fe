@@ -78,7 +78,7 @@ export default function CEOPriceNegotiationDetail({ negotiationId, onBack }: Pro
         <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
           <div>
             <p className="text-[12px] text-gray-500 mb-1">Mã Báo Giá</p>
-            <p className="font-medium text-[#1f3b64]">{quotation.id}</p>
+            <p className="font-medium text-[#1f3b64] font-mono">{quotation.id?.split('-')[0].toUpperCase()}</p>
           </div>
           <div>
             <p className="text-[12px] text-gray-500 mb-1">Khách Hàng</p>

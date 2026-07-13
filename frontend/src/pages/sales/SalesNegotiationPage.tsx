@@ -3,7 +3,7 @@ import { Button } from '../../components/sales-ui/button';
 import { Input } from '../../components/sales-ui/input';
 import {
   Send, Check,
-  DollarSign, User, Loader2
+  DollarSign, User, Loader2, MessageSquare
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext.jsx';
 import { useChat } from '../../hooks/useChat.js';
@@ -30,6 +30,7 @@ export default function SalesNegotiationPage() {
   const [proposePrice, setProposePrice] = useState(false);
   const [newPrices, setNewPrices] = useState<Record<string, string>>({});
   const [salesNote, setSalesNote] = useState('');
+  const [isChatOpen, setIsChatOpen] = useState(true);
   const endRef = useRef<HTMLDivElement>(null);
 
   const { messages, setMessages, sendMessage, isConnecting } = useChat(active?.id || null);
@@ -197,7 +198,9 @@ export default function SalesNegotiationPage() {
             <div className="bg-white border-b border-gray-200 px-4 py-3">
               <div className="flex items-center justify-between">
                 <div>
-                  <h3 className="text-sm font-bold text-gray-900 font-mono">{active.id}</h3>
+                  <h3 className="text-sm font-bold text-gray-900 font-mono">
+                    {active.id?.split('-')[0].toUpperCase()}
+                  </h3>
                   <p className="text-xs text-gray-500 mt-0.5">
                     {items.length} sản phẩm · {active.customerName}
                     {active.salesStaffName && (
@@ -221,6 +224,15 @@ export default function SalesNegotiationPage() {
                       {proposePrice ? 'Đang đề xuất...' : 'Tạo Version Đề xuất giá'}
                     </Button>
                   ) : null}
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    className="h-7 text-xs" 
+                    onClick={() => setIsChatOpen(!isChatOpen)}
+                  >
+                    <MessageSquare className="w-3.5 h-3.5 mr-1" />
+                    {isChatOpen ? 'Ẩn Chat' : 'Hiện Chat'}
+                  </Button>
                 </div>
               </div>
             </div>
@@ -368,9 +380,10 @@ export default function SalesNegotiationPage() {
       </div>
 
       {/* ── Col 3: Chat ── */}
-      <div className="w-80 flex-shrink-0 bg-white flex flex-col">
-        {!active ? (
-          <div className="flex-1 flex items-center justify-center text-gray-400 text-sm">
+      {isChatOpen && (
+        <div className="w-80 flex-shrink-0 bg-white flex flex-col border-l border-gray-200">
+          {!active ? (
+            <div className="flex-1 flex items-center justify-center text-gray-400 text-sm">
             Chọn một báo giá để trò chuyện
           </div>
         ) : (
@@ -444,6 +457,7 @@ export default function SalesNegotiationPage() {
           </>
         )}
       </div>
+      )}
     </div>
   );
 }

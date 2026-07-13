@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Routes, Route, useNavigate, useLocation } from 'react-router-dom';
 import { Avatar, AvatarFallback } from '../../components/sales-ui/avatar';
 import {
@@ -15,7 +15,12 @@ import SalesManagerRoundRobinPage from './SalesManagerRoundRobinPage';
 import SalesManagerSePayExceptionPage from './SalesManagerSePayExceptionPage';
 import SalesManagerPriceNegotiation from './SalesManagerPriceNegotiation';
 import SalesManagerPriceNegotiationDetail from './SalesManagerPriceNegotiationDetail';
+import SalesManagerOrdersPage from './SalesManagerOrdersPage';
+import SalesManagerOrderDetailPage from './SalesManagerOrderDetailPage';
+import DirectPurchasePage from '../sales/DirectPurchasePage';
 import { useAuth } from '../../context/AuthContext';
+import { getQuotations } from '../../services/quotationService.js';
+import { FileText } from 'lucide-react';
 
 interface NavItem {
   id: string;
@@ -43,7 +48,12 @@ const NAV_ITEMS: NavItem[] = [
     label: 'Duyệt Báo giá (Quản lý)',
     icon: <CheckSquare className="w-4 h-4" />,
     path: '/sales-manager/manager-negotiation',
-    badge: 2,
+  },
+  {
+    id: 'orders',
+    label: 'Quản lý đơn hàng',
+    icon: <FileText className="w-4 h-4" />,
+    path: '/sales-manager/orders',
   },
   {
     id: 'sepay-exceptions',
@@ -78,7 +88,7 @@ function NavItemRow({
         </span>
         <span>{item.label}</span>
       </div>
-      {item.badge && (
+      {item.badge !== undefined && item.badge > 0 && (
         <span
           className="flex h-4 min-w-[16px] items-center justify-center rounded px-1 text-[9px] font-bold bg-red-500 text-white"
         >
@@ -90,9 +100,19 @@ function NavItemRow({
 }
 
 export default function SalesManagerPortal() {
-  const [totalBadge] = useState(2);
+  const [pendingCount, setPendingCount] = useState(0);
   const { user, logout } = useAuth() as any;
   const navigate = useNavigate();
+
+  useEffect(() => {
+    getQuotations()
+      .then((data) => {
+        const list = Array.isArray(data) ? data : [];
+        const count = list.filter((q: any) => q.status === 'PendingManager').length;
+        setPendingCount(count);
+      })
+      .catch(console.error);
+  }, []);
 
   const userName = user?.fullName || 'Manager User';
   const initials = userName
@@ -106,6 +126,13 @@ export default function SalesManagerPortal() {
     logout();
     navigate('/login');
   };
+
+  const menuItems = NAV_ITEMS.map((item) => {
+    if (item.id === 'manager-negotiation') {
+      return { ...item, badge: pendingCount };
+    }
+    return item;
+  });
 
   return (
     <div className="flex h-screen w-full bg-[#f8fafc] overflow-hidden">
@@ -123,7 +150,7 @@ export default function SalesManagerPortal() {
         </div>
 
         <nav className="flex-1 overflow-y-auto px-1.5 py-2 space-y-px">
-          {NAV_ITEMS.map((item) => (
+          {menuItems.map((item) => (
             <NavItemRow key={item.id} item={item} onNavigate={navigate} />
           ))}
         </nav>
@@ -152,9 +179,9 @@ export default function SalesManagerPortal() {
           <div className="flex items-center gap-0.5">
             <button className="relative p-1.5 rounded text-gray-500 hover:bg-gray-100 hover:text-gray-700 transition-colors">
               <Bell className="w-4 h-4" />
-              {totalBadge > 0 && (
+              {pendingCount > 0 && (
                 <span className="absolute top-0.5 right-0.5 w-3.5 h-3.5 bg-red-500 text-white text-[8px] rounded-full flex items-center justify-center font-bold">
-                  {totalBadge}
+                  {pendingCount}
                 </span>
               )}
             </button>
@@ -170,6 +197,9 @@ export default function SalesManagerPortal() {
             <Route path="round-robin" element={<SalesManagerRoundRobinPage />} />
             <Route path="manager-negotiation" element={<SalesManagerPriceNegotiation />} />
             <Route path="manager-negotiation/:id" element={<SalesManagerPriceNegotiationDetail />} />
+            <Route path="orders" element={<SalesManagerOrdersPage />} />
+            <Route path="orders/:id" element={<SalesManagerOrderDetailPage />} />
+            <Route path="direct-purchase" element={<DirectPurchasePage />} />
             <Route path="sepay-exceptions" element={<SalesManagerSePayExceptionPage />} />
             <Route path="*" element={<SalesDashboardPage />} />
           </Routes>
