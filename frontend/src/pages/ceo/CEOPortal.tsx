@@ -9,8 +9,9 @@ import { useAuth } from '../../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import {
   LayoutDashboard, DollarSign,
-  Package, Users, LogOut, Bell
+  Package, Users, LogOut, Bell, Building
 } from 'lucide-react';
+import WarehouseManagement from '../warehouse/WarehouseManagement';
 
 // ─── Sidebar primitives (Same as Admin) ───────────────────────────────────────
 function SidebarHeader() {
@@ -92,6 +93,11 @@ function CEOSidebar({ activeTab, setActiveTab }: { activeTab: string; setActiveT
           <NavItem icon={<Users className="w-4 h-4" />} label="Quản lý nhà cung cấp"
             active={activeTab === 'suppliers'} onClick={() => setActiveTab('suppliers')} />
         </NavGroup>
+
+        <NavGroup title="Cấu hình hệ thống">
+          <NavItem icon={<Building className="w-4 h-4" />} label="Quản lý Kho"
+            active={activeTab === 'warehouses'} onClick={() => setActiveTab('warehouses')} />
+        </NavGroup>
       </div>
     </div>
   );
@@ -127,6 +133,8 @@ export default function CEOPortal() {
         return <CEOPurchaseOrderDetailPage poId={selectPOId} onBack={() => setActiveTab('purchase-orders')} />;
       case 'suppliers': 
         return <CEOSupplierManagementPage />;
+      case 'warehouses':
+        return <WarehouseManagement />;
       default: 
         return <CEODashboard setActiveTab={setActiveTab} />;
     }

@@ -1,362 +1,541 @@
-import { useState } from 'react';
-import { Button } from '../../components/sales-ui/button';
-import { Input } from '../../components/sales-ui/input';
-import { Search, Eye, RefreshCw, Download, Plus, Printer, CheckCircle, Play, X } from 'lucide-react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../../components/sales-ui/dialog';
+import React, { useState, useEffect } from 'react';
+import { Search, Filter, AlertCircle, PackageSearch, ArrowLeftRight, Clock, User, Check } from 'lucide-react';
+import { Button } from '../../components/ui/Button';
+import { Input } from '../../components/ui/Input';
+import { getWarehouseInventory, adjustInventory, getWarehouses, addInventory } from '../../services/warehouseService';
+import { getProducts, getCategories, createProduct } from '../../services/productService';
 
-const PRIMARY = '#1F3B64';
-const SUCCESS = '#16A34A';
-const WARNING = '#D97706';
-const ERROR   = '#DC2626';
-const INFO    = '#2563EB';
-const NEUTRAL = '#64748B';
-
-const STATUS_CFG: Record<string, { label: string; bg: string }> = {
-  open:      { label: 'Đang mở',       bg: INFO    },
-  counting:  { label: 'Đang kiểm',     bg: WARNING },
-  pending:   { label: 'Chờ duyệt',     bg: NEUTRAL },
-  approved:  { label: 'Đã duyệt',      bg: SUCCESS },
-  completed: { label: 'Hoàn tất',      bg: '#0891B2' },
-};
-
-interface CountLine { sku: string; product: string; location: string; systemQty: number; physicalQty: number; variance: number; diffPct: number; reason: string; remarks: string }
-interface CountSession {
-  id: string; warehouse: string; createdBy: string; snapshotTime: string;
-  status: string; varianceCount: number; completion: number;
-  countType: string; lines: CountLine[];
-}
-
-const SESSIONS: CountSession[] = [
-  {
-    id: 'CS-2406-0012', warehouse: 'Kho Hà Nội', createdBy: 'Trần Văn Bình',
-    snapshotTime: '06/07/2026 00:00', status: 'counting', varianceCount: 2, completion: 65,
-    countType: 'Kiểm kê toàn phần',
-    lines: [
-      { sku: 'VT-CT-001', product: 'Vải cotton khổ 1.5m', location: 'A-01-03', systemQty: 850, physicalQty: 848, variance: -2, diffPct: -0.24, reason: 'Hao hụt tự nhiên', remarks: '' },
-      { sku: 'VT-SM-012', product: 'Sơ mi nam slim fit',   location: 'B-02-11', systemQty: 240, physicalQty: 238, variance: -2, diffPct: -0.83, reason: 'Chênh lệch',      remarks: 'Cần xác nhận lại' },
-      { sku: 'VT-QT-007', product: 'Quần tây slim fit',    location: 'B-03-05', systemQty: 185, physicalQty: 185, variance: 0,  diffPct: 0,     reason: '',             remarks: '' },
-      { sku: 'VT-LN-003', product: 'Vải linen nhập khẩu',  location: 'A-02-08', systemQty: 420, physicalQty: 420, variance: 0,  diffPct: 0,     reason: '',             remarks: '' },
-      { sku: 'VT-DM-005', product: 'Vải denim cao cấp',    location: 'A-03-06', systemQty: 310, physicalQty: 0,   variance: -310, diffPct: -100, reason: '',             remarks: 'Chưa kiểm' },
-    ],
-  },
-  {
-    id: 'CS-2406-0011', warehouse: 'Kho HCM', createdBy: 'Phạm Thị Hương',
-    snapshotTime: '01/07/2026 00:00', status: 'pending', varianceCount: 5, completion: 100,
-    countType: 'Kiểm kê chu kỳ',
-    lines: [],
-  },
-  {
-    id: 'CS-2406-0010', warehouse: 'Kho Hà Nội', createdBy: 'Lê Văn Dũng',
-    snapshotTime: '25/06/2026 00:00', status: 'approved', varianceCount: 1, completion: 100,
-    countType: 'Kiểm kê chu kỳ',
-    lines: [],
-  },
-];
-
-const DASHBOARD = [
-  { label: 'Đang mở',   value: 1, color: INFO    },
-  { label: 'Đang kiểm', value: 1, color: WARNING },
-  { label: 'Chờ duyệt', value: 1, color: NEUTRAL },
-  { label: 'Đã duyệt',  value: 1, color: SUCCESS },
-  { label: 'Tổng lệch', value: 8, color: ERROR   },
-];
-
-function Badge({ status }: { status: string }) {
-  const c = STATUS_CFG[status] || { label: status, bg: NEUTRAL };
-  return <span className="text-[10px] font-semibold text-white px-2 py-0.5 inline-block whitespace-nowrap" style={{ backgroundColor: c.bg, borderRadius: 4 }}>{c.label}</span>;
-}
-
-function CreateDialog({ onClose }: { onClose: () => void }) {
-  const [formData, setFormData] = useState({ warehouseId: '', notes: '' });
-  
-  const handleCreateSession = async () => {
-    try {
-      const { createStockCountSession } = await import('../../services/warehouseService.js');
-      await createStockCountSession({ warehouseId: formData.warehouseId, notes: formData.notes });
-      alert('Mở phiên kiểm kê thành công!');
-      onClose();
-    } catch (err: any) { alert(err.message); }
-  };
-
-  return (
-    <div className="space-y-4 text-xs">
-      <div className="grid grid-cols-2 gap-3">
-        <div className="space-y-1.5">
-          <label className="text-gray-500">Kho *</label>
-          <Input className="w-full h-7 text-xs border border-gray-200 rounded px-2 bg-white" placeholder="ID kho" value={formData.warehouseId} onChange={e => setFormData({...formData, warehouseId: e.target.value})} />
-        </div>
-        <div className="space-y-1.5">
-          <label className="text-gray-500">Loại kiểm kê</label>
-          <select className="w-full h-7 text-xs border border-gray-200 rounded px-2 bg-white"><option>Kiểm kê chu kỳ</option><option>Kiểm kê toàn phần</option></select>
-        </div>
-        <div className="col-span-2 space-y-1.5">
-          <label className="text-gray-500">Lý do kiểm kê</label>
-          <Input className="h-7 text-xs" placeholder="Kiểm kê định kỳ tháng 7/2026..." />
-        </div>
-        <div className="col-span-2 space-y-1.5">
-          <label className="text-gray-500">Ghi chú</label>
-          <Input className="h-7 text-xs" placeholder="Ghi chú thêm..." value={formData.notes} onChange={e => setFormData({...formData, notes: e.target.value})} />
-        </div>
-      </div>
-      <div className="p-3 bg-amber-50 border border-amber-200 rounded text-amber-800 text-[11px]">
-        <strong>Lưu ý:</strong> Khi mở phiên kiểm kê, hệ thống sẽ chụp ảnh tồn kho tại thời điểm đó (Snapshot). Số liệu snapshot sẽ không thay đổi trong suốt quá trình kiểm kê.
-      </div>
-      <div className="flex gap-2 pt-2 border-t border-gray-100 justify-end">
-        <Button size="sm" className="h-7 text-xs gap-1.5" style={{ backgroundColor: PRIMARY }} onClick={handleCreateSession}><CheckCircle className="w-3.5 h-3.5" /> Mở phiên kiểm kê</Button>
-        <Button variant="outline" size="sm" className="h-7 text-xs" onClick={onClose}>Hủy</Button>
-      </div>
-    </div>
-  );
-}
+const PRIMARY = '#3b82f6';
 
 export default function WarehouseInventoryCount() {
+  const [warehouses, setWarehouses] = useState<any[]>([]);
+  const [warehouseId, setWarehouseId] = useState('');
+  const [items, setItems] = useState<any[]>([]);
+  const [loading, setLoading] = useState(false);
+  
+  // Filters
   const [search, setSearch] = useState('');
-  const [dateFrom, setDateFrom] = useState('');
-  const [dateTo, setDateTo] = useState('');
-  const [warehouseFilter, setWarehouseFilter] = useState('all');
-  const [selected, setSelected] = useState<string[]>([]);
-  const [detail, setDetail] = useState<CountSession | null>(null);
-  const [showCreate, setShowCreate] = useState(false);
-  const [editLines, setEditLines] = useState<CountLine[]>([]);
+  const [minQty, setMinQty] = useState('');
+  const [maxQty, setMaxQty] = useState('');
+  const [fromDate, setFromDate] = useState('');
+  const [toDate, setToDate] = useState('');
+  
+  // Pagination
+  const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [totalCount, setTotalCount] = useState(0);
 
-  const filtered = SESSIONS.filter(s => {
-    const q = search.toLowerCase();
-    const mw = warehouseFilter === 'all' || s.warehouse === warehouseFilter;
-    return (!q || s.id.toLowerCase().includes(q) || s.warehouse.toLowerCase().includes(q) || s.createdBy.toLowerCase().includes(q)) && mw;
-  });
+  // Edit State
+  const [editingItem, setEditingItem] = useState<any>(null);
+  const [newQuantity, setNewQuantity] = useState('');
+  const [adjustNote, setAdjustNote] = useState('');
+  const [submitting, setSubmitting] = useState(false);
 
-  const toggleSelect = (id: string) => setSelected(p => p.includes(id) ? p.filter(x => x !== id) : [...p, id]);
-  const toggleAll = () => setSelected(p => p.length === filtered.length ? [] : filtered.map(s => s.id));
+  // Add Product State
+  const [showAddModal, setShowAddModal] = useState(false);
+  const [isNewProduct, setIsNewProduct] = useState(false);
+  const [productsList, setProductsList] = useState<any[]>([]);
+  const [categoriesList, setCategoriesList] = useState<any[]>([]);
+  const [selectedProductId, setSelectedProductId] = useState('');
+  const [selectedLocationId, setSelectedLocationId] = useState('');
+  const [initialQuantity, setInitialQuantity] = useState('0');
+  
+  // New Product Info
+  const [newProductName, setNewProductName] = useState('');
+  const [newProductSku, setNewProductSku] = useState('');
+  const [newProductCategoryId, setNewProductCategoryId] = useState('');
+  const [newProductPrice, setNewProductPrice] = useState('0');
+  const [newProductUnit, setNewProductUnit] = useState('Cái');
+  const [newProductDesc, setNewProductDesc] = useState('');
+  const [newProductSpecs, setNewProductSpecs] = useState('');
+  const [newProductImageFile, setNewProductImageFile] = useState<File | null>(null);
 
-  const openDetail = (s: CountSession) => { setDetail(s); setEditLines(s.lines.map(l => ({ ...l }))); };
-  const updatePhysical = (idx: number, val: number) => {
-    setEditLines(p => p.map((l, i) => i === idx ? { ...l, physicalQty: val, variance: val - l.systemQty, diffPct: l.systemQty > 0 ? ((val - l.systemQty) / l.systemQty) * 100 : 0 } : l));
+  useEffect(() => {
+    fetchWarehousesList();
+  }, []);
+
+  const fetchWarehousesList = async () => {
+    try {
+      const res: any = await getWarehouses();
+      if (res && res.length > 0) {
+        setWarehouses(res);
+        setWarehouseId(res[0].id);
+      }
+    } catch (err: any) {
+      console.error('Error fetching warehouses:', err);
+    }
   };
 
-  const handleSubmitCount = async () => {
-    if (!detail) return;
+  useEffect(() => {
+    if (warehouseId) {
+      fetchInventory();
+    }
+  }, [warehouseId, page]);
+
+  const fetchInventory = async (isSearch = false) => {
     try {
-      const payload = editLines.map(l => ({
-        productId: l.sku,
-        actualQuantity: l.physicalQty,
-        reason: l.reason
-      }));
-      const { submitStockCount } = await import('../../services/warehouseService.js');
-      await submitStockCount(detail.id, payload);
-      alert('Nộp kết quả kiểm kê thành công!');
-      setDetail(null);
-    } catch (err: any) { alert(err.message); }
+      setLoading(true);
+      const currentPage = isSearch ? 1 : page;
+      if (isSearch && page !== 1) setPage(1);
+
+      const params: any = {
+        pageNumber: currentPage,
+        pageSize: 10,
+        search,
+      };
+      if (minQty) params.minQty = minQty;
+      if (maxQty) params.maxQty = maxQty;
+      if (fromDate) params.fromDate = fromDate;
+      if (toDate) params.toDate = toDate;
+
+      const res: any = await getWarehouseInventory(warehouseId, params);
+      setItems(res.items || []);
+      setTotalPages(res.totalPages || 1);
+      setTotalCount(res.totalCount || 0);
+    } catch (err: any) {
+      alert('Lỗi khi tải danh sách tồn kho: ' + err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSearch = () => {
+    fetchInventory(true);
+  };
+
+  const openAdjustDialog = (item: any) => {
+    setEditingItem(item);
+    setNewQuantity(item.onHandQuantity.toString());
+    setAdjustNote('');
+  };
+
+  const handleAdjustSubmit = async () => {
+    if (!newQuantity || isNaN(newQuantity) || parseInt(newQuantity) < 0) {
+      alert('Số lượng mới không hợp lệ!');
+      return;
+    }
+    try {
+      setSubmitting(true);
+      await adjustInventory(editingItem.id, {
+        newQuantity: parseInt(newQuantity as string, 10),
+        note: adjustNote
+      });
+      alert('Cập nhật tồn kho thành công!');
+      setEditingItem(null);
+      fetchInventory(); // Reload current page
+    } catch (err: any) {
+      alert('Lỗi khi cập nhật tồn kho: ' + err.message);
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const openAddProductModal = async () => {
+    try {
+      setLoading(true);
+      const [res, cats]: any = await Promise.all([
+        getProducts({ page: 1, pageSize: 200 }),
+        getCategories()
+      ]);
+      setProductsList(res.items || []);
+      setCategoriesList(cats || []);
+      if (res.items && res.items.length > 0) {
+        setSelectedProductId(res.items[0].id);
+      }
+      if (cats && cats.length > 0) {
+        setNewProductCategoryId(cats[0].id);
+      }
+      
+      const currWh = warehouses.find(w => w.id === warehouseId);
+      if (currWh && currWh.locations && currWh.locations.length > 0) {
+        setSelectedLocationId(currWh.locations[0].id);
+      } else {
+        setSelectedLocationId('');
+      }
+      
+      setInitialQuantity('0');
+      setNewProductName('');
+      setNewProductSku('');
+      setNewProductPrice('0');
+      setNewProductUnit('Cái');
+      setNewProductDesc('');
+      setNewProductSpecs('');
+      setNewProductImageFile(null);
+      setIsNewProduct(false);
+      setShowAddModal(true);
+    } catch (err: any) {
+      alert("Lỗi tải dữ liệu sản phẩm: " + err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleAddSubmit = async () => {
+    let finalProductId = selectedProductId;
+
+    if (isNewProduct) {
+      if (!newProductName || !newProductSku || !newProductCategoryId || !newProductUnit) return alert("Vui lòng điền đủ Tên, Mã SKU, Đơn vị tính và Danh mục cho sản phẩm mới.");
+      if (isNaN(newProductPrice as any)) return alert("Giá sản phẩm không hợp lệ.");
+    } else {
+      if (!selectedProductId) return alert("Vui lòng chọn sản phẩm.");
+    }
+
+    if (!selectedLocationId) return alert("Vui lòng chọn vị trí lưu trữ.");
+    if (!initialQuantity || isNaN(initialQuantity as any) || parseInt(initialQuantity) < 0) return alert("Số lượng không hợp lệ.");
+
+    try {
+      setSubmitting(true);
+      
+      if (isNewProduct) {
+        const formData = new FormData();
+        formData.append('Name', newProductName);
+        formData.append('Sku', newProductSku);
+        formData.append('CategoryId', newProductCategoryId);
+        formData.append('StandardListedPrice', newProductPrice);
+        formData.append('Unit', newProductUnit);
+        if (newProductDesc) formData.append('Description', newProductDesc);
+        if (newProductSpecs) formData.append('Specifications', newProductSpecs);
+        if (newProductImageFile) formData.append('ImageFile', newProductImageFile);
+
+        const createdProd: any = await createProduct(formData);
+        finalProductId = createdProd.id;
+      }
+
+      await addInventory({
+        productId: finalProductId,
+        warehouseLocationId: selectedLocationId,
+        initialQuantity: parseInt(initialQuantity)
+      });
+      alert('Thêm sản phẩm vào kho thành công!');
+      setShowAddModal(false);
+      fetchInventory();
+    } catch (err: any) {
+      alert('Lỗi: ' + err.message);
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   return (
-    <div className="flex flex-col h-full">
-      <div className="bg-white border-b border-gray-200 px-5 py-3 flex-shrink-0">
-        <div className="flex items-center gap-1.5 text-[11px] mb-0.5"><span className="text-gray-400">Kho hàng</span><span className="text-gray-300">/</span><span className="text-gray-400">Quản lý tồn kho (Inventory)</span><span className="text-gray-300">/</span><span className="text-gray-800 font-semibold">Kiểm kê tồn kho</span></div>
-        <div className="flex items-center justify-between mb-3">
-          <div>
-            <h2 className="text-base font-bold text-gray-900">Kiểm kê tồn kho (Inventory Count)</h2>
-            <p className="text-xs text-gray-500 mt-0.5">{SESSIONS.length} phiên kiểm kê</p>
-          </div>
-          <div className="flex items-center gap-2">
-            <Button size="sm" className="h-7 text-xs gap-1.5" style={{ backgroundColor: PRIMARY }} onClick={() => setShowCreate(true)}><Plus className="w-3 h-3" /> Mở phiên kiểm kê</Button>
-            <Button variant="outline" size="sm" className="h-7 text-xs gap-1.5"><RefreshCw className="w-3 h-3" /> Làm mới</Button>
-            <Button variant="outline" size="sm" className="h-7 text-xs gap-1.5"><Download className="w-3 h-3" /> Xuất Excel</Button>
-          </div>
+    <div className="p-4 md:p-6 max-w-7xl mx-auto space-y-6 relative">
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+        <div>
+          <h1 className="text-xl md:text-2xl font-bold text-gray-900 flex items-center gap-2">
+            <PackageSearch className="w-6 h-6 text-blue-600" />
+            Quản lý tồn kho trực tiếp
+          </h1>
+          <p className="text-sm text-gray-500 mt-1">Xem và cập nhật số lượng tồn kho vật lý tại kho</p>
         </div>
-
-        <div className="grid grid-cols-5 gap-2 mb-3">
-          {DASHBOARD.map(d => (
-            <div key={d.label} className="flex items-center gap-2 bg-gray-50 rounded px-3 py-2 border border-gray-200">
-              <div>
-                <p className="text-[10px] text-gray-500">{d.label}</p>
-                <p className="text-base font-bold" style={{ color: d.color }}>{d.value}</p>
-              </div>
-            </div>
-          ))}
-        </div>
-
-        <div className="flex items-center gap-2">
-          <div className="relative flex-1 max-w-xs">
-            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400" />
-            <Input className="pl-8 h-7 text-xs bg-gray-50" placeholder="Mã phiên, kho, người tạo..." value={search} onChange={e => setSearch(e.target.value)} />
-          </div>
-          <select className="h-7 text-xs border border-gray-200 rounded px-2 bg-white text-gray-600" value={warehouseFilter} onChange={e => setWarehouseFilter(e.target.value)}>
-            <option value="all">Tất cả kho</option>
-            <option>Kho Hà Nội</option>
-            <option>Kho HCM</option>
-            <option>Kho Đà Nẵng</option>
+        
+        <div className="flex items-center gap-2 w-full sm:w-auto">
+          <Button onClick={openAddProductModal} className="h-10 text-sm whitespace-nowrap" style={{ backgroundColor: PRIMARY }}>
+            + Thêm sản phẩm
+          </Button>
+          <select 
+            value={warehouseId} 
+            onChange={(e: any) => setWarehouseId(e.target.value)}
+            className="w-full sm:w-[250px] bg-white border border-gray-300 rounded text-sm px-3 py-2 outline-none focus:ring-2 focus:ring-blue-500"
+          >
+            {warehouses.map(wh => (
+              <option key={wh.id} value={wh.id}>{wh.name}</option>
+            ))}
           </select>
-          <input type="date" className="h-7 text-xs border border-gray-200 rounded px-2 bg-white text-gray-600" value={dateFrom} onChange={e => setDateFrom(e.target.value)} />
-          <input type="date" className="h-7 text-xs border border-gray-200 rounded px-2 bg-white text-gray-600" value={dateTo} onChange={e => setDateTo(e.target.value)} />
         </div>
       </div>
 
-      <div className="flex-1 overflow-auto bg-gray-50 p-4">
-        {selected.length > 0 && (
-          <div className="bg-[#EFF6FF] border border-[#BFDBFE] rounded px-3 py-2 mb-2 flex items-center gap-2 text-xs text-blue-700">
-            <span className="font-medium">{selected.length} đã chọn</span>
-            <button className="h-6 px-2.5 text-[10px] font-medium rounded border border-blue-300 text-blue-700 hover:bg-blue-100 whitespace-nowrap">Đóng phiên</button>
-            <button className="h-6 px-2.5 text-[10px] font-medium rounded border border-blue-300 text-blue-700 hover:bg-blue-100 whitespace-nowrap">Xuất Excel</button>
-            <button className="h-6 px-2.5 text-[10px] font-medium rounded border border-blue-300 text-blue-700 hover:bg-blue-100 whitespace-nowrap" onClick={() => setSelected([])}>Hủy chọn</button>
+      {/* Filters */}
+      <div className="bg-white p-4 rounded-xl border border-gray-100 shadow-sm flex flex-col md:flex-row gap-4 items-end flex-wrap">
+        <div className="flex-1 w-full md:min-w-[200px] space-y-1.5">
+          <label className="text-xs font-medium text-gray-600">Tìm kiếm (Tên / SKU)</label>
+          <div className="relative">
+            <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+            <Input 
+              placeholder="Nhập mã hoặc tên sản phẩm..." 
+              className="pl-9 h-9 text-sm w-full"
+              value={search}
+              onChange={(e: any) => setSearch(e.target.value)}
+              onKeyDown={(e: any) => e.key === 'Enter' && handleSearch()}
+            />
           </div>
-        )}
-        <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
-          <table className="w-full text-xs">
+        </div>
+        
+        <div className="w-full md:w-32 space-y-1.5">
+          <label className="text-xs font-medium text-gray-600">Tồn kho Min</label>
+          <Input type="number" placeholder="0" className="h-9 text-sm" value={minQty} onChange={(e: any) => setMinQty(e.target.value)} onKeyDown={(e: any) => e.key === 'Enter' && handleSearch()} />
+        </div>
+        <div className="w-full md:w-32 space-y-1.5">
+          <label className="text-xs font-medium text-gray-600">Tồn kho Max</label>
+          <Input type="number" placeholder="1000" className="h-9 text-sm" value={maxQty} onChange={(e: any) => setMaxQty(e.target.value)} onKeyDown={(e: any) => e.key === 'Enter' && handleSearch()} />
+        </div>
+        <div className="w-full md:w-32 space-y-1.5">
+          <label className="text-xs font-medium text-gray-600">Cập nhật từ</label>
+          <Input type="date" className="h-9 text-sm" value={fromDate} onChange={(e: any) => setFromDate(e.target.value)} />
+        </div>
+        <div className="w-full md:w-32 space-y-1.5">
+          <label className="text-xs font-medium text-gray-600">Đến ngày</label>
+          <Input type="date" className="h-9 text-sm" value={toDate} onChange={(e: any) => setToDate(e.target.value)} />
+        </div>
+
+        <Button onClick={handleSearch} className="h-9 gap-2 w-full md:w-auto" style={{ backgroundColor: PRIMARY }}>
+          <Filter className="w-4 h-4" /> Lọc dữ liệu
+        </Button>
+      </div>
+
+      {/* Main Table */}
+      <div className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden">
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
             <thead>
-              <tr className="bg-gray-50 border-b border-gray-200">
-                <th className="px-3 py-2.5"><input type="checkbox" checked={selected.length === filtered.length && filtered.length > 0} onChange={toggleAll} /></th>
-                <th className="text-left px-3 py-2.5 text-gray-700 font-semibold">Phiên kiểm kê</th>
-                <th className="text-left px-3 py-2.5 text-gray-700 font-semibold">Kho</th>
-                <th className="text-left px-3 py-2.5 text-gray-700 font-semibold">Người tạo</th>
-                <th className="text-left px-3 py-2.5 text-gray-700 font-semibold">Loại kiểm kê</th>
-                <th className="text-left px-3 py-2.5 text-gray-700 font-semibold">Thời gian snapshot</th>
-                <th className="text-center px-3 py-2.5 text-gray-700 font-semibold">Số lệch</th>
-                <th className="text-center px-3 py-2.5 text-gray-700 font-semibold">Hoàn thành</th>
-                <th className="text-center px-3 py-2.5 text-gray-700 font-semibold">Trạng thái</th>
-                <th className="text-center px-3 py-2.5 text-gray-700 font-semibold">Thao tác</th>
+              <tr className="bg-slate-50 border-b border-gray-200">
+                <th className="text-left px-4 py-3 font-semibold text-gray-700 w-32">Mã SKU</th>
+                <th className="text-left px-4 py-3 font-semibold text-gray-700">Tên sản phẩm</th>
+                <th className="text-right px-4 py-3 font-semibold text-gray-700">Tồn vật lý</th>
+                <th className="text-right px-4 py-3 font-semibold text-gray-700">Tồn khả dụng</th>
+                <th className="text-left px-4 py-3 font-semibold text-gray-700">Cập nhật lần cuối</th>
+                <th className="text-center px-4 py-3 font-semibold text-gray-700 w-28">Thao tác</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
-              {filtered.length === 0 && (
-                <tr><td colSpan={12} className="py-12 text-center"><div className="flex flex-col items-center gap-2"><div className="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center"><span className="text-gray-400 text-xl">📋</span></div><p className="text-sm font-medium text-gray-500">Không có dữ liệu</p><p className="text-xs text-gray-400">Thay đổi bộ lọc để xem kết quả khác</p></div></td></tr>
-              )}
-              {filtered.map((s, i) => (
-                <tr key={s.id} className={`hover:bg-blue-50/30 transition-colors ${i % 2 === 1 ? 'bg-gray-50/50' : ''}`}>
-                  <td className="px-3 py-2.5"><input type="checkbox" checked={selected.includes(s.id)} onChange={() => toggleSelect(s.id)} /></td>
-                  <td className="px-3 py-2.5 font-semibold" style={{ color: PRIMARY }}>{s.id}</td>
-                  <td className="px-3 py-2.5 text-gray-700">{s.warehouse}</td>
-                  <td className="px-3 py-2.5 text-gray-700">{s.createdBy}</td>
-                  <td className="px-3 py-2.5 text-gray-600">{s.countType}</td>
-                  <td className="px-3 py-2.5 text-gray-500">{s.snapshotTime}</td>
-                  <td className="px-3 py-2.5 text-center font-semibold" style={{ color: s.varianceCount > 0 ? ERROR : SUCCESS }}>{s.varianceCount}</td>
-                  <td className="px-3 py-2.5 text-center">
-                    <div className="flex items-center justify-center gap-1.5">
-                      <div className="w-16 h-1.5 bg-gray-200 rounded-full overflow-hidden">
-                        <div className="h-full rounded-full" style={{ width: `${s.completion}%`, backgroundColor: s.completion === 100 ? SUCCESS : INFO }} />
-                      </div>
-                      <span className="font-mono text-gray-600">{s.completion}%</span>
-                    </div>
-                  </td>
-                  <td className="px-3 py-2.5 text-center"><Badge status={s.status} /></td>
-                  <td className="px-3 py-2.5 text-center">
-                    <div className="flex items-center justify-center gap-1">
-                      <button className="p-1 rounded hover:bg-blue-50 text-gray-400 hover:text-blue-600" onClick={() => openDetail(s)}><Eye className="w-3.5 h-3.5" /></button>
-                      {s.status === 'counting' && <button className="p-1 rounded hover:bg-green-50 text-gray-400 hover:text-green-600" title="Tiếp tục kiểm"><Play className="w-3.5 h-3.5" /></button>}
-                    </div>
+              {loading ? (
+                <tr>
+                  <td colSpan={6} className="text-center py-12 text-gray-500">
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-2"></div>
+                    Đang tải dữ liệu...
                   </td>
                 </tr>
-              ))}
+              ) : items.length === 0 ? (
+                <tr>
+                  <td colSpan={6} className="text-center py-12 text-gray-500 flex flex-col items-center">
+                    <AlertCircle className="w-10 h-10 text-gray-300 mb-2" />
+                    Không tìm thấy sản phẩm nào trong kho này.
+                  </td>
+                </tr>
+              ) : (
+                items.map((item: any) => (
+                  <tr key={item.id} className="hover:bg-blue-50/30 transition-colors">
+                    <td className="px-4 py-3 font-mono text-gray-500">{item.productSku}</td>
+                    <td className="px-4 py-3 font-medium text-gray-900">{item.productName}</td>
+                    <td className="px-4 py-3 text-right">
+                      <span className="font-semibold text-blue-600 bg-blue-50 px-2 py-0.5 rounded text-sm border border-blue-100">
+                        {item.onHandQuantity}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3 text-right text-gray-600 font-medium">
+                      {item.availableQuantity}
+                    </td>
+                    <td className="px-4 py-3">
+                      <div className="flex flex-col gap-0.5">
+                        <span className="flex items-center gap-1 text-[11px] text-gray-600"><User className="w-3 h-3" /> {item.lastUpdatedByUserName || 'System'}</span>
+                        <span className="flex items-center gap-1 text-[11px] text-gray-400"><Clock className="w-3 h-3" /> {item.lastUpdatedAt ? new Date(item.lastUpdatedAt).toLocaleString('vi-VN') : 'N/A'}</span>
+                      </div>
+                    </td>
+                    <td className="px-4 py-3 text-center">
+                      <Button size="sm" variant="outline" className="h-7 text-xs border-blue-200 text-blue-700 hover:bg-blue-50" onClick={() => openAdjustDialog(item)}>
+                        Cập nhật
+                      </Button>
+                    </td>
+                  </tr>
+                ))
+              )}
             </tbody>
           </table>
-          <div className="px-4 py-2.5 border-t border-gray-100 flex items-center justify-between bg-gray-50">
-            <span className="text-xs text-gray-500">Hiển thị {filtered.length} / {SESSIONS.length} phiên</span>
-            <button className="w-6 h-6 text-xs rounded font-medium text-white flex items-center justify-center" style={{ backgroundColor: PRIMARY }}>1</button>
-          </div>
         </div>
+
+        {/* Pagination */}
+        {!loading && items.length > 0 && (
+          <div className="px-4 py-3 border-t border-gray-100 flex items-center justify-between bg-gray-50/50">
+            <span className="text-xs text-gray-500">Hiển thị {items.length} / {totalCount} sản phẩm</span>
+            <div className="flex items-center gap-1">
+              <Button size="sm" variant="outline" className="h-7 px-2 text-xs" disabled={page === 1} onClick={() => setPage(p => p - 1)}>Trang trước</Button>
+              <span className="text-xs px-2 font-medium">Trang {page} / {totalPages}</span>
+              <Button size="sm" variant="outline" className="h-7 px-2 text-xs" disabled={page === totalPages} onClick={() => setPage(p => p + 1)}>Trang sau</Button>
+            </div>
+          </div>
+        )}
       </div>
 
-      {/* Detail Dialog */}
-      <Dialog open={!!detail} onOpenChange={() => setDetail(null)}>
-        <DialogContent className="max-w-4xl max-h-[88vh] overflow-y-auto" aria-describedby={undefined}>
-          <DialogHeader>
-            <DialogTitle className="text-sm font-bold">Chi tiết phiên kiểm kê — {detail?.id}</DialogTitle>
-          </DialogHeader>
-          {detail && (
-            <div className="space-y-4 text-xs">
-              <div className="grid grid-cols-3 gap-3">
-                <div className="bg-gray-50 rounded p-3 space-y-1.5">
-                  <p className="font-semibold text-gray-500 text-[10px] uppercase tracking-wide mb-2">Thông tin phiên</p>
-                  <div className="flex justify-between"><span className="text-gray-500">Mã phiên:</span><span className="font-semibold" style={{ color: PRIMARY }}>{detail.id}</span></div>
-                  <div className="flex justify-between"><span className="text-gray-500">Kho:</span><span>{detail.warehouse}</span></div>
-                  <div className="flex justify-between"><span className="text-gray-500">Người tạo:</span><span>{detail.createdBy}</span></div>
-                  <div className="flex justify-between"><span className="text-gray-500">Loại kiểm:</span><span>{detail.countType}</span></div>
-                  <div className="flex justify-between"><span className="text-gray-500">Snapshot:</span><span>{detail.snapshotTime}</span></div>
-                  <div className="flex justify-between"><span className="text-gray-500">Trạng thái:</span><Badge status={detail.status} /></div>
-                </div>
-                <div className="col-span-2 bg-gray-50 rounded p-3">
-                  <p className="font-semibold text-gray-500 text-[10px] uppercase tracking-wide mb-2">Tiến độ kiểm kê</p>
-                  <div className="flex items-center gap-3 mb-2">
-                    <div className="flex-1 h-2.5 bg-gray-200 rounded-full overflow-hidden">
-                      <div className="h-full rounded-full" style={{ width: `${detail.completion}%`, backgroundColor: detail.completion === 100 ? SUCCESS : INFO }} />
-                    </div>
-                    <span className="font-mono font-semibold" style={{ color: PRIMARY }}>{detail.completion}%</span>
-                  </div>
-                  <div className="flex gap-4">
-                    <div><p className="text-gray-500">Số dòng lệch</p><p className="text-xl font-bold" style={{ color: detail.varianceCount > 0 ? ERROR : SUCCESS }}>{detail.varianceCount}</p></div>
-                    <div><p className="text-gray-500">Tổng dòng</p><p className="text-xl font-bold text-gray-700">{detail.lines.length}</p></div>
-                  </div>
+      {/* Adjust Inventory Modal */}
+      {editingItem && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+          <div className="bg-white rounded-xl shadow-xl max-w-md w-full overflow-hidden">
+            <div className="p-4 border-b border-gray-100">
+              <h3 className="text-base font-bold flex items-center gap-2 text-blue-700">
+                <ArrowLeftRight className="w-5 h-5" />
+                Điều chỉnh tồn kho
+              </h3>
+            </div>
+            
+            <div className="p-4 space-y-4">
+              <div className="bg-slate-50 p-3 rounded border border-slate-100 space-y-1">
+                <div className="text-xs text-gray-500 font-mono">{editingItem.productSku}</div>
+                <div className="font-semibold text-gray-800 text-sm">{editingItem.productName}</div>
+                <div className="flex justify-between mt-2 pt-2 border-t border-slate-200">
+                  <span className="text-xs text-gray-500">Tồn hiện tại hệ thống:</span>
+                  <span className="font-bold text-gray-700">{editingItem.onHandQuantity}</span>
                 </div>
               </div>
 
-              {editLines.length > 0 && (
-                <div>
-                  <p className="font-semibold text-gray-600 text-[10px] uppercase tracking-wide mb-2">Bảng kiểm kê</p>
-                  <div className="border border-gray-200 rounded overflow-hidden">
-                    <table className="w-full">
-                      <thead>
-                        <tr className="bg-gray-50 border-b border-gray-200">
-                          <th className="text-left px-3 py-2 text-gray-700 font-semibold">SKU</th>
-                          <th className="text-left px-3 py-2 text-gray-700 font-semibold">Sản phẩm</th>
-                          <th className="text-left px-3 py-2 text-gray-700 font-semibold">Vị trí</th>
-                          <th className="text-center px-3 py-2 text-gray-700 font-semibold">SL hệ thống</th>
-                          <th className="text-center px-3 py-2 text-gray-700 font-semibold">SL thực tế</th>
-                          <th className="text-center px-3 py-2 text-gray-700 font-semibold">Lệch</th>
-                          <th className="text-center px-3 py-2 text-gray-700 font-semibold">Lệch %</th>
-                          <th className="text-left px-3 py-2 text-gray-700 font-semibold">Lý do</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-gray-100">
-                        {editLines.map((line, idx) => (
-                          <tr key={line.sku} className={`hover:bg-gray-50 ${line.variance !== 0 ? 'bg-red-50/30' : ''}`}>
-                            <td className="px-3 py-2 font-mono text-gray-500">{line.sku}</td>
-                            <td className="px-3 py-2 text-gray-800">{line.product}</td>
-                            <td className="px-3 py-2 font-mono text-gray-600">{line.location}</td>
-                            <td className="px-3 py-2 text-center font-semibold text-gray-700">{line.systemQty}</td>
-                            <td className="px-3 py-2 text-center">
-                              {detail.status === 'counting'
-                                ? <Input type="number" value={line.physicalQty || ''} className="h-6 text-xs text-center w-16 mx-auto" onChange={e => updatePhysical(idx, +e.target.value)} placeholder="..." />
-                                : <span className="font-semibold">{line.physicalQty}</span>}
-                            </td>
-                            <td className="px-3 py-2 text-center font-semibold" style={{ color: line.variance === 0 ? SUCCESS : line.variance < 0 ? ERROR : WARNING }}>
-                              {line.variance > 0 ? '+' : ''}{line.physicalQty > 0 ? line.variance : '—'}
-                            </td>
-                            <td className="px-3 py-2 text-center font-mono font-semibold" style={{ color: line.variance === 0 ? SUCCESS : ERROR }}>
-                              {line.physicalQty > 0 ? `${line.diffPct.toFixed(1)}%` : '—'}
-                            </td>
-                            <td className="px-3 py-2">
-                              {detail.status === 'counting'
-                                ? <Input value={line.reason} className="h-6 text-xs" onChange={e => setEditLines(p => p.map((l, i) => i === idx ? { ...l, reason: e.target.value } : l))} placeholder="Lý do..." />
-                                : <span className="text-gray-600">{line.reason}</span>}
-                            </td>
-                          </tr>
+              <div className="space-y-1.5">
+                <label className="text-xs font-semibold text-gray-700">Tồn kho thực tế (đã đếm)</label>
+                <Input 
+                  type="number" 
+                  value={newQuantity} 
+                  onChange={(e: any) => setNewQuantity(e.target.value)} 
+                  className="font-mono text-lg font-bold text-blue-600"
+                  autoFocus
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="text-xs font-semibold text-gray-700">Ghi chú (Tùy chọn)</label>
+                <Input 
+                  placeholder="Ví dụ: Kiểm kê định kỳ, sai lệch do hàng hỏng..." 
+                  value={adjustNote} 
+                  onChange={(e: any) => setAdjustNote(e.target.value)} 
+                  className="text-sm"
+                />
+              </div>
+
+              <div className="flex justify-end gap-2 pt-4">
+                <Button variant="outline" onClick={() => setEditingItem(null)} disabled={submitting}>Hủy bỏ</Button>
+                <Button style={{ backgroundColor: PRIMARY }} onClick={handleAdjustSubmit} disabled={submitting} className="gap-2">
+                  <Check className="w-4 h-4" /> {submitting ? 'Đang lưu...' : 'Lưu điều chỉnh'}
+                </Button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Add Product Modal */}
+      {showAddModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+          <div className="bg-white rounded-xl shadow-xl max-w-md w-full overflow-hidden">
+            <div className="p-4 border-b border-gray-100">
+              <h3 className="text-base font-bold flex items-center gap-2 text-blue-700">
+                <PackageSearch className="w-5 h-5" />
+                Thêm sản phẩm vào kho
+              </h3>
+            </div>
+            
+            <div className="p-4 space-y-4">
+              <div className="flex gap-4 mb-2">
+                <label className="flex items-center gap-2 cursor-pointer text-sm">
+                  <input type="radio" checked={!isNewProduct} onChange={() => setIsNewProduct(false)} name="productType" className="w-4 h-4 text-blue-600" />
+                  <span>Chọn sản phẩm có sẵn</span>
+                </label>
+                <label className="flex items-center gap-2 cursor-pointer text-sm">
+                  <input type="radio" checked={isNewProduct} onChange={() => setIsNewProduct(true)} name="productType" className="w-4 h-4 text-blue-600" />
+                  <span className="font-semibold text-blue-700">Tạo mới hoàn toàn</span>
+                </label>
+              </div>
+
+              {!isNewProduct ? (
+                <div className="space-y-1.5">
+                  <label className="text-xs font-semibold text-gray-700">Chọn sản phẩm</label>
+                  <select 
+                    className="w-full text-sm h-9 border border-gray-300 rounded px-2"
+                    value={selectedProductId}
+                    onChange={(e: any) => setSelectedProductId(e.target.value)}
+                  >
+                    <option value="">-- Chọn sản phẩm --</option>
+                    {productsList.map(p => (
+                      <option key={p.id} value={p.id}>{p.sku} - {p.name}</option>
+                    ))}
+                  </select>
+                </div>
+              ) : (
+                <div className="space-y-3 bg-blue-50/50 p-3 rounded-lg border border-blue-100">
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-semibold text-gray-700">Tên sản phẩm *</label>
+                    <Input placeholder="Nhập tên sản phẩm mới" value={newProductName} onChange={(e: any) => setNewProductName(e.target.value)} className="h-8 text-sm" />
+                  </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="space-y-1.5">
+                      <label className="text-xs font-semibold text-gray-700">Mã SKU *</label>
+                      <Input placeholder="Nhập mã SKU" value={newProductSku} onChange={(e: any) => setNewProductSku(e.target.value)} className="h-8 text-sm uppercase" />
+                    </div>
+                    <div className="space-y-1.5">
+                      <label className="text-xs font-semibold text-gray-700">Danh mục *</label>
+                      <select 
+                        className="w-full text-sm h-8 border border-gray-300 rounded px-2"
+                        value={newProductCategoryId}
+                        onChange={(e: any) => setNewProductCategoryId(e.target.value)}
+                      >
+                        {categoriesList.map(c => (
+                          <option key={c.id} value={c.id}>{c.name}</option>
                         ))}
-                      </tbody>
-                    </table>
+                      </select>
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="space-y-1.5">
+                      <label className="text-xs font-semibold text-gray-700">Giá niêm yết (VNĐ)</label>
+                      <Input type="number" placeholder="0" value={newProductPrice} onChange={(e: any) => setNewProductPrice(e.target.value)} className="h-8 text-sm" />
+                    </div>
+                    <div className="space-y-1.5">
+                      <label className="text-xs font-semibold text-gray-700">Đơn vị tính *</label>
+                      <Input placeholder="Cái, Hộp, Kg..." value={newProductUnit} onChange={(e: any) => setNewProductUnit(e.target.value)} className="h-8 text-sm" />
+                    </div>
+                  </div>
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-semibold text-gray-700">Mô tả ngắn</label>
+                    <Input placeholder="Nhập mô tả sản phẩm" value={newProductDesc} onChange={(e: any) => setNewProductDesc(e.target.value)} className="h-8 text-sm" />
+                  </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="space-y-1.5">
+                      <label className="text-xs font-semibold text-gray-700">Thông số kỹ thuật</label>
+                      <Input placeholder="Nhập thông số kỹ thuật" value={newProductSpecs} onChange={(e: any) => setNewProductSpecs(e.target.value)} className="h-8 text-sm" />
+                    </div>
+                    <div className="space-y-1.5">
+                      <label className="text-xs font-semibold text-gray-700">Tải lên hình ảnh</label>
+                      <Input type="file" accept="image/*" onChange={(e: any) => setNewProductImageFile(e.target.files[0])} className="h-8 text-sm pt-1" />
+                    </div>
                   </div>
                 </div>
               )}
 
-              <div className="flex gap-2 pt-2 border-t border-gray-100">
-                {detail.status === 'counting' && (
-                  <>
-                    <Button size="sm" className="h-7 text-xs gap-1.5" variant="outline"><X className="w-3.5 h-3.5" /> Lưu nháp</Button>
-                    <Button size="sm" className="h-7 text-xs gap-1.5" style={{ backgroundColor: PRIMARY }} onClick={handleSubmitCount}><CheckCircle className="w-3.5 h-3.5" /> Nộp kết quả</Button>
-                    <Button size="sm" className="h-7 text-xs gap-1.5" variant="outline"><Printer className="w-3.5 h-3.5" /> In bảng kiểm</Button>
-                  </>
+              <div className="space-y-1.5">
+                <label className="text-xs font-semibold text-gray-700">Chọn vị trí lưu trữ</label>
+                <select 
+                  className="w-full text-sm h-9 border border-gray-300 rounded px-2"
+                  value={selectedLocationId}
+                  onChange={(e: any) => setSelectedLocationId(e.target.value)}
+                >
+                  {warehouses.find(w => w.id === warehouseId)?.locations?.length === 0 && (
+                    <option value="">Kho này chưa có vị trí</option>
+                  )}
+                  {warehouses.find(w => w.id === warehouseId)?.locations?.map((loc: any) => (
+                    <option key={loc.id} value={loc.id}>{loc.name}</option>
+                  ))}
+                </select>
+                {warehouses.find(w => w.id === warehouseId)?.locations?.length === 0 && (
+                  <p className="text-xs text-red-500 mt-1">Vui lòng sang trang Quản lý kho tạo vị trí trước.</p>
                 )}
-                <Button variant="outline" size="sm" className="h-7 text-xs ml-auto" onClick={() => setDetail(null)}>Đóng</Button>
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="text-xs font-semibold text-gray-700">Số lượng ban đầu</label>
+                <Input 
+                  type="number" 
+                  value={initialQuantity} 
+                  onChange={(e: any) => setInitialQuantity(e.target.value)} 
+                  className="font-mono text-lg font-bold text-blue-600"
+                />
+              </div>
+
+              <div className="flex justify-end gap-2 pt-4">
+                <Button variant="outline" onClick={() => setShowAddModal(false)} disabled={submitting}>Hủy bỏ</Button>
+                <Button style={{ backgroundColor: PRIMARY }} onClick={handleAddSubmit} disabled={submitting || !selectedLocationId} className="gap-2">
+                  <Check className="w-4 h-4" /> {submitting ? 'Đang lưu...' : 'Lưu sản phẩm'}
+                </Button>
               </div>
             </div>
-          )}
-        </DialogContent>
-      </Dialog>
+          </div>
+        </div>
+      )}
 
-      <Dialog open={showCreate} onOpenChange={setShowCreate}>
-        <DialogContent className="max-w-lg" aria-describedby={undefined}>
-          <DialogHeader><DialogTitle className="text-sm font-bold">Mở phiên kiểm kê mới</DialogTitle></DialogHeader>
-          <CreateDialog onClose={() => setShowCreate(false)} />
-        </DialogContent>
-      </Dialog>
     </div>
   );
 }
