@@ -1,8 +1,24 @@
 // ─── Base config ─────────────────────────────────────────────────────────────
 const API_BASE = '/api'  // Vite proxy → backend ASP.NET Core
 
-async function request(method, url) {
-  const res = await fetch(`${API_BASE}${url}`, { method })
+async function request(method, url, body) {
+  const accessToken = localStorage.getItem('accessToken')
+  const headers = {}
+  
+  if (accessToken) {
+    headers['Authorization'] = `Bearer ${accessToken}`
+  }
+
+  const isFormData = body instanceof FormData;
+  if (!isFormData && body) {
+    headers['Content-Type'] = 'application/json'
+  }
+
+  const res = await fetch(`${API_BASE}${url}`, { 
+    method,
+    headers,
+    body: isFormData ? body : (body ? JSON.stringify(body) : undefined),
+  })
   const json = await res.json().catch(() => ({}))
 
   if (!res.ok) {
@@ -41,6 +57,14 @@ export async function getProductById(id) {
  */
 export async function getCategories() {
   return request('GET', '/products/categories')
+}
+
+/**
+ * Tạo sản phẩm mới hoàn toàn.
+ * @param {{ name, sku, standardListedPrice, categoryId, unit }} data
+ */
+export async function createProduct(data) {
+  return request('POST', '/products', data)
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
