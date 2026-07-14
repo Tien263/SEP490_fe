@@ -155,8 +155,11 @@ export function AuthProvider({ children }) {
       await authService.register({
         fullName: formData.fullName,
         email: formData.email,
+        phoneNumber: formData.phoneNumber || undefined,
         password: formData.password,
         confirmPassword: formData.confirmPassword,
+        taxCode: formData.taxCode || undefined,
+        referralCode: formData.referralCode || undefined,
       })
       return { success: true }
     } catch (err) {

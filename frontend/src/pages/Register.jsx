@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { ArrowLeft, Lock, Mail, Phone, User } from 'lucide-react'
+import { ArrowLeft, Building2, Gift, Lock, Mail, Phone, User } from 'lucide-react'
 import { motion } from 'motion/react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext.jsx'
@@ -13,8 +13,11 @@ export default function Register() {
   const [formData, setFormData] = useState({
     fullName: '',
     email: '',
+    phoneNumber: '',
     password: '',
     confirmPassword: '',
+    taxCode: '',
+    referralCode: '',
   })
   const [errorMsg, setErrorMsg] = useState('')
 
@@ -123,6 +126,21 @@ export default function Register() {
             </div>
 
             <div className="space-y-2">
+              <Label htmlFor="phoneNumber">Số điện thoại</Label>
+              <div className="relative">
+                <Phone className="absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-gray-400" />
+                <Input
+                  id="phoneNumber"
+                  type="tel"
+                  placeholder="0912345678"
+                  value={formData.phoneNumber}
+                  onChange={(event) => handleChange('phoneNumber', event.target.value)}
+                  className="h-12 pl-11"
+                />
+              </div>
+            </div>
+
+            <div className="space-y-2">
               <Label htmlFor="password">Mật khẩu</Label>
               <div className="relative">
                 <Lock className="absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-gray-400" />
@@ -152,6 +170,40 @@ export default function Register() {
                   className="h-12 pl-11"
                   required
                 />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="taxCode">Mã số thuế (tuỳ chọn)</Label>
+                <div className="relative">
+                  <Building2 className="absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-gray-400" />
+                  <Input
+                    id="taxCode"
+                    type="text"
+                    placeholder="0312345678"
+                    value={formData.taxCode}
+                    onChange={(event) => handleChange('taxCode', event.target.value)}
+                    className="h-12 pl-11"
+                    maxLength={20}
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="referralCode">Mã giới thiệu (tuỳ chọn)</Label>
+                <div className="relative">
+                  <Gift className="absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-gray-400" />
+                  <Input
+                    id="referralCode"
+                    type="text"
+                    placeholder="Mã hoặc email NV tư vấn"
+                    value={formData.referralCode}
+                    onChange={(event) => handleChange('referralCode', event.target.value)}
+                    className="h-12 pl-11"
+                    maxLength={100}
+                  />
+                </div>
               </div>
             </div>
 
