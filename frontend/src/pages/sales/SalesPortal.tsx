@@ -1,5 +1,6 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Routes, Route, useNavigate, useLocation } from 'react-router-dom';
+import * as signalR from '@microsoft/signalr';
 import { Avatar, AvatarFallback } from '../../components/sales-ui/avatar';
 import {
   DropdownMenu,
@@ -20,7 +21,9 @@ import {
   Settings,
   ShoppingCart,
   Truck,
+  UserPlus,
   Users,
+  X,
 } from 'lucide-react';
 import SalesDashboardPage from './SalesDashboardPage';
 import SalesNegotiationPage from './SalesNegotiationPage';
@@ -193,12 +196,56 @@ function NavItemRow({
   );
 }
 
+type AssignmentToast = {
+  id: number;
+  customerName: string;
+  source: string;
+  assignedAt: string;
+};
+
+const TOAST_SOURCE_LABELS: Record<string, string> = {
+  ROUND_ROBIN: 'Round-robin',
+  REFERRAL: 'Giới thiệu',
+  RETURNING_CUSTOMER: 'Khách cũ quay lại',
+  MANUAL_REASSIGNMENT: 'Quản lý gán',
+};
+
 export default function SalesPortal() {
   const navigate = useNavigate();
   const { user, logout } = useAuth() as any;
   const totalBadge = 5;
   const role: string = user?.role || '';
   const visibleNavItems = NAV_ITEMS.filter((item) => !item.roles || item.roles.includes(role));
+  const [toasts, setToasts] = useState<AssignmentToast[]>([]);
+
+  // WF-01 bước 6: nhận thông báo realtime khi được hệ thống gán khách hàng mới
+  useEffect(() => {
+    if (role !== 'SalesStaff') return;
+    const accessToken = localStorage.getItem('accessToken');
+    if (!accessToken) return;
+
+    const connection = new signalR.HubConnectionBuilder()
+      .withUrl('/hubs/sales', { accessTokenFactory: () => accessToken })
+      .withAutomaticReconnect()
+      .build();
+
+    connection.on('CustomerAssigned', (payload: { customerName: string; source: string; assignedAt: string }) => {
+      const id = Date.now() + Math.random();
+      setToasts((prev) => [...prev, { id, ...payload }]);
+      setTimeout(() => setToasts((prev) => prev.filter((t) => t.id !== id)), 8000);
+    });
+
+    let stopped = false;
+    connection.start().catch((err) => {
+      // StrictMode mount kép sẽ stop connection đầu tiên — không phải lỗi thật
+      if (!stopped) console.error('SalesHub connection error:', err);
+    });
+
+    return () => {
+      stopped = true;
+      connection.stop();
+    };
+  }, [role]);
 
   const handleLogout = async () => {
     await logout();
@@ -328,6 +375,36 @@ export default function SalesPortal() {
           </Routes>
         </main>
       </div>
+
+      {/* Toast thông báo được gán khách hàng mới (SignalR) */}
+      {toasts.length > 0 && (
+        <div className="fixed right-4 top-14 z-[100] flex w-80 flex-col gap-2">
+          {toasts.map((t) => (
+            <div
+              key={t.id}
+              className="flex items-start gap-2.5 rounded-lg border border-blue-200 bg-white p-3 shadow-lg"
+            >
+              <span className="mt-0.5 flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full bg-blue-50">
+                <UserPlus className="h-4 w-4 text-blue-600" />
+              </span>
+              <div className="min-w-0 flex-1">
+                <p className="text-[13px] font-bold text-[#374151]">Bạn được gán khách hàng mới</p>
+                <p className="mt-0.5 truncate text-[12px] text-gray-600">
+                  <span className="font-semibold">{t.customerName}</span>
+                  {' · '}
+                  {TOAST_SOURCE_LABELS[t.source] || t.source}
+                </p>
+              </div>
+              <button
+                onClick={() => setToasts((prev) => prev.filter((x) => x.id !== t.id))}
+                className="flex-shrink-0 text-gray-300 hover:text-gray-500"
+              >
+                <X className="h-3.5 w-3.5" />
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
