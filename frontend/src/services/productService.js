@@ -1,8 +1,24 @@
 // ─── Base config ─────────────────────────────────────────────────────────────
 const API_BASE = '/api'  // Vite proxy → backend ASP.NET Core
 
-async function request(method, url) {
-  const res = await fetch(`${API_BASE}${url}`, { method })
+async function request(method, url, body) {
+  const accessToken = localStorage.getItem('accessToken')
+  const headers = {}
+  
+  if (accessToken) {
+    headers['Authorization'] = `Bearer ${accessToken}`
+  }
+
+  const isFormData = body instanceof FormData;
+  if (!isFormData && body) {
+    headers['Content-Type'] = 'application/json'
+  }
+
+  const res = await fetch(`${API_BASE}${url}`, { 
+    method,
+    headers,
+    body: isFormData ? body : (body ? JSON.stringify(body) : undefined),
+  })
   const json = await res.json().catch(() => ({}))
 
   if (!res.ok) {
@@ -19,10 +35,11 @@ async function request(method, url) {
  * @param {{ page?, pageSize?, categoryId?, search? }} params
  * @returns {{ items, totalCount, page, pageSize, totalPages }}
  */
-export async function getProducts({ page = 1, pageSize = 6, categoryId, search } = {}) {
+export async function getProducts({ page = 1, pageSize = 6, categoryId, search, sortBy } = {}) {
   const params = new URLSearchParams({ page, pageSize })
   if (categoryId) params.set('categoryId', categoryId)
   if (search)     params.set('search', search)
+  if (sortBy)     params.set('sortBy', sortBy)
   return request('GET', `/products?${params.toString()}`)
 }
 
@@ -41,6 +58,14 @@ export async function getProductById(id) {
  */
 export async function getCategories() {
   return request('GET', '/products/categories')
+}
+
+/**
+ * Tạo sản phẩm mới hoàn toàn.
+ * @param {{ name, sku, standardListedPrice, categoryId, unit }} data
+ */
+export async function createProduct(data) {
+  return request('POST', '/products', data)
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────

@@ -9,8 +9,12 @@ import { useAuth } from '../../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import {
   LayoutDashboard, DollarSign,
-  Package, Users, LogOut, Bell
+  Package, Users, LogOut, Bell, Building
 } from 'lucide-react';
+import WarehouseManagement from '../warehouse/WarehouseManagement';
+import NotificationBell from '../../components/NotificationBell';
+import NotificationsPage from '../NotificationsPage';
+import { Routes, Route } from 'react-router-dom';
 
 // ─── Sidebar primitives (Same as Admin) ───────────────────────────────────────
 function SidebarHeader() {
@@ -92,6 +96,11 @@ function CEOSidebar({ activeTab, setActiveTab }: { activeTab: string; setActiveT
           <NavItem icon={<Users className="w-4 h-4" />} label="Quản lý nhà cung cấp"
             active={activeTab === 'suppliers'} onClick={() => setActiveTab('suppliers')} />
         </NavGroup>
+
+        <NavGroup title="Cấu hình hệ thống">
+          <NavItem icon={<Building className="w-4 h-4" />} label="Quản lý Kho"
+            active={activeTab === 'warehouses'} onClick={() => setActiveTab('warehouses')} />
+        </NavGroup>
       </div>
     </div>
   );
@@ -127,6 +136,10 @@ export default function CEOPortal() {
         return <CEOPurchaseOrderDetailPage poId={selectPOId} onBack={() => setActiveTab('purchase-orders')} />;
       case 'suppliers': 
         return <CEOSupplierManagementPage />;
+      case 'warehouses':
+        return <WarehouseManagement />;
+      case 'notifications':
+        return <NotificationsPage />;
       default: 
         return <CEODashboard setActiveTab={setActiveTab} />;
     }
@@ -141,10 +154,7 @@ export default function CEOPortal() {
         {/* Topbar */}
         <header className="h-11 bg-white border-b border-gray-200 flex items-center px-4 gap-3 flex-shrink-0">
           <div className="flex-1" />
-          <button className="relative p-1.5 rounded text-gray-500 hover:bg-gray-100 transition-colors">
-            <Bell className="w-4 h-4" />
-            <span className="absolute top-0.5 right-0.5 w-3.5 h-3.5 bg-red-500 text-white text-[8px] rounded-full flex items-center justify-center font-bold">3</span>
-          </button>
+          <NotificationBell role={user?.role || ''} onViewAll={() => setActiveTab('notifications')} />
           <div className="w-px h-5 bg-gray-200" />
           <div className="flex items-center gap-2 px-2">
             <div className="w-6 h-6 rounded-full flex items-center justify-center text-[9px] font-semibold text-white flex-shrink-0"

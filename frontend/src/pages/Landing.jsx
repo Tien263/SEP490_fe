@@ -3,9 +3,7 @@ import { motion } from 'motion/react'
 import { Link } from 'react-router-dom'
 import Footer from '../components/Footer.jsx'
 import Header from '../components/Header.jsx'
-import ProductCard from '../components/ProductCard.jsx'
 import { Button } from '../components/ui/Button.jsx'
-import { products } from '../data/products.js'
 
 const values = [
   {
@@ -31,7 +29,6 @@ const values = [
 ]
 
 export default function Landing() {
-  const featuredProducts = products.filter((product) => product.isBestSeller).slice(0, 3)
 
   return (
     <div className="min-h-screen bg-white">
@@ -160,28 +157,7 @@ export default function Landing() {
         </div>
       </section>
 
-      <section className="bg-white py-24">
-        <div className="mx-auto max-w-7xl px-6 lg:px-8">
-          <div className="mb-12 flex flex-col justify-between gap-6 md:flex-row md:items-end">
-            <div>
-              <p className="mb-4 text-sm uppercase tracking-[0.4em] text-gray-500">Bộ sưu tập</p>
-              <h2 className="text-4xl font-bold text-gray-900 md:text-5xl">Sản phẩm nổi bật</h2>
-            </div>
-            <Link to="/home">
-              <Button variant="outline" className="rounded-full border-gray-900">
-                Xem tất cả
-                <ArrowRight className="h-4 w-4" />
-              </Button>
-            </Link>
-          </div>
 
-          <div className="grid grid-cols-1 gap-8 md:grid-cols-2 lg:grid-cols-3">
-            {featuredProducts.map((product) => (
-              <ProductCard key={product.id} product={product} />
-            ))}
-          </div>
-        </div>
-      </section>
 
       <section className="bg-gray-900 py-24 text-white">
         <div className="mx-auto max-w-4xl px-6 text-center lg:px-8">

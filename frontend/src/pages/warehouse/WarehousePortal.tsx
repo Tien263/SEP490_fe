@@ -10,8 +10,10 @@ import {
   History, ShoppingBag, BarChart3, AlertCircle, TrendingDown, FileBarChart,
   Bell, LogOut, ChevronDown, Search, Settings, Truck, GitMerge,
   PackageCheck, ArrowRightLeft, FlaskConical, ClipboardCheck, ShieldCheck,
-  Factory, SlidersHorizontal,
+  Factory, SlidersHorizontal, Building
 } from 'lucide-react';
+
+import NotificationBell from '../../components/NotificationBell';
 
 import WarehouseDashboard from './WarehouseDashboard';
 import WarehouseShiftInventory from './WarehouseShiftInventory';
@@ -26,7 +28,7 @@ import WarehouseLowStock from './WarehouseLowStock';
 import WarehouseSlowMoving from './WarehouseSlowMoving';
 import WarehouseReport from './WarehouseReport';
 import WarehouseAuditLog from './WarehouseAuditLog';
-import WarehouseNotifications from './WarehouseNotifications';
+import NotificationsPage from '../NotificationsPage';
 import WarehouseFulfillmentOrders from './WarehouseFulfillmentOrders';
 import WarehousePickPacking from './WarehousePickPacking';
 import WarehouseConsolidation from './WarehouseConsolidation';
@@ -41,6 +43,7 @@ import WarehouseInventoryCount from './WarehouseInventoryCount';
 import WarehouseStockAdjustment from './WarehouseStockAdjustment';
 import WarehouseProductionIssue from './WarehouseProductionIssue';
 import WarehouseGoodsIssue from './WarehouseGoodsIssue';
+import WarehouseManagement from './WarehouseManagement';
 
 interface NavItem {
   id: string; label: string; icon: ReactNode; path: string;
@@ -82,6 +85,12 @@ const buildNavItems = (): NavItem[] => [
       { id: 'inventory-count',  label: 'Kiểm kê tồn kho',     icon: <ClipboardCheck className="w-3.5 h-3.5" />, path: '/warehouse/inv-management/inventory-count' },
       { id: 'stock-adjustment', label: 'Duyệt điều chỉnh TK', icon: <SlidersHorizontal className="w-3.5 h-3.5" />, path: '/warehouse/inv-management/stock-adjustment' },
     ],
+  },
+  {
+    id: 'management', label: 'Cấu hình Hệ thống', icon: <Settings className="w-4 h-4" />, path: '/warehouse/management',
+    children: [
+      { id: 'warehouse-list', label: 'Quản lý Kho (CEO)', icon: <Building className="w-3.5 h-3.5" />, path: '/warehouse/management/warehouses' },
+    ]
   },
   {
     id: 'production', label: 'Sản xuất', icon: <Factory className="w-4 h-4" />, path: '/warehouse/production',
@@ -236,17 +245,7 @@ export default function WarehousePortal() {
           </div>
           <div className="flex-1" />
           <div className="flex items-center gap-0.5">
-            <button
-              className="relative p-1.5 rounded text-gray-500 hover:bg-gray-100 hover:text-gray-700 transition-colors"
-              onClick={() => navigate('/warehouse/notifications')}
-            >
-              <Bell className="w-4 h-4" />
-              {totalBadge > 0 && (
-                <span className="absolute top-0.5 right-0.5 w-3.5 h-3.5 bg-red-500 text-white text-[8px] rounded-full flex items-center justify-center font-bold">
-                  {totalBadge}
-                </span>
-              )}
-            </button>
+            <NotificationBell role={user?.role || ''} />
             <button className="p-1.5 rounded text-gray-500 hover:bg-gray-100 hover:text-gray-700 transition-colors">
               <Settings className="w-4 h-4" />
             </button>
@@ -288,6 +287,7 @@ export default function WarehousePortal() {
             <Route path="inv-management/quarantine"              element={<WarehouseQuarantine />} />
             <Route path="inv-management/inventory-count"         element={<WarehouseInventoryCount />} />
             <Route path="inv-management/stock-adjustment"        element={<WarehouseStockAdjustment />} />
+            <Route path="management/warehouses"                  element={<WarehouseManagement />} />
             <Route path="production/issue"                       element={<WarehouseProductionIssue />} />
             <Route path="shift-inventory"                        element={<WarehouseShiftInventory />} />
             <Route path="materials"                              element={<WarehouseMaterials />} />
@@ -301,7 +301,7 @@ export default function WarehousePortal() {
             <Route path="inventory/slow-moving"                  element={<WarehouseSlowMoving />} />
             <Route path="inventory/report"                       element={<WarehouseReport />} />
             <Route path="audit-log"                              element={<WarehouseAuditLog />} />
-            <Route path="notifications"                          element={<WarehouseNotifications />} />
+            <Route path="notifications"                          element={<NotificationsPage />} />
             <Route path="*"                                      element={<WarehouseDashboard />} />
           </Routes>
         </main>

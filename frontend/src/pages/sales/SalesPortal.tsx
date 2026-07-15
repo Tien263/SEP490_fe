@@ -37,6 +37,8 @@ import SalesDeliveryCollectionPage from './SalesDeliveryCollectionPage';
 import SalesMyCustomersPage from './SalesMyCustomersPage';
 import SalesChangeRequestExplainPage from './SalesChangeRequestExplainPage';
 import { useAuth } from '../../context/AuthContext';
+import NotificationBell from '../../components/NotificationBell';
+import NotificationsPage from '../NotificationsPage';
 
 interface NavItem {
   id: string;
@@ -223,7 +225,6 @@ const TOAST_SOURCE_LABELS: Record<string, string> = {
 export default function SalesPortal() {
   const navigate = useNavigate();
   const { user, logout } = useAuth() as any;
-  const totalBadge = 5;
   const role: string = user?.role || '';
   const visibleNavItems = NAV_ITEMS.filter((item) => !item.roles || item.roles.includes(role));
   const [toasts, setToasts] = useState<AssignmentToast[]>([]);
@@ -345,14 +346,7 @@ export default function SalesPortal() {
           <div className="flex-1" />
 
           <div className="flex items-center gap-0.5">
-            <button className="relative rounded p-1.5 text-gray-500 transition-colors hover:bg-gray-100 hover:text-gray-700">
-              <Bell className="h-4 w-4" />
-              {totalBadge > 0 && (
-                <span className="absolute right-0.5 top-0.5 flex h-3.5 w-3.5 items-center justify-center rounded-full bg-red-500 text-[8px] font-bold text-white">
-                  {totalBadge}
-                </span>
-              )}
-            </button>
+            <NotificationBell role={role} />
             <button className="rounded p-1.5 text-gray-500 transition-colors hover:bg-gray-100 hover:text-gray-700">
               <Settings className="h-4 w-4" />
             </button>
@@ -396,6 +390,7 @@ export default function SalesPortal() {
             <Route path="delivery/warehouse" element={<SalesWarehouseCoordPage />} />
             <Route path="delivery/arrangement" element={<SalesDeliveryArrangementPage />} />
             <Route path="delivery/collection" element={<SalesDeliveryCollectionPage />} />
+            <Route path="notifications" element={<NotificationsPage />} />
             <Route path="*" element={<SalesDashboardPage />} />
           </Routes>
         </main>

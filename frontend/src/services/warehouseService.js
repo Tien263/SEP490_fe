@@ -94,8 +94,25 @@ export async function dispatchStockTransfer(id) {
   return request('POST', `/stock-transfers/${id}/dispatch`);
 }
 
-export async function receiveStockTransfer(id) {
-  return request('POST', `/stock-transfers/${id}/receive`);
+export async function cancelStockTransfer(id) {
+  return request('POST', `/stock-transfers/${id}/cancel`);
+}
+
+export async function receiveStockTransfer(id, formData) {
+  const accessToken = localStorage.getItem('accessToken');
+  const headers = {};
+  if (accessToken) headers['Authorization'] = `Bearer ${accessToken}`;
+
+  const res = await fetch(`${API_BASE}/stock-transfers/${id}/receive`, {
+    method: 'POST',
+    headers,
+    body: formData,
+  });
+  if (!res.ok) {
+    const errorData = await res.json().catch(() => ({}));
+    throw new Error(errorData.message || `Lỗi ${res.status}`);
+  }
+  return res.json();
 }
 
 export async function getHandoverById(id) {
@@ -146,14 +163,48 @@ export async function postProductionMaterialIssue(id, file) {
   return res.json();
 }
 
-export async function createStockCountSession(data) {
-  return request('POST', `/stock-counts`, data);
+export async function getWarehouseInventory(warehouseId, params) {
+  const qs = new URLSearchParams(params).toString();
+  return request('GET', `/inventory/${warehouseId}?${qs}`);
 }
 
-export async function submitStockCount(id, data) {
-  return request('POST', `/stock-counts/${id}/submit`, data);
+export async function adjustInventory(inventoryId, data) {
+  return request('PUT', `/inventory/${inventoryId}/adjust`, data);
 }
 
+export async function addInventory(data) {
+  return request('POST', `/inventory/add`, data);
+}
+
+// Dummy for backward compatibility with WarehouseStockAdjustment
 export async function ceoDecisionStockAdjustment(id, data) {
   return request('POST', `/stock-adjustments/${id}/decision`, data);
+}
+
+// ==========================================
+// WAREHOUSE MANAGEMENT (CEO)
+// ==========================================
+
+export async function getWarehouses() {
+  return request('GET', `/warehouse-management`);
+}
+
+export async function getWarehouse(id) {
+  return request('GET', `/warehouse-management/${id}`);
+}
+
+export async function createWarehouse(data) {
+  return request('POST', `/warehouse-management`, data);
+}
+
+export async function updateWarehouse(id, data) {
+  return request('PUT', `/warehouse-management/${id}`, data);
+}
+
+export async function deleteWarehouse(id) {
+  return request('DELETE', `/warehouse-management/${id}`);
+}
+
+export async function getStaffUsers() {
+  return request('GET', `/warehouse-management/staff`);
 }
