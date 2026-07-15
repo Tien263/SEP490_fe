@@ -35,10 +35,11 @@ async function request(method, url, body) {
  * @param {{ page?, pageSize?, categoryId?, search? }} params
  * @returns {{ items, totalCount, page, pageSize, totalPages }}
  */
-export async function getProducts({ page = 1, pageSize = 6, categoryId, search } = {}) {
+export async function getProducts({ page = 1, pageSize = 6, categoryId, search, sortBy } = {}) {
   const params = new URLSearchParams({ page, pageSize })
   if (categoryId) params.set('categoryId', categoryId)
   if (search)     params.set('search', search)
+  if (sortBy)     params.set('sortBy', sortBy)
   return request('GET', `/products?${params.toString()}`)
 }
 

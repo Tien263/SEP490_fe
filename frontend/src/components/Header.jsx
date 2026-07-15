@@ -18,6 +18,7 @@ import { Button } from './ui/Button.jsx'
 import { cn } from '../lib/utils.js'
 import { useAuth } from '../context/AuthContext.jsx'
 import { useCart } from '../context/CartContext.jsx'
+import NotificationBell from './NotificationBell'
 
 const navigation = [
   { to: '/', label: 'Giới thiệu' },
@@ -115,14 +116,9 @@ export default function Header() {
           </button>
 
           {isAuthenticated && (
-            <button
-              type="button"
-              className="relative rounded-full p-2 text-slate-500 transition hover:text-slate-900"
-              aria-label="Thông báo"
-            >
-              <Bell className="h-5 w-5 stroke-[1.8]" />
-              <span className="absolute right-1.5 top-1.5 h-2 w-2 rounded-full bg-red-500" />
-            </button>
+            <div className="flex items-center">
+              <NotificationBell role="Customer" onViewAll={() => navigate('/notifications')} />
+            </div>
           )}
 
           <Link
@@ -257,9 +253,11 @@ export default function Header() {
                     </div>
                   </div>
                 </div>
-                <Button variant="outline" className="w-full rounded-2xl">
-                  Thông báo
-                </Button>
+                <Link to="/notifications" onClick={() => setMobileOpen(false)}>
+                  <Button variant="outline" className="w-full rounded-2xl">
+                    Thông báo
+                  </Button>
+                </Link>
                 <Link to="/cart" onClick={() => setMobileOpen(false)}>
                   <Button variant="outline" className="w-full rounded-2xl">
                     Giỏ hàng

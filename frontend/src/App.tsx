@@ -20,6 +20,7 @@ import NegotiationList from './pages/NegotiationList.jsx'
 import SalesPortal from './pages/sales/SalesPortal.tsx'
 import AdminPortal from './pages/admin/AdminPortal.tsx'
 import CEOPortal from './pages/ceo/CEOPortal.tsx'
+import CustomerNotificationsPage from './pages/CustomerNotificationsPage.jsx'
 import WarehousePortal from './pages/warehouse/WarehousePortal.tsx'
 import SalesManagerPortal from './pages/sales-manager/SalesManagerPortal.tsx'
 import ProtectedRouteImport from './components/ProtectedRoute.jsx'
@@ -46,6 +47,7 @@ function App() {
             <Route path="/reset-password" element={<ResetPassword />} />
 
             {/* Customer Routes */}
+            <Route path="/notifications" element={<ProtectedRoute><CustomerNotificationsPage /></ProtectedRoute>} />
             <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
             <Route path="/profile/orders/:orderId" element={<ProtectedRoute><OrderDetail /></ProtectedRoute>} />
             <Route path="/profile/quotations/:id" element={<ProtectedRoute allowedRoles={['Customer']}><Negotiation /></ProtectedRoute>} />

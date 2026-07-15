@@ -21,6 +21,8 @@ import DirectPurchasePage from '../sales/DirectPurchasePage';
 import { useAuth } from '../../context/AuthContext';
 import { getQuotations } from '../../services/quotationService.js';
 import { FileText } from 'lucide-react';
+import NotificationBell from '../../components/NotificationBell';
+import NotificationsPage from '../NotificationsPage';
 
 interface NavItem {
   id: string;
@@ -103,6 +105,7 @@ export default function SalesManagerPortal() {
   const [pendingCount, setPendingCount] = useState(0);
   const { user, logout } = useAuth() as any;
   const navigate = useNavigate();
+  const role: string = user?.role || '';
 
   useEffect(() => {
     getQuotations()
@@ -177,14 +180,7 @@ export default function SalesManagerPortal() {
         <header className="h-11 bg-white border-b border-gray-200 flex items-center px-4 gap-3 flex-shrink-0">
           <div className="flex-1" />
           <div className="flex items-center gap-0.5">
-            <button className="relative p-1.5 rounded text-gray-500 hover:bg-gray-100 hover:text-gray-700 transition-colors">
-              <Bell className="w-4 h-4" />
-              {pendingCount > 0 && (
-                <span className="absolute top-0.5 right-0.5 w-3.5 h-3.5 bg-red-500 text-white text-[8px] rounded-full flex items-center justify-center font-bold">
-                  {pendingCount}
-                </span>
-              )}
-            </button>
+            <NotificationBell role={role} />
             <button className="p-1.5 rounded text-gray-500 hover:bg-gray-100 hover:text-gray-700 transition-colors">
               <Settings className="w-4 h-4" />
             </button>
@@ -201,6 +197,7 @@ export default function SalesManagerPortal() {
             <Route path="orders/:id" element={<SalesManagerOrderDetailPage />} />
             <Route path="direct-purchase" element={<DirectPurchasePage />} />
             <Route path="sepay-exceptions" element={<SalesManagerSePayExceptionPage />} />
+            <Route path="notifications" element={<NotificationsPage />} />
             <Route path="*" element={<SalesDashboardPage />} />
           </Routes>
         </main>
