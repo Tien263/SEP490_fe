@@ -35,6 +35,7 @@ import SalesWarehouseCoordPage from './SalesWarehouseCoordPage';
 import SalesDeliveryArrangementPage from './SalesDeliveryArrangementPage';
 import SalesDeliveryCollectionPage from './SalesDeliveryCollectionPage';
 import SalesMyCustomersPage from './SalesMyCustomersPage';
+import SalesChangeRequestExplainPage from './SalesChangeRequestExplainPage';
 import { useAuth } from '../../context/AuthContext';
 import NotificationBell from '../../components/NotificationBell';
 import NotificationsPage from '../NotificationsPage';
@@ -68,6 +69,13 @@ const NAV_ITEMS: NavItem[] = [
     label: 'Quản lý đơn hàng',
     icon: <FileText className="w-4 h-4" />,
     path: '/sales/orders',
+    roles: ['SalesStaff', 'Admin'],
+  },
+  {
+    id: 'change-requests',
+    label: 'Yêu cầu đổi Sale',
+    icon: <UserPlus className="w-4 h-4" />,
+    path: '/sales/change-requests',
     roles: ['SalesStaff', 'Admin'],
   },
   {
@@ -204,6 +212,7 @@ type AssignmentToast = {
   customerName: string;
   source: string;
   assignedAt: string;
+  message?: string; // toast dạng thông báo tự do (LUỒNG 7)
 };
 
 const TOAST_SOURCE_LABELS: Record<string, string> = {
@@ -236,6 +245,19 @@ export default function SalesPortal() {
       setToasts((prev) => [...prev, { id, ...payload }]);
       setTimeout(() => setToasts((prev) => prev.filter((t) => t.id !== id)), 8000);
     });
+
+    // LUỒNG 7: thông báo liên quan yêu cầu đổi Sale của khách
+    const pushMessageToast = (payload: { customerName?: string; message?: string }) => {
+      const id = Date.now() + Math.random();
+      setToasts((prev) => [
+        ...prev,
+        { id, customerName: payload.customerName || '', source: '', assignedAt: '', message: payload.message },
+      ]);
+      setTimeout(() => setToasts((prev) => prev.filter((t) => t.id !== id)), 8000);
+    };
+    connection.on('SalesChangeRequestCreated', pushMessageToast);
+    connection.on('SalesChangeRequestApproved', pushMessageToast);
+    connection.on('SalesChangeRequestRejected', pushMessageToast);
 
     let stopped = false;
     connection.start().catch((err) => {
@@ -359,6 +381,7 @@ export default function SalesPortal() {
           <Routes>
             <Route path="dashboard" element={<SalesDashboardPage />} />
             <Route path="my-customers" element={<SalesMyCustomersPage />} />
+            <Route path="change-requests" element={<SalesChangeRequestExplainPage />} />
             <Route path="orders" element={<SalesOrdersPage />} />
             <Route path="orders/:id" element={<SalesOrderDetailPage />} />
             <Route path="negotiation" element={<SalesNegotiationPage />} />
@@ -385,12 +408,21 @@ export default function SalesPortal() {
                 <UserPlus className="h-4 w-4 text-blue-600" />
               </span>
               <div className="min-w-0 flex-1">
-                <p className="text-[13px] font-bold text-[#374151]">Bạn được gán khách hàng mới</p>
-                <p className="mt-0.5 truncate text-[12px] text-gray-600">
-                  <span className="font-semibold">{t.customerName}</span>
-                  {' · '}
-                  {TOAST_SOURCE_LABELS[t.source] || t.source}
-                </p>
+                {t.message ? (
+                  <>
+                    <p className="text-[13px] font-bold text-[#374151]">Yêu cầu đổi Sale</p>
+                    <p className="mt-0.5 text-[12px] text-gray-600">{t.message}</p>
+                  </>
+                ) : (
+                  <>
+                    <p className="text-[13px] font-bold text-[#374151]">Bạn được gán khách hàng mới</p>
+                    <p className="mt-0.5 truncate text-[12px] text-gray-600">
+                      <span className="font-semibold">{t.customerName}</span>
+                      {' · '}
+                      {TOAST_SOURCE_LABELS[t.source] || t.source}
+                    </p>
+                  </>
+                )}
               </div>
               <button
                 onClick={() => setToasts((prev) => prev.filter((x) => x.id !== t.id))}
