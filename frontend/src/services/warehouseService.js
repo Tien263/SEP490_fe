@@ -94,8 +94,25 @@ export async function dispatchStockTransfer(id) {
   return request('POST', `/stock-transfers/${id}/dispatch`);
 }
 
-export async function receiveStockTransfer(id) {
-  return request('POST', `/stock-transfers/${id}/receive`);
+export async function cancelStockTransfer(id) {
+  return request('POST', `/stock-transfers/${id}/cancel`);
+}
+
+export async function receiveStockTransfer(id, formData) {
+  const accessToken = localStorage.getItem('accessToken');
+  const headers = {};
+  if (accessToken) headers['Authorization'] = `Bearer ${accessToken}`;
+
+  const res = await fetch(`${API_BASE}/stock-transfers/${id}/receive`, {
+    method: 'POST',
+    headers,
+    body: formData,
+  });
+  if (!res.ok) {
+    const errorData = await res.json().catch(() => ({}));
+    throw new Error(errorData.message || `Lỗi ${res.status}`);
+  }
+  return res.json();
 }
 
 export async function getHandoverById(id) {
@@ -186,4 +203,8 @@ export async function updateWarehouse(id, data) {
 
 export async function deleteWarehouse(id) {
   return request('DELETE', `/warehouse-management/${id}`);
+}
+
+export async function getStaffUsers() {
+  return request('GET', `/warehouse-management/staff`);
 }
