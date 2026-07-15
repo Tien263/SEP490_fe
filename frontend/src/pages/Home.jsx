@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useMemo, useState, useEffect } from 'react'
 import { Search, SlidersHorizontal } from 'lucide-react'
 import { motion } from 'motion/react'
 import Footer from '../components/Footer.jsx'
@@ -7,26 +7,42 @@ import ProductCard from '../components/ProductCard.jsx'
 import { Badge } from '../components/ui/Badge.jsx'
 import { Button } from '../components/ui/Button.jsx'
 import { Input } from '../components/ui/Input.jsx'
-import { categories, products } from '../data/products.js'
+import { useNavigate } from 'react-router-dom'
+import { getProducts } from '../services/productService.js'
 
 export default function Home() {
-  const [selectedCategory, setSelectedCategory] = useState('Tất Cả Sản Phẩm')
+  const navigate = useNavigate()
   const [searchQuery, setSearchQuery] = useState('')
 
-  const filteredProducts = useMemo(() => {
-    return products.filter((product) => {
-      const matchesCategory =
-        selectedCategory === 'Tất Cả Sản Phẩm' || product.category === selectedCategory
-      const matchesSearch =
-        product.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        product.description.toLowerCase().includes(searchQuery.toLowerCase())
+  const handleSearch = (e) => {
+    if (e.key === 'Enter' && searchQuery.trim()) {
+      navigate(`/products?search=${encodeURIComponent(searchQuery.trim())}`)
+    }
+  }
 
-      return matchesCategory && matchesSearch
-    })
-  }, [searchQuery, selectedCategory])
+  const [newArrivals, setNewArrivals] = useState([])
+  const [bestSellers, setBestSellers] = useState([])
+  const [loading, setLoading] = useState(true)
 
-  const newArrivals = products.filter((product) => product.isNew)
-  const bestSellers = products.filter((product) => product.isBestSeller)
+  useEffect(() => {
+    async function loadFeaturedProducts() {
+      try {
+        setLoading(true)
+        // Lấy 4 sản phẩm mới nhất
+        const newestResponse = await getProducts({ page: 1, pageSize: 4, sortBy: 'newest' })
+        setNewArrivals(newestResponse.items || [])
+        
+        // Lấy 4 sản phẩm bán chạy nhất dựa trên doanh số
+        const bestSellersResponse = await getProducts({ page: 1, pageSize: 4, sortBy: 'sales' })
+        setBestSellers(bestSellersResponse.items || [])
+      } catch (err) {
+        console.error("Lỗi tải sản phẩm nổi bật:", err)
+      } finally {
+        setLoading(false)
+      }
+    }
+    loadFeaturedProducts()
+  }, [])
 
   return (
     <div className="min-h-screen bg-white">
@@ -60,9 +76,10 @@ export default function Home() {
                 <Search className="absolute left-6 top-1/2 h-5 w-5 -translate-y-1/2 text-gray-400" />
                 <Input
                   type="text"
-                  placeholder="Tìm kiếm sản phẩm..."
+                  placeholder="Tìm kiếm sản phẩm (Nhấn Enter để tìm)..."
                   value={searchQuery}
                   onChange={(event) => setSearchQuery(event.target.value)}
+                  onKeyDown={handleSearch}
                   className="rounded-full border-0 bg-white/95 py-6 pl-14 pr-6 text-base backdrop-blur-sm"
                 />
               </div>
@@ -71,35 +88,7 @@ export default function Home() {
         </div>
       </section>
 
-      <section className="border-b bg-gray-50 py-12">
-        <div className="mx-auto max-w-7xl px-6 lg:px-8">
-          <div className="mb-6 flex items-center justify-between gap-4">
-            <h2 className="text-2xl font-bold text-gray-900">Danh mục</h2>
-            <Button variant="ghost" size="sm" className="gap-2 rounded-full">
-              <SlidersHorizontal className="h-4 w-4" />
-              Bộ lọc
-            </Button>
-          </div>
-          <div className="scrollbar-hide flex gap-3 overflow-x-auto pb-2">
-            {categories.map((category) => (
-              <Badge
-                key={category}
-                as="button"
-                type="button"
-                variant={selectedCategory === category ? 'default' : 'outline'}
-                className={
-                  selectedCategory === category
-                    ? 'cursor-pointer whitespace-nowrap rounded-full px-6 py-2 hover:bg-gray-800'
-                    : 'cursor-pointer whitespace-nowrap rounded-full px-6 py-2 text-gray-700 hover:border-gray-900'
-                }
-                onClick={() => setSelectedCategory(category)}
-              >
-                {category}
-              </Badge>
-            ))}
-          </div>
-        </div>
-      </section>
+
 
       <section className="bg-white py-16">
         <div className="mx-auto max-w-7xl px-6 lg:px-8">
@@ -107,11 +96,15 @@ export default function Home() {
             <p className="mb-2 text-sm uppercase tracking-[0.4em] text-gray-500">Mới nhất</p>
             <h2 className="text-4xl font-bold text-gray-900">Hàng mới về</h2>
           </div>
-          <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-4">
-            {newArrivals.map((product) => (
-              <ProductCard key={product.id} product={product} />
-            ))}
-          </div>
+          {loading ? (
+             <div className="flex items-center justify-center py-10"><div className="h-8 w-8 animate-spin rounded-full border-2 border-gray-200 border-t-gray-900"></div></div>
+          ) : (
+            <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-4">
+              {newArrivals.map((product) => (
+                <ProductCard key={product.id} product={product} />
+              ))}
+            </div>
+          )}
         </div>
       </section>
 
@@ -152,36 +145,19 @@ export default function Home() {
             <p className="mb-2 text-sm uppercase tracking-[0.4em] text-gray-500">Bán chạy</p>
             <h2 className="text-4xl font-bold text-gray-900">Sản phẩm nổi bật</h2>
           </div>
-          <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-4">
-            {bestSellers.map((product) => (
-              <ProductCard key={product.id} product={product} />
-            ))}
-          </div>
-        </div>
-      </section>
-
-      <section id="catalog" className="bg-gray-50 py-16">
-        <div className="mx-auto max-w-7xl px-6 lg:px-8">
-          <div className="mb-10">
-            <h2 className="mb-2 text-4xl font-bold text-gray-900">
-              {selectedCategory === 'Tất Cả Sản Phẩm' ? 'Tất Cả Sản Phẩm' : selectedCategory}
-            </h2>
-            <p className="text-gray-600">Hiển thị {filteredProducts.length} sản phẩm</p>
-          </div>
-
-          <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-4">
-            {filteredProducts.map((product) => (
-              <ProductCard key={product.id} product={product} />
-            ))}
-          </div>
-
-          {filteredProducts.length === 0 && (
-            <div className="py-20 text-center">
-              <p className="text-lg text-gray-500">Không tìm thấy sản phẩm phù hợp.</p>
+          {loading ? (
+             <div className="flex items-center justify-center py-10"><div className="h-8 w-8 animate-spin rounded-full border-2 border-gray-200 border-t-gray-900"></div></div>
+          ) : (
+            <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-4">
+              {bestSellers.map((product) => (
+                <ProductCard key={product.id} product={product} />
+              ))}
             </div>
           )}
         </div>
       </section>
+
+
 
       <Footer />
     </div>

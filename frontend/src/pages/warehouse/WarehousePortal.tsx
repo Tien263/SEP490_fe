@@ -13,6 +13,8 @@ import {
   Factory, SlidersHorizontal, Building
 } from 'lucide-react';
 
+import NotificationBell from '../../components/NotificationBell';
+
 import WarehouseDashboard from './WarehouseDashboard';
 import WarehouseShiftInventory from './WarehouseShiftInventory';
 import WarehouseMaterials from './WarehouseMaterials';
@@ -26,7 +28,7 @@ import WarehouseLowStock from './WarehouseLowStock';
 import WarehouseSlowMoving from './WarehouseSlowMoving';
 import WarehouseReport from './WarehouseReport';
 import WarehouseAuditLog from './WarehouseAuditLog';
-import WarehouseNotifications from './WarehouseNotifications';
+import NotificationsPage from '../NotificationsPage';
 import WarehouseFulfillmentOrders from './WarehouseFulfillmentOrders';
 import WarehousePickPacking from './WarehousePickPacking';
 import WarehouseConsolidation from './WarehouseConsolidation';
@@ -243,17 +245,7 @@ export default function WarehousePortal() {
           </div>
           <div className="flex-1" />
           <div className="flex items-center gap-0.5">
-            <button
-              className="relative p-1.5 rounded text-gray-500 hover:bg-gray-100 hover:text-gray-700 transition-colors"
-              onClick={() => navigate('/warehouse/notifications')}
-            >
-              <Bell className="w-4 h-4" />
-              {totalBadge > 0 && (
-                <span className="absolute top-0.5 right-0.5 w-3.5 h-3.5 bg-red-500 text-white text-[8px] rounded-full flex items-center justify-center font-bold">
-                  {totalBadge}
-                </span>
-              )}
-            </button>
+            <NotificationBell role={user?.role || ''} />
             <button className="p-1.5 rounded text-gray-500 hover:bg-gray-100 hover:text-gray-700 transition-colors">
               <Settings className="w-4 h-4" />
             </button>
@@ -309,7 +301,7 @@ export default function WarehousePortal() {
             <Route path="inventory/slow-moving"                  element={<WarehouseSlowMoving />} />
             <Route path="inventory/report"                       element={<WarehouseReport />} />
             <Route path="audit-log"                              element={<WarehouseAuditLog />} />
-            <Route path="notifications"                          element={<WarehouseNotifications />} />
+            <Route path="notifications"                          element={<NotificationsPage />} />
             <Route path="*"                                      element={<WarehouseDashboard />} />
           </Routes>
         </main>

@@ -5,9 +5,11 @@ import { useNavigate } from 'react-router-dom';
 import {
   LayoutDashboard, FileText, CheckSquare,
   Package, XCircle, AlertTriangle, Users, ShieldCheck,
-  Wallet, BarChart2, Sparkles, History, Settings, CreditCard,
-  LogOut, Bell,
+  LogOut, Bell, BarChart2, Sparkles, History, Settings,
+  CreditCard, Wallet
 } from 'lucide-react';
+import NotificationBell from '../../components/NotificationBell';
+import NotificationsPage from '../NotificationsPage';
 
 // ─── Sidebar primitives ───────────────────────────────────────────────────────
 function SidebarHeader() {
@@ -160,6 +162,7 @@ export default function AdminPortal() {
   const renderContent = () => {
     switch (activeTab) {
       case 'dashboard': return <AdminDashboard />;
+      case 'notifications': return <NotificationsPage />;
       default: return <ComingSoon label={activeTab} />;
     }
   };
@@ -173,10 +176,7 @@ export default function AdminPortal() {
         {/* Topbar */}
         <header className="h-11 bg-white border-b border-gray-200 flex items-center px-4 gap-3 flex-shrink-0">
           <div className="flex-1" />
-          <button className="relative p-1.5 rounded text-gray-500 hover:bg-gray-100 transition-colors">
-            <Bell className="w-4 h-4" />
-            <span className="absolute top-0.5 right-0.5 w-3.5 h-3.5 bg-red-500 text-white text-[8px] rounded-full flex items-center justify-center font-bold">7</span>
-          </button>
+          <NotificationBell role={user?.role || ''} onViewAll={() => setActiveTab('notifications')} />
           <div className="w-px h-5 bg-gray-200" />
           <div className="flex items-center gap-2 px-2">
             <div className="w-6 h-6 rounded-full flex items-center justify-center text-[9px] font-semibold text-white flex-shrink-0"
