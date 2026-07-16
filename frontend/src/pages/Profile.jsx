@@ -24,7 +24,7 @@ import {
   Trash2,
   Truck,
   User,
-  Wallet
+  Wallet,
   UserCog,
 } from 'lucide-react'
 import { AnimatePresence, motion } from 'motion/react'
