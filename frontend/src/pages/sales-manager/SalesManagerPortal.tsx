@@ -9,6 +9,7 @@ import {
   Settings,
   Shuffle,
   AlertTriangle,
+  UserCog,
 } from 'lucide-react';
 import SalesDashboardPage from '../sales/SalesDashboardPage';
 import SalesManagerRoundRobinPage from './SalesManagerRoundRobinPage';
@@ -17,6 +18,8 @@ import SalesManagerPriceNegotiation from './SalesManagerPriceNegotiation';
 import SalesManagerPriceNegotiationDetail from './SalesManagerPriceNegotiationDetail';
 import SalesManagerOrdersPage from './SalesManagerOrdersPage';
 import SalesManagerOrderDetailPage from './SalesManagerOrderDetailPage';
+import SalesManagerChangeRequestsPage from './SalesManagerChangeRequestsPage';
+import SalesManagerChangeRequestDetailPage from './SalesManagerChangeRequestDetailPage';
 import DirectPurchasePage from '../sales/DirectPurchasePage';
 import { useAuth } from '../../context/AuthContext';
 import { getQuotations } from '../../services/quotationService.js';
@@ -62,6 +65,12 @@ const NAV_ITEMS: NavItem[] = [
     label: 'Ngoại lệ SePay',
     icon: <AlertTriangle className="w-4 h-4" />,
     path: '/sales-manager/sepay-exceptions',
+  },
+  {
+    id: 'change-requests',
+    label: 'Duyệt yêu cầu đổi Sale',
+    icon: <UserCog className="w-4 h-4" />,
+    path: '/sales-manager/change-requests',
   }
 ];
 
@@ -197,6 +206,8 @@ export default function SalesManagerPortal() {
             <Route path="orders/:id" element={<SalesManagerOrderDetailPage />} />
             <Route path="direct-purchase" element={<DirectPurchasePage />} />
             <Route path="sepay-exceptions" element={<SalesManagerSePayExceptionPage />} />
+            <Route path="change-requests" element={<SalesManagerChangeRequestsPage />} />
+            <Route path="change-requests/:id" element={<SalesManagerChangeRequestDetailPage />} />
             <Route path="notifications" element={<NotificationsPage />} />
             <Route path="*" element={<SalesDashboardPage />} />
           </Routes>

@@ -25,6 +25,7 @@ import {
   Truck,
   User,
   Wallet
+  UserCog,
 } from 'lucide-react'
 import { AnimatePresence, motion } from 'motion/react'
 import { Link, useLocation, useSearchParams } from 'react-router-dom'
@@ -43,6 +44,7 @@ import AddressModal, { buildFullAddress, emptyAddressForm } from '../components/
 import Footer from '../components/Footer.jsx'
 import Header from '../components/Header.jsx'
 import PhoneVerificationModal from '../components/PhoneVerificationModal.jsx'
+import SalesChangeRequestTab from '../components/SalesChangeRequestTab.jsx'
 import SuccessToast from '../components/SuccessToast.jsx'
 import { Badge } from '../components/ui/Badge.jsx'
 import { Button } from '../components/ui/Button.jsx'
@@ -81,6 +83,7 @@ const profileTabs = [
   { id: 'orders', label: 'Lịch sử đơn hàng', icon: Package },
   { id: 'stats', label: 'Thống kê cá nhân', icon: BarChart3 },
   { id: 'quotations', label: 'Báo giá đặc biệt', icon: MessageSquare },
+  { id: 'sales-change', label: 'Sale phụ trách', icon: UserCog },
   { id: 'tracking', label: 'Theo dõi đơn hàng', icon: Truck },
   { id: 'credit', label: 'Lịch sử Credit', icon: Wallet },
 ]
@@ -1894,6 +1897,7 @@ export default function Profile() {
     orders: <OrderHistoryTab onSuccess={showSuccess} />,
     stats: <PersonalStatsTab />,
     quotations: <QuotationRequestsTab />,
+    'sales-change': <SalesChangeRequestTab onSuccess={showSuccess} />,
     tracking: <OrderTrackingTab />,
     credit: <CreditHistoryTab />
   }

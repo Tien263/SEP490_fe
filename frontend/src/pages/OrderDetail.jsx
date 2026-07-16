@@ -48,14 +48,20 @@ function InfoRow({ icon: Icon, label, value }) {
 const formatPrice = (n) =>
   n?.toLocaleString('vi-VN', { style: 'currency', currency: 'VND' }) ?? '—'
 
-const formatDate = (iso) =>
-  new Date(iso).toLocaleDateString('vi-VN', {
+const formatDate = (iso) => {
+  if (!iso) return '—';
+  let s = iso;
+  if (!s.endsWith('Z') && !s.includes('+')) {
+    s += 'Z';
+  }
+  return new Date(s).toLocaleDateString('vi-VN', {
     day: '2-digit',
     month: '2-digit',
     year: 'numeric',
     hour: '2-digit',
     minute: '2-digit',
-  })
+  });
+}
 
 export default function OrderDetail() {
   const { orderId } = useParams()
@@ -323,6 +329,59 @@ export default function OrderDetail() {
                   )}
                 </div>
               </section>
+
+              {/* Delivery info */}
+              {order.deliveryStatus && order.deliveryStatus !== 'NotScheduled' && (
+                <section className="rounded-[1.75rem] border border-gray-100 bg-white p-6">
+                  <div className="mb-4">
+                    <p className="text-xs font-semibold uppercase tracking-[0.2em] text-gray-400">Vận chuyển</p>
+                    <h2 className="mt-2 text-xl font-semibold text-gray-900">Chi tiết giao nhận &amp; COD</h2>
+                  </div>
+
+                  <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+                    <InfoRow icon={MapPin} label="Trạng thái giao" value={
+                      order.deliveryStatus === 'Scheduled' ? 'Đã xếp lịch' :
+                      order.deliveryStatus === 'InDelivery' ? 'Đang đi giao' :
+                      order.deliveryStatus === 'Delivered' ? 'Đã giao thành công' :
+                      order.deliveryStatus === 'PartiallyDelivered' ? 'Giao một phần' :
+                      order.deliveryStatus === 'Failed' ? 'Thất bại' :
+                      order.deliveryStatus === 'Rescheduled' ? 'Hẹn giao lại' : order.deliveryStatus
+                    } />
+                    <InfoRow icon={CalendarDays} label="Ngày giao dự kiến" value={order.scheduledDeliveryDate ? new Date(order.scheduledDeliveryDate).toLocaleDateString('vi-VN') : '—'} />
+                    <InfoRow icon={MapPin} label="Ca giao" value={order.deliveryShift || '—'} />
+                    <InfoRow icon={Package} label="Xe giao hàng" value={order.deliveryVehicleId ? `Xe ${order.deliveryVehicleId}` : '—'} />
+                    <InfoRow icon={CreditCard} label="Số tiền đã thu (COD)" value={formatPrice(order.amountPaid)} />
+                    {order.failedDeliveryCount > 0 && (
+                      <InfoRow icon={AlertCircle} label="Số lần giao thất bại" value={`${order.failedDeliveryCount} lần`} />
+                    )}
+                  </div>
+
+                  {/* Proof of Delivery (POD) images */}
+                  {(order.customerSignatureUrl || order.deliveryPhotoUrl) && (
+                    <div className="mt-6 border-t border-gray-100 pt-6">
+                      <h3 className="text-sm font-semibold text-gray-900 mb-3">Minh chứng bàn giao hàng (POD)</h3>
+                      <div className="flex flex-wrap gap-4">
+                        {order.customerSignatureUrl && (
+                          <div className="flex flex-col gap-1.5">
+                            <span className="text-xs text-gray-400 font-medium">Chữ ký khách hàng</span>
+                            <div className="border border-gray-100 rounded-2xl bg-gray-50 p-2">
+                              <img src={order.customerSignatureUrl} alt="Chữ ký" className="h-20 object-contain" />
+                            </div>
+                          </div>
+                        )}
+                        {order.deliveryPhotoUrl && (
+                          <div className="flex flex-col gap-1.5">
+                            <span className="text-xs text-gray-400 font-medium">Ảnh hiện trường giao hàng</span>
+                            <div className="border border-gray-100 rounded-2xl bg-gray-50 p-1">
+                              <img src={order.deliveryPhotoUrl} alt="Ảnh giao hàng" className="h-20 w-32 object-cover rounded-xl" />
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                </section>
+              )}
 
               {/* Product list */}
               <section className="rounded-[1.75rem] border border-gray-100 bg-white p-6">
