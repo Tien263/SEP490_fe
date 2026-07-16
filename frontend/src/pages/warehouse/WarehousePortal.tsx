@@ -245,7 +245,7 @@ export default function WarehousePortal() {
           </div>
           <div className="flex-1" />
           <div className="flex items-center gap-0.5">
-            <NotificationBell role={user?.role || ''} />
+            <NotificationBell role={user?.role || ''} onViewAll={() => navigate('/warehouse/notifications')} />
             <button className="p-1.5 rounded text-gray-500 hover:bg-gray-100 hover:text-gray-700 transition-colors">
               <Settings className="w-4 h-4" />
             </button>

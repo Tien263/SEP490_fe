@@ -141,9 +141,42 @@ export default function SalesManagerOrdersPage() {
   const [page, setPage] = useState(1);
 
   const [orderToConfirm, setOrderToConfirm] = useState<string | null>(null);
+  const [cancelModalOrder, setCancelModalOrder] = useState<string | null>(null);
+  const [cancelReason, setCancelReason] = useState('');
 
-  const handleCancelOrder = () => {
-    alert('Tính năng hủy đơn chưa được triển khai.');
+  const handleCancelOrder = (orderId: string) => {
+    setCancelReason('');
+    setCancelModalOrder(orderId);
+  };
+
+  const executeCancelOrder = async () => {
+    if (!cancelModalOrder) return;
+    if (!cancelReason.trim()) {
+      alert('Vui lòng nhập lý do hủy đơn');
+      return;
+    }
+    try {
+      const response = await fetch(`/api/orders/sales/${cancelModalOrder}/process-cancel-request`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${localStorage.getItem('accessToken')}`
+        },
+        body: JSON.stringify({ isApproved: true, reason: cancelReason })
+      });
+      if (response.ok) {
+        alert('Đã hủy đơn hàng thành công!');
+        fetchOrdersList();
+        fetchDashboard();
+      } else {
+        const data = await response.json();
+        alert(data.message || 'Lỗi khi hủy đơn hàng');
+      }
+    } catch (err) {
+      alert('Đã xảy ra lỗi khi kết nối với máy chủ');
+    } finally {
+      setCancelModalOrder(null);
+    }
   };
 
   const fetchDashboard = async () => {
@@ -475,6 +508,25 @@ export default function SalesManagerOrdersPage() {
                               Hủy
                             </button>
                           </div>
+                        ) : order.orderStatus === 'CancelRequested' ? (
+                          <div className="flex justify-center gap-1.5">
+                            <button
+                              onClick={() => navigate(`/sales-manager/orders/${order.id}`)}
+                              className="inline-flex items-center gap-1 rounded bg-gray-600 px-2 py-1 text-[11px] font-semibold text-white hover:bg-gray-700"
+                              title="Xem chi tiết đơn hàng"
+                            >
+                              <FileText className="h-3 w-3" />
+                              Chi tiết
+                            </button>
+                            <button
+                              onClick={() => handleCancelOrder(order.id)}
+                              className="inline-flex items-center gap-1 rounded bg-red-100 border border-red-200 px-2 py-1 text-[11px] font-semibold text-red-600 hover:bg-red-200"
+                              title="Hủy đơn hàng"
+                            >
+                              <XCircle className="h-3 w-3" />
+                              Duyệt hủy
+                            </button>
+                          </div>
                         ) : (
                           <div className="flex justify-center gap-1.5">
                             <button
@@ -526,6 +578,36 @@ export default function SalesManagerOrdersPage() {
         onConfirm={executeConfirmOrder}
         onCancel={() => setOrderToConfirm(null)}
       />
+
+      {cancelModalOrder && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/40 p-4">
+          <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl">
+            <h3 className="mb-2 text-lg font-bold text-gray-900">Hủy đơn hàng</h3>
+            <p className="mb-4 text-sm text-gray-500">Vui lòng nhập lý do hủy đơn hàng này.</p>
+            <textarea
+              className="w-full rounded-xl border border-gray-300 p-3 text-sm outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+              rows={3}
+              placeholder="Nhập lý do hủy..."
+              value={cancelReason}
+              onChange={(e) => setCancelReason(e.target.value)}
+            />
+            <div className="mt-6 flex justify-end gap-3">
+              <button
+                onClick={() => setCancelModalOrder(null)}
+                className="rounded-xl px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100"
+              >
+                Đóng
+              </button>
+              <button
+                onClick={executeCancelOrder}
+                className="rounded-xl bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-700"
+              >
+                Xác nhận hủy
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

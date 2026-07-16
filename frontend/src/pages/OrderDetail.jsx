@@ -27,6 +27,7 @@ import {
   paymentStatusMeta,
   redInvoiceStatusMeta,
   requestVatInvoice,
+  requestCancelOrder
 } from '../services/orderService.js'
 import { exportInvoiceToPdf } from '../utils/exportPdf.js'
 
@@ -64,24 +65,48 @@ export default function OrderDetail() {
   const [loading,    setLoading]    = useState(true)
   const [error,      setError]      = useState(null)
   const [vatLoading, setVatLoading] = useState(false)
-  const [vatDone,    setVatDone]    = useState(false)
+  const [vatDone, setVatDone] = useState(false)
+  const [cancelModalOpen, setCancelModalOpen] = useState(false)
+  const [cancelReason, setCancelReason] = useState('')
+  const [cancelLoading, setCancelLoading] = useState(false)
 
-  async function fetchOrder() {
-    setLoading(true)
-    setError(null)
+  const fetchOrder = async () => {
     try {
+      setLoading(true)
+      setError(null)
       const data = await getOrderDetail(orderId)
       setOrder(data)
     } catch (err) {
-      setError(err.message || 'Không thể tải chi tiết đơn hàng.')
+      console.error(err)
+      setError(err?.response?.data?.message || 'Không thể tải chi tiết đơn hàng')
     } finally {
       setLoading(false)
     }
   }
 
-  useEffect(() => { fetchOrder() }, [orderId])
+  useEffect(() => {
+    fetchOrder()
+  }, [orderId])
 
-  async function handleRequestVat() {
+  const handleRequestCancel = async () => {
+    if (!cancelReason.trim()) {
+      alert('Vui lòng nhập lý do hủy đơn')
+      return
+    }
+    try {
+      setCancelLoading(true)
+      await requestCancelOrder(orderId, { reason: cancelReason })
+      setCancelModalOpen(false)
+      fetchOrder()
+    } catch (err) {
+      console.error(err)
+      alert(err?.response?.data?.message || 'Có lỗi xảy ra khi yêu cầu hủy đơn')
+    } finally {
+      setCancelLoading(false)
+    }
+  }
+
+  const handleRequestVat = async () => {
     setVatLoading(true)
     try {
       await requestVatInvoice(order.id)
@@ -223,6 +248,18 @@ export default function OrderDetail() {
                 </Button>
               )}
 
+              {/* Nút yêu cầu hủy đơn */}
+              {['PendingPayment', 'PendingConfirmation', 'Confirmed', 'Processing'].includes(order.orderStatus) && (
+                <Button
+                  variant="outline"
+                  className="rounded-full text-sm text-red-600 hover:bg-red-50 hover:text-red-700 gap-2"
+                  onClick={() => setCancelModalOpen(true)}
+                >
+                  <AlertCircle className="h-4 w-4" />
+                  Yêu cầu hủy đơn
+                </Button>
+              )}
+
               {/* Trạng thái VAT (sau khi đã yêu cầu) */}
               {(!order.canRequestVat || vatDone) && order.redInvoiceStatus !== 'None' && (
                 <Badge className={`${vatMeta.badgeClass} px-3 py-1.5 text-xs font-medium hover:opacity-100`}>
@@ -231,6 +268,16 @@ export default function OrderDetail() {
               )}
             </div>
           </div>
+
+          {/* Cancel Requested Banner */}
+          {order.orderStatus === 'CancelRequested' && (
+            <div className="mb-4 flex items-center justify-between rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-700">
+              <div className="flex items-center gap-2">
+                <AlertCircle className="h-4 w-4 flex-shrink-0" />
+                <span>Đơn hàng đang chờ Sales duyệt yêu cầu hủy.</span>
+              </div>
+            </div>
+          )}
 
           {/* VAT deadline banner */}
           {order.canRequestVat && vatDeadlineStr && (
@@ -385,6 +432,12 @@ export default function OrderDetail() {
                       <span className="font-medium text-gray-900">{formatPrice(order.vatAmount)}</span>
                     </div>
                   )}
+                  {order.creditApplied > 0 && (
+                    <div className="flex items-center justify-between text-blue-600">
+                      <span>Thanh toán bằng Credit</span>
+                      <span className="font-medium">- {formatPrice(order.creditApplied)}</span>
+                    </div>
+                  )}
                   <div className="flex items-center justify-between">
                     <span>Trạng thái hóa đơn VAT</span>
                     <div className="flex items-center gap-2">
@@ -398,7 +451,7 @@ export default function OrderDetail() {
                   </div>
                   <div className="border-t border-gray-100 pt-4">
                     <div className="flex items-center justify-between">
-                      <span className="text-base font-semibold text-gray-900">Tổng cộng</span>
+                      <span className="text-base font-semibold text-gray-900">{order.creditApplied > 0 ? "Khách cần trả thêm" : "Tổng cộng"}</span>
                       <span className="text-xl font-bold text-gray-900">{formatPrice(order.finalPayment)}</span>
                     </div>
                   </div>
@@ -429,6 +482,33 @@ export default function OrderDetail() {
       </div>
 
       <Footer />
+
+      {/* Modal Yêu cầu hủy đơn */}
+      {cancelModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4">
+          <div className="w-full max-w-md rounded-3xl bg-white p-6 shadow-xl">
+            <h2 className="mb-4 text-xl font-bold text-gray-900">Yêu cầu hủy đơn hàng</h2>
+            <p className="mb-4 text-sm text-gray-500">
+              Vui lòng cho chúng tôi biết lý do bạn muốn hủy đơn hàng này. Yêu cầu của bạn sẽ được chuyển đến bộ phận Sales để xử lý.
+            </p>
+            <textarea
+              className="mb-4 w-full rounded-xl border border-gray-200 p-3 text-sm outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+              rows={4}
+              placeholder="Nhập lý do hủy đơn..."
+              value={cancelReason}
+              onChange={(e) => setCancelReason(e.target.value)}
+            />
+            <div className="flex justify-end gap-3">
+              <Button variant="outline" onClick={() => setCancelModalOpen(false)}>
+                Đóng
+              </Button>
+              <Button onClick={handleRequestCancel} disabled={cancelLoading} className="bg-red-600 hover:bg-red-700 text-white">
+                {cancelLoading ? 'Đang gửi...' : 'Gửi yêu cầu'}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

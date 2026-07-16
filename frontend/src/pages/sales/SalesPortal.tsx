@@ -324,7 +324,7 @@ export default function SalesPortal() {
           <div className="flex-1" />
 
           <div className="flex items-center gap-0.5">
-            <NotificationBell role={role} />
+            <NotificationBell role={role} onViewAll={() => navigate('/sales/notifications')} />
             <button className="rounded p-1.5 text-gray-500 transition-colors hover:bg-gray-100 hover:text-gray-700">
               <Settings className="h-4 w-4" />
             </button>
