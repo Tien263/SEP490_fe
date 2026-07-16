@@ -1,8 +1,12 @@
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
+import ConfirmModal from '../../components/ui/ConfirmModal';
+import { useAuth } from '../../context/AuthContext';
 import {
   Package, MapPin, Phone, User, Calendar, CreditCard, ArrowLeft,
-  CheckCircle, Truck, Box, ShieldCheck, ChevronRight, Hash
+  Clock, AlertTriangle, CheckCircle, XCircle, Truck, Building2,
+  Mail, Hash, FileText, Download, ChevronRight, Box, Wallet,
+  ShieldCheck, CircleDot, Timer
 } from 'lucide-react';
 
 const PRIMARY = '#1F3B64';
@@ -18,7 +22,6 @@ const ORDER_STATUS: Record<string, { label: string; color: string; bg: string }>
   CancelRequested:     { label: 'Yêu cầu hủy',       color: '#991B1B', bg: '#FEE2E2' },
   CancelledReallocated:{ label: 'Đã hủy & chuyển',    color: '#991B1B', bg: '#FEE2E2' },
   PaidReviewRequired:  { label: 'Cần duyệt thanh toán', color: '#92400E', bg: '#FEF3C7' },
-  New:                 { label: 'Đơn mới',            color: '#1E40AF', bg: '#DBEAFE' },
 };
 
 const FULFILLMENT_STATUS: Record<string, { label: string; color: string; bg: string }> = {
@@ -77,9 +80,11 @@ const formatDateTime = (dateStr: string) => {
 };
 
 type OrderItem = {
-  id: string;
+  id?: string;
+  productId?: string;
   productName: string;
   productSku?: string;
+  productImageUrl?: string;
   quantity: number;
   priceSnapshot: number;
   lineTotal: number;
@@ -90,6 +95,8 @@ type SalesOrderDetail = {
   orderCode: string;
   customerName: string;
   customerPhone?: string;
+  customerEmail?: string;
+  companyName?: string;
   shippingAddress?: string;
   createdAt: string;
   totalAmount: number;
@@ -101,6 +108,7 @@ type SalesOrderDetail = {
   orderStatus: string;
   fulfillmentStatus?: string;
   deliveryStatus?: string;
+  invoicePdfUrl?: string;
   items: OrderItem[];
 };
 
@@ -113,13 +121,13 @@ function getTimelineSteps(order: SalesOrderDetail) {
   const steps = [
     {
       label: 'Đơn hàng được tạo',
-      icon: Package,
+      icon: FileText,
       done: true,
       time: order.createdAt,
     },
     {
       label: order.paymentMethod === 'COD' ? 'Sales xác nhận COD' : 'Thanh toán thành công',
-      icon: CreditCard,
+      icon: Wallet,
       done: ['Confirmed', 'Processing', 'Completed'].includes(os),
     },
     {
@@ -145,9 +153,20 @@ function getTimelineSteps(order: SalesOrderDetail) {
 export default function SalesManagerOrderDetailPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const { user } = useAuth() as any;
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [order, setOrder] = useState<SalesOrderDetail | null>(null);
+  const [isConfirming, setIsConfirming] = useState(false);
+  const [timeLeft, setTimeLeft] = useState<number | null>(null);
+
+  const [showAcceptConfirm, setShowAcceptConfirm] = useState(false);
+  const [showRejectModal, setShowRejectModal] = useState(false);
+  const [rejectReason, setRejectReason] = useState('');
+
+  const [showDirectCancelModal, setShowDirectCancelModal] = useState(false);
+  const [directCancelReason, setDirectCancelReason] = useState('');
+  const [showDirectConfirmModal, setShowDirectConfirmModal] = useState(false);
 
   useEffect(() => {
     const fetchDetail = async () => {
@@ -159,6 +178,14 @@ export default function SalesManagerOrderDetailPage() {
         if (!res.ok) throw new Error('Không thể tải chi tiết đơn hàng.');
         const data = await res.json();
         setOrder(data);
+
+        // Tính giờ đếm ngược 35 phút cho đơn COD nháp
+        if (data.paymentMethod === 'COD' && (data.orderStatus === 'Draft' || data.orderStatus === 'PendingConfirmation')) {
+          const createdAt = new Date(data.createdAt).getTime();
+          const limitTime = createdAt + 35 * 60 * 1000;
+          const now = new Date().getTime();
+          setTimeLeft(Math.max(0, Math.floor((limitTime - now) / 1000)));
+        }
       } catch (err: any) {
         setError(err.message || 'Có lỗi xảy ra.');
       } finally {
@@ -167,6 +194,76 @@ export default function SalesManagerOrderDetailPage() {
     };
     if (id) fetchDetail();
   }, [id]);
+
+  useEffect(() => {
+    if (timeLeft !== null && timeLeft > 0) {
+      const timerId = setInterval(() => setTimeLeft(t => (t && t > 0 ? t - 1 : 0)), 1000);
+      return () => clearInterval(timerId);
+    }
+  }, [timeLeft]);
+
+  const handleConfirmOrder = async () => {
+    if (!order) return;
+    setIsConfirming(true);
+    try {
+      const response = await fetch(`/api/orders/sales/${order.id}/confirm`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${localStorage.getItem('accessToken')}` },
+      });
+
+      if (!response.ok) {
+        const err = await response.json();
+        throw new Error(err.message || 'Lỗi khi xác nhận đơn hàng.');
+      }
+
+      alert('Xác nhận thành công!');
+      const res = await fetch(`/api/orders/sales/${id}`, {
+        headers: { Authorization: `Bearer ${localStorage.getItem('accessToken')}` }
+      });
+      const data = await res.json();
+      setOrder(data);
+      setTimeLeft(null);
+    } catch (err: any) {
+      alert(err.message || 'Lỗi không xác định.');
+    } finally {
+      setIsConfirming(false);
+    }
+  };
+
+  const handleProcessCancelRequest = async (isApproved: boolean, reason: string) => {
+    if (!order) return;
+    try {
+      const response = await fetch(`/api/orders/sales/${order.id}/process-cancel-request`, {
+        method: 'POST',
+        headers: { 
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${localStorage.getItem('accessToken')}` 
+        },
+        body: JSON.stringify({ isApproved, reason })
+      });
+
+      if (!response.ok) {
+        const err = await response.json();
+        throw new Error(err.message || 'Lỗi khi xử lý yêu cầu hủy.');
+      }
+
+      alert('Đã xử lý yêu cầu hủy đơn thành công!');
+      // Reload order
+      const res = await fetch(`/api/orders/sales/${id}`, {
+        headers: { Authorization: `Bearer ${localStorage.getItem('accessToken')}` }
+      });
+      const data = await res.json();
+      setOrder(data);
+    } catch (err: any) {
+      alert(err.message || 'Lỗi không xác định.');
+    }
+  };
+
+  const formatTimeLeft = (seconds: number) => {
+    const m = Math.floor(seconds / 60);
+    const s = seconds % 60;
+    return `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+  };
 
   if (loading) {
     return (
@@ -183,7 +280,7 @@ export default function SalesManagerOrderDetailPage() {
     return (
       <div className="flex h-screen flex-col items-center justify-center bg-slate-50 gap-4">
         <div className="rounded-full bg-red-50 p-4">
-          <ShieldCheck className="h-8 w-8 text-red-400" />
+          <XCircle className="h-8 w-8 text-red-400" />
         </div>
         <p className="text-red-600 font-medium">{error || 'Không tìm thấy thông tin đơn hàng'}</p>
         <button
@@ -196,6 +293,8 @@ export default function SalesManagerOrderDetailPage() {
     );
   }
 
+  const isCOD = order.paymentMethod === 'COD';
+  const isPending = order.orderStatus === 'Draft' || order.orderStatus === 'PendingConfirmation';
   const timeline = getTimelineSteps(order);
   const activeStep = timeline.filter(s => s.done).length;
 
@@ -223,15 +322,142 @@ export default function SalesManagerOrderDetailPage() {
                 <h1 className="text-lg font-bold text-slate-900">Đơn hàng #{order.orderCode}</h1>
                 <StatusChip {...orderMeta} />
               </div>
-              <p className="text-xs text-slate-400 mt-0.5 flex items-center gap-1">
-                <ShieldCheck className="w-3.5 h-3.5 text-blue-500" /> Quản lý đơn hàng
+              <p className="text-xs text-slate-400 mt-0.5">
+                Ngày tạo: {formatDateTime(order.createdAt)}
               </p>
             </div>
+          </div>
+          <div className="flex items-center gap-2">
+            {(order.orderStatus === 'Draft' || order.orderStatus === 'New' || order.orderStatus === 'PendingConfirmation') && (user?.role === 'SalesManager' || user?.role === 'Admin') && (
+              <>
+                <button
+                  onClick={() => setShowDirectConfirmModal(true)}
+                  disabled={isConfirming}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium text-white bg-blue-600 hover:bg-blue-700 transition-colors disabled:opacity-50"
+                >
+                  <CheckCircle className="w-3.5 h-3.5" />
+                  Xác nhận
+                </button>
+                <button
+                  onClick={() => setShowDirectCancelModal(true)}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium text-red-600 bg-red-50 border border-red-200 hover:bg-red-100 transition-colors"
+                >
+                  <XCircle className="w-3.5 h-3.5" />
+                  Hủy đơn
+                </button>
+              </>
+            )}
+            {order.invoicePdfUrl && (
+              <a
+                href={order.invoicePdfUrl}
+                target="_blank"
+                rel="noreferrer"
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium text-slate-600 bg-slate-100 hover:bg-slate-200 transition-colors"
+              >
+                <Download className="w-3.5 h-3.5" />
+                Tải hóa đơn
+              </a>
+            )}
           </div>
         </div>
       </div>
 
       <div className="max-w-7xl mx-auto px-6 py-6">
+        {/* ── Cancel Requested Banner ─────────────────────────────────── */}
+        {order.orderStatus === 'CancelRequested' && (
+          <div className="mb-6 rounded-2xl border border-red-200 bg-red-50 p-5 flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="bg-red-100 p-2 rounded-full flex-shrink-0">
+                <AlertTriangle className="w-6 h-6 text-red-600" />
+              </div>
+              <div>
+                <h3 className="text-red-800 font-bold">Khách hàng yêu cầu hủy đơn</h3>
+                <p className="text-sm text-red-700 mt-1">Đơn hàng đang chờ bạn duyệt yêu cầu hủy.</p>
+              </div>
+            </div>
+            {(user?.role === 'SalesManager' || user?.role === 'Admin') && (
+              <div className="flex items-center gap-2 w-full sm:w-auto">
+                <button
+                  onClick={() => setShowRejectModal(true)}
+                  className="flex-1 sm:flex-none px-4 py-2 bg-white border border-red-200 text-red-600 font-medium rounded-xl hover:bg-red-50 transition-colors"
+                >
+                  Từ chối hủy
+                </button>
+                <button
+                  onClick={() => setShowAcceptConfirm(true)}
+                  className="flex-1 sm:flex-none px-4 py-2 bg-red-600 text-white font-medium rounded-xl hover:bg-red-700 transition-colors shadow-sm"
+                >
+                  Chấp nhận hủy
+                </button>
+              </div>
+            )}
+          </div>
+        )}
+        {/* ── COD Confirmation Banner ─────────────────────────────────── */}
+        {isPending && (
+          <div
+            className={`mb-6 rounded-2xl border p-5 flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between ${
+              isCOD
+                ? 'bg-gradient-to-r from-amber-50 to-orange-50 border-amber-200'
+                : 'bg-gradient-to-r from-blue-50 to-indigo-50 border-blue-200'
+            }`}
+          >
+            <div className="flex items-start gap-3">
+              {isCOD ? (
+                <div className="rounded-xl bg-amber-100 p-2.5 shrink-0">
+                  <AlertTriangle className="w-5 h-5 text-amber-600" />
+                </div>
+              ) : (
+                <div className="rounded-xl bg-blue-100 p-2.5 shrink-0">
+                  <Clock className="w-5 h-5 text-blue-600" />
+                </div>
+              )}
+              <div>
+                <h3 className={`font-semibold text-sm ${isCOD ? 'text-amber-800' : 'text-blue-800'}`}>
+                  {isCOD ? 'Đơn hàng COD đang chờ bạn xác nhận' : 'Chờ khách hàng thanh toán SePay'}
+                </h3>
+                <p className={`text-xs mt-1 ${isCOD ? 'text-amber-600' : 'text-blue-600'}`}>
+                  {isCOD
+                    ? 'Kiểm tra lại địa chỉ, SĐT khách hàng. Thời gian giới hạn 35 phút kể từ khi đặt.'
+                    : 'Hệ thống tự động xác nhận khi webhook SePay trả về kết quả thanh toán thành công.'}
+                </p>
+              </div>
+            </div>
+
+            {isCOD && (
+              <div className="flex items-center gap-2.5 shrink-0">
+                {timeLeft !== null && (
+                  <div
+                    className={`flex items-center gap-1.5 px-3 py-2 rounded-xl font-mono text-sm font-bold ${
+                      timeLeft < 300
+                        ? 'bg-red-100 text-red-700 border border-red-200'
+                        : 'bg-white text-amber-700 border border-amber-200'
+                    }`}
+                  >
+                    <Timer className="w-4 h-4" />
+                    {formatTimeLeft(timeLeft)}
+                  </div>
+                )}
+                <button
+                  className="px-4 py-2 bg-white border border-slate-200 text-slate-600 rounded-xl hover:bg-slate-50 text-xs font-semibold flex items-center gap-1.5 transition-all"
+                >
+                  <XCircle className="w-3.5 h-3.5 text-red-500" />
+                  Từ chối
+                </button>
+                <button
+                  onClick={handleConfirmOrder}
+                  disabled={isConfirming || timeLeft === 0}
+                  className="px-4 py-2 text-white rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+                  style={{ backgroundColor: PRIMARY }}
+                >
+                  <CheckCircle className="w-3.5 h-3.5" />
+                  {isConfirming ? 'Đang xử lý...' : 'Xác nhận COD'}
+                </button>
+              </div>
+            )}
+          </div>
+        )}
+
         {/* ── Timeline Progress ───────────────────────────────────────── */}
         <div className="mb-6 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
           <div className="flex items-center gap-2 mb-4">
@@ -240,22 +466,18 @@ export default function SalesManagerOrderDetailPage() {
             <span className="text-xs text-slate-400 ml-auto">{activeStep}/{timeline.length} bước</span>
           </div>
           <div className="flex items-start justify-between relative">
-            <div className="absolute top-5 left-0 right-0 h-0.5 bg-slate-100" style={{ marginLeft: '40px', marginRight: '40px' }} />
-            <div
-              className="absolute top-5 left-0 h-0.5 transition-all duration-500"
-              style={{
-                marginLeft: '40px',
-                width: `calc(${((activeStep - 1) / (timeline.length - 1)) * 100}% - 80px)`,
-                backgroundColor: PRIMARY,
-              }}
-            />
-
             {timeline.map((step, i) => {
               const Icon = step.icon;
               const isDone = step.done;
               const isCurrent = i === activeStep;
               return (
                 <div key={i} className="flex flex-col items-center relative z-10 flex-1">
+                  {i < timeline.length - 1 && (
+                    <div className="absolute top-5 left-1/2 w-full h-0.5 bg-slate-100" style={{ zIndex: -1 }} />
+                  )}
+                  {i < activeStep - 1 && (
+                    <div className="absolute top-5 left-1/2 w-full h-0.5 transition-all duration-500" style={{ backgroundColor: PRIMARY, zIndex: -1 }} />
+                  )}
                   <div
                     className={`w-10 h-10 rounded-full flex items-center justify-center transition-all ${
                       isDone
@@ -297,10 +519,20 @@ export default function SalesManagerOrderDetailPage() {
                 <div className="flex items-center gap-3 p-3 rounded-xl bg-slate-50">
                   <User className="w-4 h-4 text-slate-400 shrink-0" />
                   <div className="min-w-0">
-                    <p className="text-[10px] uppercase tracking-wider text-slate-400 font-semibold">Khách hàng</p>
+                    <p className="text-[10px] uppercase tracking-wider text-slate-400 font-semibold">Người liên hệ</p>
                     <p className="text-sm font-medium text-slate-900 truncate">{order.customerName}</p>
                   </div>
                 </div>
+
+                {order.companyName && (
+                  <div className="flex items-center gap-3 p-3 rounded-xl bg-slate-50">
+                    <Building2 className="w-4 h-4 text-slate-400 shrink-0" />
+                    <div className="min-w-0">
+                      <p className="text-[10px] uppercase tracking-wider text-slate-400 font-semibold">Công ty</p>
+                      <p className="text-sm font-medium text-slate-900 truncate">{order.companyName}</p>
+                    </div>
+                  </div>
+                )}
 
                 <div className="flex items-center gap-3 p-3 rounded-xl bg-slate-50">
                   <Phone className="w-4 h-4 text-slate-400 shrink-0" />
@@ -309,6 +541,16 @@ export default function SalesManagerOrderDetailPage() {
                     <p className="text-sm font-medium text-slate-900">{order.customerPhone || '---'}</p>
                   </div>
                 </div>
+
+                {order.customerEmail && (
+                  <div className="flex items-center gap-3 p-3 rounded-xl bg-slate-50">
+                    <Mail className="w-4 h-4 text-slate-400 shrink-0" />
+                    <div className="min-w-0">
+                      <p className="text-[10px] uppercase tracking-wider text-slate-400 font-semibold">Email</p>
+                      <p className="text-sm font-medium text-slate-900 truncate">{order.customerEmail}</p>
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
 
@@ -387,8 +629,14 @@ export default function SalesManagerOrderDetailPage() {
                     <span className="font-medium text-slate-700 tabular-nums">{formatPrice(order.vatAmount)} ₫</span>
                   </div>
                 )}
+                {order.creditApplied > 0 && (
+                  <div className="flex justify-between text-xs text-blue-600">
+                    <span>Thanh toán bằng Credit</span>
+                    <span className="font-medium tabular-nums">-{formatPrice(order.creditApplied)} ₫</span>
+                  </div>
+                )}
                 <div className="flex justify-between items-center pt-3 border-t border-dashed border-slate-200">
-                  <span className="text-sm font-bold text-slate-900">Tổng cộng</span>
+                  <span className="text-sm font-bold text-slate-900">{order.creditApplied > 0 ? "Khách cần trả thêm" : "Tổng cộng"}</span>
                   <span className="text-xl font-extrabold tabular-nums" style={{ color: PRIMARY }}>
                     {formatPrice(order.finalPayment)} ₫
                   </span>
@@ -400,6 +648,7 @@ export default function SalesManagerOrderDetailPage() {
           {/* ── Right Column: Product List ─────────────────────────────── */}
           <div className="lg:col-span-2 space-y-5">
             <div className="rounded-2xl border border-slate-200 bg-white shadow-sm overflow-hidden">
+              {/* Header */}
               <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100 bg-slate-50/50">
                 <div className="flex items-center gap-2">
                   <Package className="h-4 w-4 text-slate-500" />
@@ -409,10 +658,25 @@ export default function SalesManagerOrderDetailPage() {
                   {order.items.length} sản phẩm · {totalQty} đơn vị
                 </span>
               </div>
-              
+
+              {/* Product Cards */}
               <div className="divide-y divide-slate-100">
                 {order.items?.map((item, idx) => (
-                  <div key={item.id || idx} className="flex flex-col sm:flex-row sm:items-center gap-4 px-5 py-4 hover:bg-slate-50/50 transition-colors">
+                  <div key={item.id || item.productId || idx} className="flex items-center gap-4 px-5 py-4 hover:bg-slate-50/50 transition-colors">
+                    {/* Product Image */}
+                    <div className="w-14 h-14 rounded-xl bg-slate-100 border border-slate-200 overflow-hidden flex items-center justify-center shrink-0">
+                      {item.productImageUrl ? (
+                        <img
+                          src={item.productImageUrl}
+                          alt={item.productName}
+                          className="w-full h-full object-cover"
+                        />
+                      ) : (
+                        <Package className="w-6 h-6 text-slate-300" />
+                      )}
+                    </div>
+
+                    {/* Info */}
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-semibold text-slate-900 truncate">{item.productName}</p>
                       {item.productSku && (
@@ -422,26 +686,45 @@ export default function SalesManagerOrderDetailPage() {
                         </p>
                       )}
                     </div>
-                    <div className="flex items-center gap-4">
-                      <div className="text-center shrink-0 w-16">
-                        <p className="text-[10px] uppercase tracking-wider text-slate-400 font-semibold">SL</p>
-                        <p className="text-sm font-bold text-slate-900 mt-0.5">{item.quantity}</p>
-                      </div>
-                      <div className="text-right shrink-0 w-28">
-                        <p className="text-[10px] uppercase tracking-wider text-slate-400 font-semibold">Đơn giá</p>
-                        <p className="text-sm font-medium text-slate-600 tabular-nums mt-0.5">{formatPrice(item.priceSnapshot)} ₫</p>
-                      </div>
-                      <div className="text-right shrink-0 w-32">
-                        <p className="text-[10px] uppercase tracking-wider text-slate-400 font-semibold">Thành tiền</p>
-                        <p className="text-sm font-bold text-slate-900 tabular-nums mt-0.5">{formatPrice(item.lineTotal)} ₫</p>
-                      </div>
+
+                    {/* Quantity */}
+                    <div className="text-center shrink-0 w-16">
+                      <p className="text-[10px] uppercase tracking-wider text-slate-400 font-semibold">SL</p>
+                      <p className="text-sm font-bold text-slate-900 mt-0.5">{item.quantity}</p>
+                    </div>
+
+                    {/* Unit Price */}
+                    <div className="text-right shrink-0 w-28">
+                      <p className="text-[10px] uppercase tracking-wider text-slate-400 font-semibold">Đơn giá</p>
+                      <p className="text-sm font-medium text-slate-600 tabular-nums mt-0.5">{formatPrice(item.priceSnapshot)} ₫</p>
+                    </div>
+
+                    {/* Line Total */}
+                    <div className="text-right shrink-0 w-32">
+                      <p className="text-[10px] uppercase tracking-wider text-slate-400 font-semibold">Thành tiền</p>
+                      <p className="text-sm font-bold text-slate-900 tabular-nums mt-0.5">{formatPrice(item.lineTotal)} ₫</p>
                     </div>
                   </div>
                 ))}
               </div>
+
+              {/* Footer Summary */}
+              <div className="border-t border-slate-200 bg-slate-50/50 px-5 py-4">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-slate-500">
+                    Tổng {order.items.length} sản phẩm ({totalQty} đơn vị)
+                  </span>
+                  <div className="text-right">
+                    <span className="text-xs text-slate-400 mr-2">Tổng tiền hàng:</span>
+                    <span className="text-lg font-extrabold tabular-nums" style={{ color: PRIMARY }}>
+                      {formatPrice(order.totalAmount)} ₫
+                    </span>
+                  </div>
+                </div>
+              </div>
             </div>
-            
-            {/* Stats Cards */}
+
+            {/* Status Cards Grid */}
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
               <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm text-center">
                 <div className="w-10 h-10 rounded-full bg-blue-50 flex items-center justify-center mx-auto mb-2">
@@ -469,7 +752,7 @@ export default function SalesManagerOrderDetailPage() {
 
               <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm text-center">
                 <div className="w-10 h-10 rounded-full flex items-center justify-center mx-auto mb-2" style={{ backgroundColor: '#EEF2FF' }}>
-                  <CreditCard className="w-4 h-4" style={{ color: PRIMARY }} />
+                  <Wallet className="w-4 h-4" style={{ color: PRIMARY }} />
                 </div>
                 <p className="text-[10px] uppercase tracking-wider text-slate-400 font-semibold">Thanh toán</p>
                 <p className="text-sm font-bold mt-0.5" style={{ color: PRIMARY }}>
@@ -480,6 +763,104 @@ export default function SalesManagerOrderDetailPage() {
           </div>
         </div>
       </div>
+      {/* Modals cho Yêu cầu hủy đơn */}
+      <ConfirmModal
+        isOpen={showAcceptConfirm}
+        title="Xác nhận hủy đơn"
+        message="Bạn có chắc chắn muốn chấp nhận yêu cầu hủy đơn hàng này?"
+        onConfirm={() => {
+          setShowAcceptConfirm(false);
+          handleProcessCancelRequest(true, 'Đồng ý hủy theo yêu cầu khách hàng');
+        }}
+        onCancel={() => setShowAcceptConfirm(false)}
+        confirmText="Chấp nhận hủy"
+      />
+
+      {showRejectModal && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/40 p-4">
+          <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl">
+            <h3 className="mb-2 text-lg font-bold text-gray-900">Từ chối yêu cầu hủy đơn</h3>
+            <p className="mb-4 text-sm text-gray-500">Vui lòng nhập lý do từ chối yêu cầu hủy đơn hàng này của khách hàng.</p>
+            <textarea
+              className="w-full rounded-xl border border-gray-300 p-3 text-sm outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+              rows={3}
+              placeholder="Nhập lý do từ chối..."
+              value={rejectReason}
+              onChange={(e) => setRejectReason(e.target.value)}
+            />
+            <div className="mt-6 flex justify-end gap-3">
+              <button
+                onClick={() => setShowRejectModal(false)}
+                className="rounded-xl px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100"
+              >
+                Hủy
+              </button>
+              <button
+                onClick={() => {
+                  if (!rejectReason.trim()) {
+                    alert('Vui lòng nhập lý do');
+                    return;
+                  }
+                  setShowRejectModal(false);
+                  handleProcessCancelRequest(false, rejectReason);
+                }}
+                className="rounded-xl bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-700"
+              >
+                Xác nhận từ chối
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      <ConfirmModal
+        isOpen={showDirectConfirmModal}
+        title="Xác nhận đơn hàng"
+        message="Bạn có chắc muốn xác nhận đơn hàng này và chuyển xuống kho?"
+        onConfirm={() => {
+          setShowDirectConfirmModal(false);
+          handleConfirmOrder();
+        }}
+        onCancel={() => setShowDirectConfirmModal(false)}
+        confirmText="Xác nhận"
+      />
+
+      {showDirectCancelModal && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/40 p-4">
+          <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl">
+            <h3 className="mb-2 text-lg font-bold text-gray-900">Hủy đơn hàng</h3>
+            <p className="mb-4 text-sm text-gray-500">Vui lòng nhập lý do hủy đơn hàng này.</p>
+            <textarea
+              className="w-full rounded-xl border border-gray-300 p-3 text-sm outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+              rows={3}
+              placeholder="Nhập lý do hủy..."
+              value={directCancelReason}
+              onChange={(e) => setDirectCancelReason(e.target.value)}
+            />
+            <div className="mt-6 flex justify-end gap-3">
+              <button
+                onClick={() => setShowDirectCancelModal(false)}
+                className="rounded-xl px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100"
+              >
+                Đóng
+              </button>
+              <button
+                onClick={() => {
+                  if (!directCancelReason.trim()) {
+                    alert('Vui lòng nhập lý do');
+                    return;
+                  }
+                  setShowDirectCancelModal(false);
+                  handleProcessCancelRequest(true, directCancelReason);
+                }}
+                className="rounded-xl bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-700"
+              >
+                Xác nhận hủy
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

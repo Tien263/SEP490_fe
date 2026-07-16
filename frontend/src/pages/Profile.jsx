@@ -24,6 +24,7 @@ import {
   Trash2,
   Truck,
   User,
+  Wallet
   UserCog,
 } from 'lucide-react'
 import { AnimatePresence, motion } from 'motion/react'
@@ -84,6 +85,7 @@ const profileTabs = [
   { id: 'quotations', label: 'Báo giá đặc biệt', icon: MessageSquare },
   { id: 'sales-change', label: 'Sale phụ trách', icon: UserCog },
   { id: 'tracking', label: 'Theo dõi đơn hàng', icon: Truck },
+  { id: 'credit', label: 'Lịch sử Credit', icon: Wallet },
 ]
 
 const mockAddresses = [
@@ -160,6 +162,18 @@ function PersonalInfoTab({ user, onSuccess }) {
   const [fullName, setFullName] = useState(user?.fullName || '')
   const [phoneNumber, setPhoneNumber] = useState(user?.phoneNumber || '')
   
+  const [profileFull, setProfileFull] = useState(null)
+  
+  useEffect(() => {
+    async function loadProfile() {
+      try {
+        const res = await getCustomerProfile()
+        setProfileFull(res)
+      } catch (err) {}
+    }
+    loadProfile()
+  }, [])
+
   const [currentPassword, setCurrentPassword] = useState('')
   const [newPassword, setNewPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
@@ -355,6 +369,16 @@ function PersonalInfoTab({ user, onSuccess }) {
                 className="rounded-xl bg-gray-50 text-sm cursor-not-allowed"
               />
             </div>
+            {profileFull && (
+              <div>
+                <label className="mb-1 block text-xs text-blue-600 font-semibold">Số dư Credit</label>
+                <Input
+                  value={`${formatPrice(profileFull.availableCredit || 0)}`}
+                  disabled
+                  className="rounded-xl bg-blue-50/50 text-blue-700 text-sm font-bold border-blue-200 cursor-default"
+                />
+              </div>
+            )}
           </div>
         </div>
         <Button
@@ -1745,6 +1769,95 @@ function OrderTrackingTab() {
   )
 }
 
+function CreditHistoryTab() {
+  const [history, setHistory] = useState([])
+  const [balance, setBalance] = useState(0)
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    async function loadData() {
+      try {
+        setLoading(true)
+        // Lấy profile để hiển thị số dư hiện tại
+        const profileRes = await getCustomerProfile()
+        if (profileRes?.data) {
+          setBalance(profileRes.data.availableCredit || 0)
+        }
+
+        const res = await fetch('/api/customer-profile/credit-history', {
+          headers: {
+            'Authorization': `Bearer ${localStorage.getItem('accessToken')}`
+          }
+        })
+        if (res.ok) {
+          const data = await res.json()
+          setHistory(data)
+        }
+      } catch (err) {
+        console.error("Lỗi tải lịch sử Credit:", err)
+      } finally {
+        setLoading(false)
+      }
+    }
+    loadData()
+  }, [])
+
+  return (
+    <div className="space-y-6">
+      <section className="rounded-2xl border border-gray-100 bg-white p-6">
+        <div className="mb-5 flex items-center justify-between">
+          <h3 className="text-base font-semibold text-gray-900">Lịch sử giao dịch Credit</h3>
+          <div className="rounded-xl bg-blue-50/50 px-4 py-2 text-sm font-bold text-blue-700 border border-blue-100">
+            Số dư hiện tại: {formatPrice(balance)}
+          </div>
+        </div>
+        
+        {loading ? (
+          <div className="flex justify-center p-8">
+            <div className="h-8 w-8 animate-spin rounded-full border-4 border-gray-200 border-t-gray-900"></div>
+          </div>
+        ) : history.length === 0 ? (
+          <div className="flex flex-col items-center justify-center p-8 text-center text-gray-500">
+            <Wallet className="mb-4 h-12 w-12 text-gray-300" />
+            <p className="text-sm">Chưa có giao dịch Credit nào.</p>
+          </div>
+        ) : (
+          <div className="overflow-hidden rounded-xl border border-gray-200">
+            <table className="min-w-full divide-y divide-gray-200">
+              <thead className="bg-gray-50 text-left text-xs font-medium uppercase tracking-wider text-gray-500">
+                <tr>
+                  <th className="px-6 py-4">Thời gian</th>
+                  <th className="px-6 py-4">Mô tả</th>
+                  <th className="px-6 py-4 text-right">Số tiền</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-200 bg-white">
+                {history.map((tx) => (
+                  <tr key={tx.id} className="transition-colors hover:bg-gray-50">
+                    <td className="whitespace-nowrap px-6 py-4 text-sm text-gray-500">
+                      {new Date(tx.createdAt).toLocaleString('vi-VN')}
+                    </td>
+                    <td className="px-6 py-4 text-sm text-gray-900">
+                      {tx.description}
+                    </td>
+                    <td className="whitespace-nowrap px-6 py-4 text-right text-sm font-medium">
+                      {tx.amount > 0 ? (
+                        <span className="text-emerald-600">+{formatPrice(tx.amount)}</span>
+                      ) : (
+                        <span className="text-red-600">{formatPrice(tx.amount)}</span>
+                      )}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </section>
+    </div>
+  )
+}
+
 export default function Profile() {
   const { user } = useAuth()
   const [searchParams, setSearchParams] = useSearchParams()
@@ -1786,6 +1899,7 @@ export default function Profile() {
     quotations: <QuotationRequestsTab />,
     'sales-change': <SalesChangeRequestTab onSuccess={showSuccess} />,
     tracking: <OrderTrackingTab />,
+    credit: <CreditHistoryTab />
   }
 
   function setTab(tabId) {

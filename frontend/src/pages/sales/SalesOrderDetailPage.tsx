@@ -1,5 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
+import ConfirmModal from '../../components/ui/ConfirmModal';
+import { useAuth } from '../../context/AuthContext';
 import {
   Package, MapPin, Phone, User, Calendar, CreditCard, ArrowLeft,
   Clock, AlertTriangle, CheckCircle, XCircle, Truck, Building2,
@@ -151,11 +153,20 @@ function getTimelineSteps(order: SalesOrderDetail) {
 export default function SalesOrderDetailPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const { user } = useAuth() as any;
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [order, setOrder] = useState<SalesOrderDetail | null>(null);
   const [isConfirming, setIsConfirming] = useState(false);
   const [timeLeft, setTimeLeft] = useState<number | null>(null);
+
+  const [showAcceptConfirm, setShowAcceptConfirm] = useState(false);
+  const [showRejectModal, setShowRejectModal] = useState(false);
+  const [rejectReason, setRejectReason] = useState('');
+
+  const [showDirectCancelModal, setShowDirectCancelModal] = useState(false);
+  const [directCancelReason, setDirectCancelReason] = useState('');
+  const [showDirectConfirmModal, setShowDirectConfirmModal] = useState(false);
 
   useEffect(() => {
     const fetchDetail = async () => {
@@ -216,6 +227,35 @@ export default function SalesOrderDetailPage() {
       alert(err.message || 'Lỗi không xác định.');
     } finally {
       setIsConfirming(false);
+    }
+  };
+
+  const handleProcessCancelRequest = async (isApproved: boolean, reason: string) => {
+    if (!order) return;
+    try {
+      const response = await fetch(`/api/orders/sales/${order.id}/process-cancel-request`, {
+        method: 'POST',
+        headers: { 
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${localStorage.getItem('accessToken')}` 
+        },
+        body: JSON.stringify({ isApproved, reason })
+      });
+
+      if (!response.ok) {
+        const err = await response.json();
+        throw new Error(err.message || 'Lỗi khi xử lý yêu cầu hủy.');
+      }
+
+      alert('Đã xử lý yêu cầu hủy đơn thành công!');
+      // Reload order
+      const res = await fetch(`/api/orders/sales/${id}`, {
+        headers: { Authorization: `Bearer ${localStorage.getItem('accessToken')}` }
+      });
+      const data = await res.json();
+      setOrder(data);
+    } catch (err: any) {
+      alert(err.message || 'Lỗi không xác định.');
     }
   };
 
@@ -288,6 +328,25 @@ export default function SalesOrderDetailPage() {
             </div>
           </div>
           <div className="flex items-center gap-2">
+            {(order.orderStatus === 'Draft' || order.orderStatus === 'New' || order.orderStatus === 'PendingConfirmation') && (user?.role === 'SalesManager' || user?.role === 'Admin') && (
+              <>
+                <button
+                  onClick={() => setShowDirectConfirmModal(true)}
+                  disabled={isConfirming}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium text-white bg-blue-600 hover:bg-blue-700 transition-colors disabled:opacity-50"
+                >
+                  <CheckCircle className="w-3.5 h-3.5" />
+                  Xác nhận
+                </button>
+                <button
+                  onClick={() => setShowDirectCancelModal(true)}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium text-red-600 bg-red-50 border border-red-200 hover:bg-red-100 transition-colors"
+                >
+                  <XCircle className="w-3.5 h-3.5" />
+                  Hủy đơn
+                </button>
+              </>
+            )}
             {order.invoicePdfUrl && (
               <a
                 href={order.invoicePdfUrl}
@@ -304,6 +363,36 @@ export default function SalesOrderDetailPage() {
       </div>
 
       <div className="max-w-7xl mx-auto px-6 py-6">
+        {/* ── Cancel Requested Banner ─────────────────────────────────── */}
+        {order.orderStatus === 'CancelRequested' && (
+          <div className="mb-6 rounded-2xl border border-red-200 bg-red-50 p-5 flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="bg-red-100 p-2 rounded-full flex-shrink-0">
+                <AlertTriangle className="w-6 h-6 text-red-600" />
+              </div>
+              <div>
+                <h3 className="text-red-800 font-bold">Khách hàng yêu cầu hủy đơn</h3>
+                <p className="text-sm text-red-700 mt-1">Đơn hàng đang chờ bạn duyệt yêu cầu hủy.</p>
+              </div>
+            </div>
+            {(user?.role === 'SalesManager' || user?.role === 'Admin') && (
+              <div className="flex items-center gap-2 w-full sm:w-auto">
+                <button
+                  onClick={() => setShowRejectModal(true)}
+                  className="flex-1 sm:flex-none px-4 py-2 bg-white border border-red-200 text-red-600 font-medium rounded-xl hover:bg-red-50 transition-colors"
+                >
+                  Từ chối hủy
+                </button>
+                <button
+                  onClick={() => setShowAcceptConfirm(true)}
+                  className="flex-1 sm:flex-none px-4 py-2 bg-red-600 text-white font-medium rounded-xl hover:bg-red-700 transition-colors shadow-sm"
+                >
+                  Chấp nhận hủy
+                </button>
+              </div>
+            )}
+          </div>
+        )}
         {/* ── COD Confirmation Banner ─────────────────────────────────── */}
         {isPending && (
           <div
@@ -377,23 +466,18 @@ export default function SalesOrderDetailPage() {
             <span className="text-xs text-slate-400 ml-auto">{activeStep}/{timeline.length} bước</span>
           </div>
           <div className="flex items-start justify-between relative">
-            {/* Line connecting steps */}
-            <div className="absolute top-5 left-0 right-0 h-0.5 bg-slate-100" style={{ marginLeft: '40px', marginRight: '40px' }} />
-            <div
-              className="absolute top-5 left-0 h-0.5 transition-all duration-500"
-              style={{
-                marginLeft: '40px',
-                width: `calc(${((activeStep - 1) / (timeline.length - 1)) * 100}% - 80px)`,
-                backgroundColor: PRIMARY,
-              }}
-            />
-
             {timeline.map((step, i) => {
               const Icon = step.icon;
               const isDone = step.done;
               const isCurrent = i === activeStep;
               return (
                 <div key={i} className="flex flex-col items-center relative z-10 flex-1">
+                  {i < timeline.length - 1 && (
+                    <div className="absolute top-5 left-1/2 w-full h-0.5 bg-slate-100" style={{ zIndex: -1 }} />
+                  )}
+                  {i < activeStep - 1 && (
+                    <div className="absolute top-5 left-1/2 w-full h-0.5 transition-all duration-500" style={{ backgroundColor: PRIMARY, zIndex: -1 }} />
+                  )}
                   <div
                     className={`w-10 h-10 rounded-full flex items-center justify-center transition-all ${
                       isDone
@@ -545,8 +629,14 @@ export default function SalesOrderDetailPage() {
                     <span className="font-medium text-slate-700 tabular-nums">{formatPrice(order.vatAmount)} ₫</span>
                   </div>
                 )}
+                {order.creditApplied > 0 && (
+                  <div className="flex justify-between text-xs text-blue-600">
+                    <span>Thanh toán bằng Credit</span>
+                    <span className="font-medium tabular-nums">-{formatPrice(order.creditApplied)} ₫</span>
+                  </div>
+                )}
                 <div className="flex justify-between items-center pt-3 border-t border-dashed border-slate-200">
-                  <span className="text-sm font-bold text-slate-900">Tổng cộng</span>
+                  <span className="text-sm font-bold text-slate-900">{order.creditApplied > 0 ? "Khách cần trả thêm" : "Tổng cộng"}</span>
                   <span className="text-xl font-extrabold tabular-nums" style={{ color: PRIMARY }}>
                     {formatPrice(order.finalPayment)} ₫
                   </span>
@@ -673,6 +763,104 @@ export default function SalesOrderDetailPage() {
           </div>
         </div>
       </div>
+      {/* Modals cho Yêu cầu hủy đơn */}
+      <ConfirmModal
+        isOpen={showAcceptConfirm}
+        title="Xác nhận hủy đơn"
+        message="Bạn có chắc chắn muốn chấp nhận yêu cầu hủy đơn hàng này?"
+        onConfirm={() => {
+          setShowAcceptConfirm(false);
+          handleProcessCancelRequest(true, 'Đồng ý hủy theo yêu cầu khách hàng');
+        }}
+        onCancel={() => setShowAcceptConfirm(false)}
+        confirmText="Chấp nhận hủy"
+      />
+
+      {showRejectModal && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/40 p-4">
+          <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl">
+            <h3 className="mb-2 text-lg font-bold text-gray-900">Từ chối yêu cầu hủy đơn</h3>
+            <p className="mb-4 text-sm text-gray-500">Vui lòng nhập lý do từ chối yêu cầu hủy đơn hàng này của khách hàng.</p>
+            <textarea
+              className="w-full rounded-xl border border-gray-300 p-3 text-sm outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+              rows={3}
+              placeholder="Nhập lý do từ chối..."
+              value={rejectReason}
+              onChange={(e) => setRejectReason(e.target.value)}
+            />
+            <div className="mt-6 flex justify-end gap-3">
+              <button
+                onClick={() => setShowRejectModal(false)}
+                className="rounded-xl px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100"
+              >
+                Hủy
+              </button>
+              <button
+                onClick={() => {
+                  if (!rejectReason.trim()) {
+                    alert('Vui lòng nhập lý do');
+                    return;
+                  }
+                  setShowRejectModal(false);
+                  handleProcessCancelRequest(false, rejectReason);
+                }}
+                className="rounded-xl bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-700"
+              >
+                Xác nhận từ chối
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      <ConfirmModal
+        isOpen={showDirectConfirmModal}
+        title="Xác nhận đơn hàng"
+        message="Bạn có chắc muốn xác nhận đơn hàng này và chuyển xuống kho?"
+        onConfirm={() => {
+          setShowDirectConfirmModal(false);
+          handleConfirmOrder();
+        }}
+        onCancel={() => setShowDirectConfirmModal(false)}
+        confirmText="Xác nhận"
+      />
+
+      {showDirectCancelModal && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/40 p-4">
+          <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl">
+            <h3 className="mb-2 text-lg font-bold text-gray-900">Hủy đơn hàng</h3>
+            <p className="mb-4 text-sm text-gray-500">Vui lòng nhập lý do hủy đơn hàng này.</p>
+            <textarea
+              className="w-full rounded-xl border border-gray-300 p-3 text-sm outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+              rows={3}
+              placeholder="Nhập lý do hủy..."
+              value={directCancelReason}
+              onChange={(e) => setDirectCancelReason(e.target.value)}
+            />
+            <div className="mt-6 flex justify-end gap-3">
+              <button
+                onClick={() => setShowDirectCancelModal(false)}
+                className="rounded-xl px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100"
+              >
+                Đóng
+              </button>
+              <button
+                onClick={() => {
+                  if (!directCancelReason.trim()) {
+                    alert('Vui lòng nhập lý do');
+                    return;
+                  }
+                  setShowDirectCancelModal(false);
+                  handleProcessCancelRequest(true, directCancelReason);
+                }}
+                className="rounded-xl bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-700"
+              >
+                Xác nhận hủy
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

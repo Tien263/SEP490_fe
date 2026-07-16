@@ -25,6 +25,14 @@ async function request(method, url, body) {
   return json
 }
 
+export async function requestCancelOrder(orderId, body) {
+  return request('POST', `/orders/${orderId}/request-cancel`, body)
+}
+
+export async function processCancelRequest(orderId, body) {
+  return request('POST', `/orders/sales/${orderId}/process-cancel-request`, body)
+}
+
 // ─── Order History ────────────────────────────────────────────────────────────
 
 /**

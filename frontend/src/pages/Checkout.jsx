@@ -461,6 +461,9 @@ export default function Checkout() {
   const afterDiscount = subtotal - discountAmount
   const vat = vatRequested ? Math.round(afterDiscount * 0.1) : 0
   const total = afterDiscount + vat
+  const availableCredit = profileFull?.availableCredit || 0
+  const creditApplied = Math.min(total, availableCredit)
+  const finalPayment = total - creditApplied
   const selectedAddress = addresses.find((a) => a.id === selectedAddressId)
 
   // ── Countdown after success ────────────────────────────────────────────────
@@ -1312,9 +1315,17 @@ export default function Checkout() {
                           <span>+{formatPrice(vat)}</span>
                         </div>
                       )}
+                      
+                      {creditApplied > 0 && (
+                        <div className="flex justify-between text-sm text-blue-600">
+                          <span>Sử dụng Credit</span>
+                          <span>-{formatPrice(creditApplied)}</span>
+                        </div>
+                      )}
+
                       <div className="flex justify-between font-bold text-gray-900 pt-2 border-t border-gray-200">
-                        <span>Tổng thanh toán</span>
-                        <span className="text-lg">{formatPrice(total)}</span>
+                        <span>{creditApplied > 0 ? "Khách cần trả thêm" : "Tổng thanh toán"}</span>
+                        <span className="text-lg">{formatPrice(finalPayment)}</span>
                       </div>
                     </div>
 
@@ -1415,12 +1426,18 @@ export default function Checkout() {
                           <span>+{formatPrice(vat)}</span>
                         </div>
                       )}
+                      {creditApplied > 0 && (
+                        <div className="flex justify-between text-blue-600">
+                          <span>Sử dụng Credit</span>
+                          <span>-{formatPrice(creditApplied)}</span>
+                        </div>
+                      )}
                     </div>
 
                     <div className="mb-6 border-t border-gray-200 pt-4">
                       <div className="flex items-center justify-between">
-                        <span className="text-lg font-semibold text-gray-900">Tổng cộng</span>
-                        <span className="text-2xl font-bold text-gray-900">{formatPrice(total)}</span>
+                        <span className="text-lg font-semibold text-gray-900">{creditApplied > 0 ? "Cần thanh toán" : "Tổng cộng"}</span>
+                        <span className="text-2xl font-bold text-gray-900">{formatPrice(finalPayment)}</span>
                       </div>
                     </div>
 

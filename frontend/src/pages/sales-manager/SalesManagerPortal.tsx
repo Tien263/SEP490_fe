@@ -189,7 +189,7 @@ export default function SalesManagerPortal() {
         <header className="h-11 bg-white border-b border-gray-200 flex items-center px-4 gap-3 flex-shrink-0">
           <div className="flex-1" />
           <div className="flex items-center gap-0.5">
-            <NotificationBell role={role} />
+            <NotificationBell role={role} onViewAll={() => navigate('/sales-manager/notifications')} />
             <button className="p-1.5 rounded text-gray-500 hover:bg-gray-100 hover:text-gray-700 transition-colors">
               <Settings className="w-4 h-4" />
             </button>
