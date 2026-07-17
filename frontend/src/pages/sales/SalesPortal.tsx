@@ -255,7 +255,8 @@ export default function SalesPortal() {
       ]);
       setTimeout(() => setToasts((prev) => prev.filter((t) => t.id !== id)), 8000);
     };
-    connection.on('SalesChangeRequestCreated', pushMessageToast);
+    // Gate bảo vệ khách: Sale chỉ được báo khi Manager bấm "Yêu cầu giải trình" (không báo lúc khách tạo)
+    connection.on('SalesChangeRequestExplanationRequested', pushMessageToast);
     connection.on('SalesChangeRequestApproved', pushMessageToast);
     connection.on('SalesChangeRequestRejected', pushMessageToast);
 

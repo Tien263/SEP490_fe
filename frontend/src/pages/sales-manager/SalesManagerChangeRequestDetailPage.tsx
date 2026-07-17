@@ -1,16 +1,18 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { AlertCircle, ArrowLeft, Check, CircleHelp, Truck, X } from 'lucide-react';
+import { AlertCircle, ArrowLeft, Check, CircleHelp, MessageSquareWarning, Truck, X } from 'lucide-react';
 import {
   approveRequest,
   getRequestDetail,
   getReviewContext,
   rejectRequest,
+  requestExplanation,
   requestMoreInfo,
 } from '../../services/salesChangeRequestService';
 
 // LUỒNG 7 Bước 4+5+6 (MGR-06): Manager rà soát, yêu cầu bổ sung / từ chối / phê duyệt +
 // quyết định giữ/chuyển từng đơn đang chạy. Đơn đang giao mặc định giữ Sale cũ, override phải có lý do.
+// Gate bảo vệ khách: Sale hiện tại chỉ thấy khiếu nại sau khi Manager bấm "Yêu cầu giải trình".
 
 type Detail = {
   id: string;
@@ -24,8 +26,9 @@ type Detail = {
   problemDescription: string;
   evidenceUrls: string[];
   status: string;
+  explanationRequestedAt?: string;
   saleExplanation?: string;
-  saleRunningOrdersNote?: string;
+  saleExplanationFileUrls: string[];
   saleExplainedAt?: string;
   managerNote?: string;
   reviewedByName?: string;
@@ -139,6 +142,22 @@ export default function SalesManagerChangeRequestDetailPage() {
 
   function setDecisionNote(orderId: string, note: string) {
     setDecisions((prev) => ({ ...prev, [orderId]: { ...prev[orderId], note } }));
+  }
+
+  // Gate bảo vệ khách: mở giải trình thì Sale hiện tại mới thấy được khiếu nại
+  async function handleRequestExplanation() {
+    if (!id) return;
+    if (!window.confirm('Yêu cầu Sale hiện tại giải trình? Sau bước này Sale sẽ xem được nội dung khiếu nại của khách.')) return;
+    try {
+      setSubmitting(true);
+      await requestExplanation(id);
+      alert('Đã yêu cầu Sale giải trình.');
+      await loadData();
+    } catch (err: any) {
+      alert(err.message || 'Thao tác thất bại');
+    } finally {
+      setSubmitting(false);
+    }
   }
 
   async function handleModalSubmit() {
@@ -278,17 +297,42 @@ export default function SalesManagerChangeRequestDetailPage() {
                 <span className="ml-2 text-[11px] font-normal text-gray-400">({formatDate(detail.saleExplainedAt)})</span>
               )}
             </h3>
-            {detail.saleExplanation ? (
+
+            {/* Gate bảo vệ khách: Sale chưa thấy khiếu nại cho tới khi Manager mở giải trình */}
+            {!detail.explanationRequestedAt ? (
+              <div className="space-y-2">
+                <p className="text-[13px] text-gray-500">
+                  Sale hiện tại <span className="font-semibold">chưa được thông báo</span> về khiếu nại này
+                  (bảo vệ khách hàng). Bấm nút dưới nếu bạn cần Sale giải trình.
+                </p>
+                {isOpen && (
+                  <button
+                    onClick={handleRequestExplanation}
+                    disabled={submitting}
+                    className="inline-flex items-center gap-1.5 rounded border border-[#1F3B64] bg-white px-3 py-2 text-[12px] font-semibold text-[#1F3B64] transition hover:bg-[#1F3B64]/5 disabled:opacity-50"
+                  >
+                    <MessageSquareWarning className="h-3.5 w-3.5" />
+                    Yêu cầu Sale giải trình
+                  </button>
+                )}
+              </div>
+            ) : detail.saleExplanation ? (
               <>
                 <p className="text-[13px] text-gray-700">{detail.saleExplanation}</p>
-                {detail.saleRunningOrdersNote && (
-                  <p className="mt-1.5 text-[13px] text-gray-500">
-                    <span className="font-semibold">Đơn đang chạy:</span> {detail.saleRunningOrdersNote}
-                  </p>
+                {detail.saleExplanationFileUrls?.length > 0 && (
+                  <div className="mt-2 flex flex-wrap gap-2">
+                    {detail.saleExplanationFileUrls.map((url) => (
+                      <a key={url} href={url} target="_blank" rel="noreferrer">
+                        <img src={url} alt="File giải trình" className="h-16 w-16 rounded border border-gray-200 object-cover" />
+                      </a>
+                    ))}
+                  </div>
                 )}
               </>
             ) : (
-              <p className="text-[13px] text-gray-400">Sale chưa gửi giải trình.</p>
+              <p className="text-[13px] text-gray-400">
+                Đã yêu cầu giải trình lúc {formatDate(detail.explanationRequestedAt)} — Sale chưa phản hồi.
+              </p>
             )}
           </section>
 

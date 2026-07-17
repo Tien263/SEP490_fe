@@ -1,12 +1,13 @@
-import { useEffect, useState } from 'react';
-import { AlertCircle, ChevronDown, FileWarning, Send } from 'lucide-react';
+import { useEffect, useRef, useState } from 'react';
+import { AlertCircle, ChevronDown, FileWarning, Paperclip, Send, X } from 'lucide-react';
 import {
   getRequestsAboutMe,
   submitExplanation,
 } from '../../services/salesChangeRequestService';
 
-// LUỒNG 7 Bước 3: Sale hiện tại xem yêu cầu đổi Sale của khách (read-only) và gửi giải trình.
+// LUỒNG 7 Bước 3: Sale hiện tại xem yêu cầu đổi Sale của khách (read-only) và gửi giải trình kèm file.
 // Sale không có quyền sửa/xóa/từ chối yêu cầu của khách.
+// Gate bảo vệ khách: chỉ các yêu cầu Manager đã bấm "Yêu cầu giải trình" mới xuất hiện ở đây.
 
 type ChangeRequest = {
   id: string;
@@ -16,8 +17,9 @@ type ChangeRequest = {
   problemDescription: string;
   evidenceUrls: string[];
   status: string;
+  explanationRequestedAt?: string;
   saleExplanation?: string;
-  saleRunningOrdersNote?: string;
+  saleExplanationFileUrls: string[];
   saleExplainedAt?: string;
   managerNote?: string;
   customerAdditionalInfo?: string;
@@ -25,6 +27,8 @@ type ChangeRequest = {
   createdAt: string;
   reviewedAt?: string;
 };
+
+const MAX_FILES = 5;
 
 const STATUS_META: Record<string, { label: string; className: string }> = {
   Pending: { label: 'Đang chờ xử lý', className: 'bg-yellow-100 text-yellow-700' },
@@ -52,8 +56,9 @@ export default function SalesChangeRequestExplainPage() {
   const [expandedId, setExpandedId] = useState<string | null>(null);
 
   const [explanation, setExplanation] = useState('');
-  const [runningOrdersNote, setRunningOrdersNote] = useState('');
+  const [files, setFiles] = useState<File[]>([]);
   const [submitting, setSubmitting] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   async function loadData() {
     try {
@@ -78,7 +83,13 @@ export default function SalesChangeRequestExplainPage() {
     }
     setExpandedId(request.id);
     setExplanation(request.saleExplanation || '');
-    setRunningOrdersNote(request.saleRunningOrdersNote || '');
+    setFiles([]);
+  }
+
+  function handleFilesChange(event: React.ChangeEvent<HTMLInputElement>) {
+    const selected = Array.from(event.target.files || []);
+    setFiles((prev) => [...prev, ...selected].slice(0, MAX_FILES));
+    event.target.value = '';
   }
 
   async function handleSubmit(requestId: string) {
@@ -87,9 +98,10 @@ export default function SalesChangeRequestExplainPage() {
       setSubmitting(true);
       await submitExplanation(requestId, {
         explanation: explanation.trim(),
-        runningOrdersNote: runningOrdersNote.trim() || undefined,
+        files,
       });
       alert('Đã gửi giải trình cho quản lý.');
+      setFiles([]);
       await loadData();
     } catch (err: any) {
       alert(err.message || 'Gửi giải trình thất bại');
@@ -220,13 +232,59 @@ export default function SalesChangeRequestExplainPage() {
                             placeholder="Trình bày quan điểm của bạn về phản ánh của khách..."
                             className="w-full rounded border border-gray-300 px-3 py-2 text-[13px] outline-none focus:border-[#1F3B64] focus:ring-1 focus:ring-[#1F3B64]/30"
                           />
-                          <textarea
-                            value={runningOrdersNote}
-                            onChange={(e) => setRunningOrdersNote(e.target.value)}
-                            rows={2}
-                            placeholder="Thông tin các đơn đang chạy của khách (tiến độ, cam kết, lưu ý bàn giao)..."
-                            className="w-full rounded border border-gray-300 px-3 py-2 text-[13px] outline-none focus:border-[#1F3B64] focus:ring-1 focus:ring-[#1F3B64]/30"
+
+                          {/* File đính kèm giải trình (thay cho ô ghi chú text) */}
+                          <input
+                            ref={fileInputRef}
+                            type="file"
+                            accept="image/*"
+                            multiple
+                            className="hidden"
+                            onChange={handleFilesChange}
                           />
+                          <button
+                            type="button"
+                            onClick={() => fileInputRef.current?.click()}
+                            className="inline-flex items-center gap-1.5 rounded border border-dashed border-gray-300 px-3 py-2 text-[12px] text-gray-600 transition hover:border-[#1F3B64] hover:text-[#1F3B64]"
+                          >
+                            <Paperclip className="h-3.5 w-3.5" />
+                            Đính kèm file minh chứng (tối đa {MAX_FILES})
+                          </button>
+
+                          {files.length > 0 && (
+                            <div className="flex flex-wrap gap-2">
+                              {files.map((file, index) => (
+                                <div key={`${file.name}-${index}`} className="relative">
+                                  <img
+                                    src={URL.createObjectURL(file)}
+                                    alt={file.name}
+                                    className="h-14 w-14 rounded border border-gray-200 object-cover"
+                                  />
+                                  <button
+                                    type="button"
+                                    onClick={() => setFiles(files.filter((_, i) => i !== index))}
+                                    className="absolute -right-1.5 -top-1.5 rounded-full bg-[#1F3B64] p-0.5 text-white"
+                                  >
+                                    <X className="h-3 w-3" />
+                                  </button>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+
+                          {request.saleExplanationFileUrls?.length > 0 && (
+                            <div>
+                              <p className="mb-1 text-[11px] text-gray-400">File đã gửi trước đó:</p>
+                              <div className="flex flex-wrap gap-2">
+                                {request.saleExplanationFileUrls.map((url) => (
+                                  <a key={url} href={url} target="_blank" rel="noreferrer">
+                                    <img src={url} alt="File giải trình" className="h-14 w-14 rounded border border-gray-200 object-cover" />
+                                  </a>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+
                           <div className="flex justify-end">
                             <button
                               onClick={() => handleSubmit(request.id)}
@@ -241,8 +299,14 @@ export default function SalesChangeRequestExplainPage() {
                       ) : request.saleExplanation ? (
                         <div className="space-y-1 text-[13px] text-gray-800">
                           <p>{request.saleExplanation}</p>
-                          {request.saleRunningOrdersNote && (
-                            <p className="text-gray-500">Đơn đang chạy: {request.saleRunningOrdersNote}</p>
+                          {request.saleExplanationFileUrls?.length > 0 && (
+                            <div className="flex flex-wrap gap-2 pt-1">
+                              {request.saleExplanationFileUrls.map((url) => (
+                                <a key={url} href={url} target="_blank" rel="noreferrer">
+                                  <img src={url} alt="File giải trình" className="h-14 w-14 rounded border border-gray-200 object-cover" />
+                                </a>
+                              ))}
+                            </div>
                           )}
                         </div>
                       ) : (
