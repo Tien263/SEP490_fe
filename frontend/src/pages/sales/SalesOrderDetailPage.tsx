@@ -110,6 +110,13 @@ type SalesOrderDetail = {
   deliveryStatus?: string;
   invoicePdfUrl?: string;
   items: OrderItem[];
+  scheduledDeliveryDate?: string;
+  deliveryShift?: string;
+  deliveryVehicleId?: number;
+  failedDeliveryCount?: number;
+  customerSignatureUrl?: string;
+  deliveryPhotoUrl?: string;
+  amountPaid?: number;
 };
 
 // ─── Timeline Steps ─────────────────────────────────────────────────────
@@ -586,6 +593,65 @@ export default function SalesOrderDetailPage() {
                     </div>
                   </div>
                 </div>
+
+                {order.scheduledDeliveryDate && (
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="p-3 rounded-xl bg-slate-50">
+                      <p className="text-[10px] uppercase tracking-wider text-slate-400 font-semibold">Ngày giao dự kiến</p>
+                      <p className="text-xs font-semibold text-slate-700 mt-1">{new Date(order.scheduledDeliveryDate).toLocaleDateString('vi-VN')}</p>
+                    </div>
+                    {order.deliveryShift && (
+                      <div className="p-3 rounded-xl bg-slate-50">
+                        <p className="text-[10px] uppercase tracking-wider text-slate-400 font-semibold">Ca giao</p>
+                        <p className="text-xs font-semibold text-slate-700 mt-1">{order.deliveryShift}</p>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {order.deliveryVehicleId && (
+                  <div className="flex items-center gap-3 p-3 rounded-xl bg-slate-50">
+                    <Truck className="w-4 h-4 text-slate-400 shrink-0" />
+                    <div className="min-w-0">
+                      <p className="text-[10px] uppercase tracking-wider text-slate-400 font-semibold">Xe giao hàng</p>
+                      <p className="text-sm font-medium text-slate-900">Xe {order.deliveryVehicleId}</p>
+                    </div>
+                  </div>
+                )}
+
+                {order.failedDeliveryCount > 0 && (
+                  <div className="flex items-center gap-3 p-3 rounded-xl bg-red-50 text-red-700">
+                    <AlertTriangle className="w-4 h-4 shrink-0" />
+                    <div className="min-w-0">
+                      <p className="text-[10px] uppercase tracking-wider text-red-400 font-semibold">Số lần giao thất bại</p>
+                      <p className="text-sm font-bold">{order.failedDeliveryCount} lần</p>
+                    </div>
+                  </div>
+                )}
+
+                {(order.customerSignatureUrl || order.deliveryPhotoUrl) && (
+                  <div className="border-t border-slate-100 pt-3 space-y-2">
+                    <p className="text-[10px] uppercase tracking-wider text-slate-400 font-semibold">Bằng chứng giao hàng (POD)</p>
+                    <div className="flex gap-3">
+                      {order.customerSignatureUrl && (
+                        <div className="flex-1">
+                          <p className="text-[9px] text-slate-400 mb-1">Chữ ký khách hàng</p>
+                          <div className="border border-slate-150 rounded-lg p-1 bg-slate-50 flex justify-center">
+                            <img src={order.customerSignatureUrl} alt="Chữ ký" className="h-14 object-contain animate-fadeIn" />
+                          </div>
+                        </div>
+                      )}
+                      {order.deliveryPhotoUrl && (
+                        <div className="flex-1">
+                          <p className="text-[9px] text-slate-400 mb-1">Ảnh thực tế</p>
+                          <div className="border border-slate-150 rounded-lg p-1 bg-slate-50 flex justify-center">
+                            <img src={order.deliveryPhotoUrl} alt="Ảnh hiện trường" className="h-14 w-full object-cover rounded animate-fadeIn" />
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
 
@@ -641,6 +707,18 @@ export default function SalesOrderDetailPage() {
                     {formatPrice(order.finalPayment)} ₫
                   </span>
                 </div>
+                {(order.amountPaid > 0 || order.paymentStatus === 'PartiallyPaid') && (
+                  <div className="border-t border-dashed border-slate-200 pt-3 space-y-2 text-xs">
+                    <div className="flex justify-between text-slate-500">
+                      <span>Đã thanh toán (Thực thu)</span>
+                      <span className="font-semibold text-emerald-600 tabular-nums">{formatPrice(order.amountPaid)} ₫</span>
+                    </div>
+                    <div className="flex justify-between text-slate-500">
+                      <span>Còn thiếu (Công nợ)</span>
+                      <span className="font-semibold text-amber-600 tabular-nums">{formatPrice(Math.max(0, order.finalPayment - order.amountPaid))} ₫</span>
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
           </div>

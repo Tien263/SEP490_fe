@@ -514,6 +514,18 @@ export default function OrderDetail() {
                       <span className="text-xl font-bold text-gray-900">{formatPrice(order.finalPayment)}</span>
                     </div>
                   </div>
+                  {(order.amountPaid > 0 || order.paymentStatus === 'PartiallyPaid') && (
+                    <div className="border-t border-dashed border-gray-100 pt-3 space-y-2 text-xs">
+                      <div className="flex items-center justify-between text-gray-600">
+                        <span>Đã thu (Thực tế)</span>
+                        <span className="font-semibold text-emerald-600">{formatPrice(order.amountPaid)}</span>
+                      </div>
+                      <div className="flex items-center justify-between text-gray-600">
+                        <span>Còn thiếu (Công nợ)</span>
+                        <span className="font-semibold text-amber-600">{formatPrice(Math.max(0, order.finalPayment - order.amountPaid))}</span>
+                      </div>
+                    </div>
+                  )}
                 </div>
               </section>
 
