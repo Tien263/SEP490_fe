@@ -422,7 +422,7 @@ export default function SalesDeliveryArrangementPage() {
                         >
                           <div className="min-w-0 flex-1">
                             <div className="flex items-center gap-1.5">
-                              {isLocked && <Lock className="h-3 w-3 text-gray-400" title="Đã chốt lịch" />}
+                              {isLocked && <span title="Đã chốt lịch"><Lock className="h-3 w-3 text-gray-400" /></span>}
                               <span className="font-semibold text-[#1F3B64]">{order.orderCode}</span>
                             </div>
                             <p className="truncate text-[11px] text-gray-600 mt-0.5">{order.customer}</p>
