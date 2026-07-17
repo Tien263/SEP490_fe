@@ -79,12 +79,17 @@ export async function getRequestsAboutMe() {
 }
 
 /**
- * Gửi giải trình của Sale hiện tại.
+ * Gửi giải trình của Sale hiện tại (multipart — kèm file đính kèm).
  * @param {string} id
- * @param {{ explanation: string, runningOrdersNote?: string }} payload
+ * @param {{ explanation: string, files?: File[] }} payload
  */
 export async function submitExplanation(id, payload) {
-  return request('PUT', `/sales-change-requests/${id}/explanation`, payload)
+  const fd = new FormData()
+  fd.append('Explanation', payload.explanation)
+  if (payload.files?.length) {
+    for (const file of payload.files) fd.append('Files', file)
+  }
+  return fetchFormDataWithToken('PUT', `/sales-change-requests/${id}/explanation`, fd)
 }
 
 // ─── Sales Manager ───────────────────────────────────────────────────────────
@@ -101,6 +106,11 @@ export async function getManagerList(params = {}) {
 
   const query = qs.toString()
   return request('GET', `/sales-change-requests${query ? `?${query}` : ''}`)
+}
+
+/** Gate bảo vệ khách: Manager mở giải trình thì Sale hiện tại mới thấy được khiếu nại */
+export async function requestExplanation(id) {
+  return request('PUT', `/sales-change-requests/${id}/request-explanation`)
 }
 
 /** Chi tiết yêu cầu */
