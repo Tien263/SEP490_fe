@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { getSuppliers } from '../../services/supplierService.js';
 import { getProducts } from '../../services/productService.js';
+import { getMaterials } from '../../services/materialService.js';
 import { createPurchaseOrder, getWarehouses, importPOFromExcel, importPOFromImage } from '../../services/purchaseOrderService.js';
 import { X, Plus, Trash2, Upload, FileSpreadsheet, Image as ImageIcon } from 'lucide-react';
 
@@ -8,10 +9,13 @@ export default function CEOPurchaseOrderCreateModal({ onClose, onSuccess }: any)
   const [suppliers, setSuppliers] = useState<any[]>([]);
   const [warehouses, setWarehouses] = useState<any[]>([]);
   const [products, setProducts] = useState<any[]>([]);
+  const [materials, setMaterials] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [importing, setImporting] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const imageInputRef = useRef<HTMLInputElement>(null);
+
+  const [poType, setPoType] = useState<'Product' | 'Material'>('Product');
 
   const [formData, setFormData] = useState({
     supplierId: '',
@@ -22,26 +26,30 @@ export default function CEOPurchaseOrderCreateModal({ onClose, onSuccess }: any)
   });
 
   const [items, setItems] = useState<any[]>([
-    { productId: '', productName: '', expectedQuantity: 1, unitPrice: 0, unit: 'Cái', note: '' }
+    { itemId: '', itemName: '', expectedQuantity: 1, unitPrice: 0, unit: 'Cái', note: '' }
   ]);
 
   useEffect(() => {
     async function loadInitialData() {
       try {
         setLoading(true);
-        const [supData, whData, prodData] = await Promise.all([
+        const [supData, whData, prodData, matData] = await Promise.all([
           getSuppliers().catch(() => []),
           getWarehouses().catch(() => []),
-          getProducts({ pageSize: 100 }).catch(() => ({ items: [] }))
+          getProducts({ pageSize: 100 }).catch(() => ({ items: [] })),
+          getMaterials().catch(() => [])
         ]);
 
         const loadedSuppliers = supData || [];
         const loadedWarehouses = whData || [];
         const loadedProducts = prodData?.items || prodData || [];
+        // Xử lý list materials, có thể trả về array hoặc { items: [] } tuỳ api
+        const loadedMaterials = Array.isArray(matData) ? matData : (matData?.items || []);
 
         setSuppliers(loadedSuppliers);
         setWarehouses(loadedWarehouses);
         setProducts(loadedProducts);
+        setMaterials(loadedMaterials);
 
         setFormData(prev => ({
           ...prev,
@@ -57,13 +65,21 @@ export default function CEOPurchaseOrderCreateModal({ onClose, onSuccess }: any)
     loadInitialData();
   }, []);
 
-  const handleProductChange = (index: number, productId: string) => {
-    const selectedProd = products.find((p: any) => p.id === productId);
+  // Khi thay đổi loại PO, reset danh sách mặt hàng
+  useEffect(() => {
+    setItems([{ itemId: '', itemName: '', expectedQuantity: 1, unitPrice: 0, unit: poType === 'Product' ? 'Cái' : 'Kg', note: '' }]);
+  }, [poType]);
+
+  const handleItemChange = (index: number, itemId: string) => {
+    const selectedItem = poType === 'Product' 
+      ? products.find((p: any) => p.id === itemId)
+      : materials.find((m: any) => m.id === itemId);
+      
     const newItems = [...items];
-    newItems[index].productId = productId;
-    if (selectedProd) {
-      newItems[index].productName = selectedProd.name;
-      newItems[index].unitPrice = selectedProd.standardListedPrice || 0;
+    newItems[index].itemId = itemId;
+    if (selectedItem) {
+      newItems[index].itemName = selectedItem.name;
+      newItems[index].unitPrice = selectedItem.standardListedPrice || 0;
     }
     setItems(newItems);
   };
@@ -77,9 +93,9 @@ export default function CEOPurchaseOrderCreateModal({ onClose, onSuccess }: any)
         return alert("Vui lòng chọn Kho nhận hàng.");
       }
       
-      const validItems = items.filter(i => i.productId && i.expectedQuantity > 0);
+      const validItems = items.filter(i => i.itemId && i.expectedQuantity > 0);
       if (validItems.length === 0) {
-        return alert("Vui lòng chọn ít nhất 1 sản phẩm với số lượng > 0.");
+        return alert(`Vui lòng chọn ít nhất 1 ${poType === 'Product' ? 'sản phẩm' : 'nguyên liệu'} với số lượng > 0.`);
       }
 
       const payload = {
@@ -89,10 +105,11 @@ export default function CEOPurchaseOrderCreateModal({ onClose, onSuccess }: any)
         note: formData.note || null,
         deliveryTerms: formData.deliveryTerms || null,
         items: validItems.map(i => ({
-          productId: i.productId,
+          productId: poType === 'Product' ? i.itemId : null,
+          materialId: poType === 'Material' ? i.itemId : null,
           expectedQuantity: parseInt(i.expectedQuantity) || 1,
           unitPrice: parseFloat(i.unitPrice) || 0,
-          unit: i.unit || 'Cái',
+          unit: i.unit || (poType === 'Product' ? 'Cái' : 'Kg'),
           note: i.note || null
         }))
       };
@@ -167,6 +184,32 @@ export default function CEOPurchaseOrderCreateModal({ onClose, onSuccess }: any)
                 >
                   <ImageIcon className="w-4 h-4" /> {importing ? 'Đang xử lý...' : 'Upload Hóa đơn (Ảnh)'}
                 </button>
+
+                <div className="ml-auto flex items-center gap-4 bg-gray-50 px-4 py-1.5 rounded-full border">
+                  <span className="text-sm font-medium text-gray-700">Loại đơn:</span>
+                  <label className="flex items-center gap-1.5 text-sm cursor-pointer">
+                    <input 
+                      type="radio" 
+                      name="poType" 
+                      value="Product" 
+                      checked={poType === 'Product'} 
+                      onChange={() => setPoType('Product')} 
+                      className="text-blue-600"
+                    />
+                    <span>Thành phẩm</span>
+                  </label>
+                  <label className="flex items-center gap-1.5 text-sm cursor-pointer">
+                    <input 
+                      type="radio" 
+                      name="poType" 
+                      value="Material" 
+                      checked={poType === 'Material'} 
+                      onChange={() => setPoType('Material')}
+                      className="text-blue-600"
+                    />
+                    <span>Nguyên liệu</span>
+                  </label>
+                </div>
               </div>
 
               <div className="grid grid-cols-2 gap-4">
@@ -232,19 +275,19 @@ export default function CEOPurchaseOrderCreateModal({ onClose, onSuccess }: any)
 
               <div>
                 <div className="flex justify-between items-center mb-2">
-                  <h3 className="font-semibold text-sm text-[#1f3b64]">Danh sách sản phẩm / vật tư mua</h3>
+                  <h3 className="font-semibold text-sm text-[#1f3b64]">Danh sách {poType === 'Product' ? 'sản phẩm' : 'nguyên liệu'} mua</h3>
                   <button 
-                    onClick={() => setItems([...items, { productId: '', productName: '', expectedQuantity: 1, unitPrice: 0, unit: 'Cái', note: '' }])} 
+                    onClick={() => setItems([...items, { itemId: '', itemName: '', expectedQuantity: 1, unitPrice: 0, unit: poType === 'Product' ? 'Cái' : 'Kg', note: '' }])} 
                     className="text-xs text-blue-600 hover:text-blue-800 flex items-center gap-1 font-medium"
                   >
-                    <Plus className="w-3.5 h-3.5" /> Thêm sản phẩm
+                    <Plus className="w-3.5 h-3.5" /> Thêm {poType === 'Product' ? 'sản phẩm' : 'nguyên liệu'}
                   </button>
                 </div>
                 
                 <table className="w-full border text-sm">
                   <thead className="bg-gray-50 text-xs text-gray-500 text-left">
                     <tr>
-                      <th className="p-2 border-b">Sản phẩm *</th>
+                      <th className="p-2 border-b">{poType === 'Product' ? 'Sản phẩm *' : 'Nguyên liệu *'}</th>
                       <th className="p-2 border-b w-[80px]">ĐVT</th>
                       <th className="p-2 border-b w-[100px]">Số lượng</th>
                       <th className="p-2 border-b w-[130px]">Đơn giá (VNĐ)</th>
@@ -257,13 +300,14 @@ export default function CEOPurchaseOrderCreateModal({ onClose, onSuccess }: any)
                         <td className="p-2 border-b">
                           <select 
                             className="w-full border rounded px-2 py-1 text-sm outline-none focus:border-blue-500"
-                            value={item.productId}
-                            onChange={e => handleProductChange(index, e.target.value)}
+                            value={item.itemId}
+                            onChange={e => handleItemChange(index, e.target.value)}
                           >
-                            <option value="">-- Chọn sản phẩm --</option>
-                            {products.map(p => (
-                              <option key={p.id} value={p.id}>{p.name} ({p.sku})</option>
-                            ))}
+                            <option value="">-- Chọn {poType === 'Product' ? 'sản phẩm' : 'nguyên liệu'} --</option>
+                            {poType === 'Product' 
+                              ? products.map(p => <option key={p.id} value={p.id}>{p.name} ({p.sku})</option>)
+                              : materials.map(m => <option key={m.id} value={m.id}>{m.name}</option>)
+                            }
                           </select>
                         </td>
                         <td className="p-2 border-b">
