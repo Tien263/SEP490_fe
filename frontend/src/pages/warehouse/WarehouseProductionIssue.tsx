@@ -1,8 +1,10 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Button } from '../../components/sales-ui/button';
 import { Input } from '../../components/sales-ui/input';
-import { Search, Eye, RefreshCw, Download, Upload, Send, Save, CheckCircle, Camera, FileText } from 'lucide-react';
+import { Search, Eye, RefreshCw, Download, Upload, Send, Save, CheckCircle, Camera, FileText, Plus } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../../components/sales-ui/dialog';
+import { getGoodsIssues, postGoodsIssue, uploadGoodsIssueProof } from '../../services/warehouseService';
+import WarehouseProductionIssueFormModal from './WarehouseProductionIssueFormModal';
 
 const PRIMARY = '#1F3B64';
 const SUCCESS = '#16A34A';
@@ -19,63 +21,12 @@ const STATUS_CFG: Record<string, { label: string; bg: string }> = {
   cancelled:     { label: 'Đã hủy',             bg: ERROR   },
 };
 
-interface IssueLine { sku: string; materialName: string; unit: string; requestedQty: number; issuedQty: number; warehouseLocation: string; batch: string; lot: string }
-interface ProductionIssue {
-  id: string; productionRequest: string; warehouse: string;
-  factory: string; productionLine: string; receiver: string;
-  issueDate: string; status: string; hasProof: boolean;
-  lines: IssueLine[];
-  timeline: { time: string; event: string; user: string }[];
-}
 
-const DATA: ProductionIssue[] = [
-  {
-    id: 'PI-2406-0031', productionRequest: 'PR-2406-0089', warehouse: 'Kho Hà Nội',
-    factory: 'Xưởng may A - Hà Đông', productionLine: 'Chuyền 3', receiver: 'Nguyễn Thị Bích',
-    issueDate: '06/07/2026 07:30', status: 'proof_pending', hasProof: false,
-    lines: [
-      { sku: 'VT-CT-001', materialName: 'Vải cotton khổ 1.5m', unit: 'mét', requestedQty: 300, issuedQty: 300, warehouseLocation: 'A-01-03', batch: 'B2407-CT-001', lot: 'L001' },
-      { sku: 'VT-LN-003', materialName: 'Vải linen nhập khẩu', unit: 'mét', requestedQty: 100, issuedQty: 100, warehouseLocation: 'A-02-08', batch: 'B2407-LN-001', lot: 'L001' },
-    ],
-    timeline: [
-      { time: '06/07 07:00', event: 'Tạo lệnh xuất nguyên liệu', user: 'Hệ thống' },
-      { time: '06/07 07:30', event: 'Chuẩn bị nguyên liệu', user: 'Trần Văn Bình' },
-    ],
-  },
-  {
-    id: 'PI-2406-0030', productionRequest: 'PR-2406-0088', warehouse: 'Kho Hà Nội',
-    factory: 'Xưởng may B - Thanh Trì', productionLine: 'Chuyền 1', receiver: 'Lê Văn Minh',
-    issueDate: '05/07/2026 08:00', status: 'posted', hasProof: true,
-    lines: [],
-    timeline: [
-      { time: '05/07 08:00', event: 'Chuẩn bị nguyên liệu', user: 'Nguyễn Văn Thành' },
-      { time: '05/07 09:00', event: 'Upload chứng từ ký', user: 'Nguyễn Văn Thành' },
-      { time: '05/07 09:30', event: 'Đăng sổ, trừ tồn kho', user: 'Hệ thống' },
-    ],
-  },
-  {
-    id: 'PI-2406-0029', productionRequest: 'PR-2406-0087', warehouse: 'Kho HCM',
-    factory: 'Xưởng may C - Bình Dương', productionLine: 'Chuyền 2', receiver: 'Phạm Thị Lan',
-    issueDate: '05/07/2026 07:00', status: 'proof_uploaded', hasProof: true,
-    lines: [
-      { sku: 'VT-DM-005', materialName: 'Vải denim cao cấp', unit: 'mét', requestedQty: 150, issuedQty: 150, warehouseLocation: 'A-03-06', batch: 'B2407-DM-001', lot: 'L002' },
-    ],
-    timeline: [
-      { time: '05/07 07:00', event: 'Chuẩn bị nguyên liệu', user: 'Phạm Thị Hương' },
-      { time: '05/07 08:30', event: 'Upload chứng từ', user: 'Phạm Thị Hương' },
-    ],
-  },
-  {
-    id: 'PI-2406-0028', productionRequest: 'PR-2406-0086', warehouse: 'Kho Hà Nội',
-    factory: 'Xưởng may A - Hà Đông', productionLine: 'Chuyền 4', receiver: 'Trần Thị Hà',
-    issueDate: '06/07/2026 10:00', status: 'draft', hasProof: false,
-    lines: [],
-    timeline: [{ time: '06/07 10:00', event: 'Tạo nháp lệnh xuất', user: 'Lê Văn Dũng' }],
-  },
-];
 
+// We use any for real data mapping now
 function Badge({ status }: { status: string }) {
-  const c = STATUS_CFG[status] || { label: status, bg: NEUTRAL };
+  const normalizedStatus = status?.toLowerCase() || 'draft';
+  const c = STATUS_CFG[normalizedStatus] || { label: normalizedStatus, bg: NEUTRAL };
   return <span className="text-[10px] font-semibold text-white px-2 py-0.5 inline-block whitespace-nowrap" style={{ backgroundColor: c.bg, borderRadius: 4 }}>{c.label}</span>;
 }
 
@@ -86,12 +37,47 @@ export default function WarehouseProductionIssue() {
   const [dateTo, setDateTo] = useState('');
   const [warehouseFilter, setWarehouseFilter] = useState('all');
   const [selected, setSelected] = useState<string[]>([]);
-  const [detail, setDetail] = useState<ProductionIssue | null>(null);
-  const [items, setItems] = useState(DATA);
+  const [detail, setDetail] = useState<any | null>(null);
+  const [items, setItems] = useState<any[]>([]);
   const [showUpload, setShowUpload] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [uploaded, setUploaded] = useState(false);
   const [fileToUpload, setFileToUpload] = useState<File | null>(null);
+  const [showCreateModal, setShowCreateModal] = useState(false);
+
+  const loadData = () => {
+    getGoodsIssues('ProductionMaterial')
+      .then(res => {
+        // Map DTO to match frontend expected format loosely
+        const mapped = res.map((r: any) => ({
+          ...r,
+          id: r.code || r.id, // Display code as ID
+          productionRequest: r.referenceId || 'N/A',
+          warehouse: r.warehouseName,
+          factory: r.note?.replace('Xuất cho: ', '') || 'N/A',
+          receiver: r.issuedByName || 'N/A',
+          issueDate: r.issueDate ? new Date(r.issueDate).toLocaleString('vi-VN') : (new Date(r.createdAt).toLocaleString('vi-VN')),
+          hasProof: !!r.imageProofUrl,
+          lines: (r.items || []).map((i: any) => ({
+            sku: i.productSku,
+            materialName: i.productName,
+            unit: i.unit,
+            requestedQty: i.quantity,
+            issuedQty: i.quantity,
+            warehouseLocation: 'Normal', // N/A
+            batch: 'N/A',
+            lot: 'N/A'
+          })),
+          timeline: [] // Could be populated from DB
+        }));
+        setItems(mapped);
+      })
+      .catch(console.error);
+  };
+
+  useEffect(() => {
+    loadData();
+  }, []);
 
   const filtered = items.filter(d => {
     const q = search.toLowerCase();
@@ -103,15 +89,28 @@ export default function WarehouseProductionIssue() {
   const toggleSelect = (id: string) => setSelected(p => p.includes(id) ? p.filter(x => x !== id) : [...p, id]);
   const toggleAll = () => setSelected(p => p.length === filtered.length ? [] : filtered.map(d => d.id));
 
-  const postGoods = async (id: string) => {
+  const postGoods = async (id: string, realId: string) => {
+    try {
+      await postGoodsIssue(realId);
+      alert('Đăng sổ thành công!');
+      loadData();
+      setDetail(null);
+    } catch (err: any) { alert(err.message); }
+  };
+
+  const uploadProof = async (realId: string) => {
     try {
       if (!fileToUpload) return alert('Vui lòng upload chứng từ!');
-      const { postProductionMaterialIssue } = await import('../../services/warehouseService.js');
-      await postProductionMaterialIssue(id, fileToUpload);
-      alert('Đăng sổ thành công!');
-      setItems(p => p.map(i => i.id === id ? { ...i, status: 'posted', hasProof: true } : i));
-      setDetail(p => p?.id === id ? { ...p, status: 'posted', hasProof: true } : p);
-    } catch (err: any) { alert(err.message); }
+      setUploading(true);
+      await uploadGoodsIssueProof(realId, fileToUpload);
+      alert('Upload chứng từ thành công!');
+      setUploaded(true);
+      loadData();
+    } catch (err: any) { 
+      alert(err.message); 
+    } finally {
+      setUploading(false);
+    }
   };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -132,8 +131,9 @@ export default function WarehouseProductionIssue() {
             <p className="text-xs text-gray-500 mt-0.5">{items.length} lệnh · {items.filter(i => i.status === 'proof_pending').length} chờ chứng từ · {items.filter(i => i.status === 'proof_uploaded').length} chờ đăng sổ</p>
           </div>
           <div className="flex items-center gap-2">
-            <Button variant="outline" size="sm" className="h-7 text-xs gap-1.5"><RefreshCw className="w-3 h-3" /> Làm mới</Button>
+            <Button variant="outline" size="sm" className="h-7 text-xs gap-1.5" onClick={loadData}><RefreshCw className="w-3 h-3" /> Làm mới</Button>
             <Button variant="outline" size="sm" className="h-7 text-xs gap-1.5"><Download className="w-3 h-3" /> Xuất Excel</Button>
+            <Button size="sm" className="h-7 text-xs gap-1.5" style={{ backgroundColor: PRIMARY }} onClick={() => setShowCreateModal(true)}><Plus className="w-3 h-3" /> Tạo lệnh xuất</Button>
           </div>
         </div>
         <div className="flex items-center gap-2">
@@ -204,11 +204,11 @@ export default function WarehouseProductionIssue() {
                   <td className="px-3 py-2.5 text-center">
                     <div className="flex items-center justify-center gap-1">
                       <button className="p-1 rounded hover:bg-blue-50 text-gray-400 hover:text-blue-600" onClick={() => { setDetail(d); setUploaded(false); }}><Eye className="w-3.5 h-3.5" /></button>
-                      {d.status === 'proof_pending' && (
+                      {d.status?.toLowerCase() === 'proofpending' && (
                         <button className="p-1 rounded hover:bg-orange-50 text-gray-400 hover:text-orange-600" onClick={() => { setDetail(d); setShowUpload(true); setUploaded(false); }} title="Upload chứng từ"><Upload className="w-3.5 h-3.5" /></button>
                       )}
-                      {d.status === 'proof_uploaded' && (
-                        <button className="p-1 rounded hover:bg-green-50 text-gray-400 hover:text-green-600" onClick={() => postGoods(d.id)} title="Đăng sổ"><Send className="w-3.5 h-3.5" /></button>
+                      {d.status?.toLowerCase() === 'proofuploaded' && (
+                        <button className="p-1 rounded hover:bg-green-50 text-gray-400 hover:text-green-600" onClick={() => postGoods(d.id, d.id)} title="Đăng sổ"><Send className="w-3.5 h-3.5" /></button>
                       )}
                     </div>
                   </td>
@@ -301,11 +301,11 @@ export default function WarehouseProductionIssue() {
 
               <div className="flex gap-2 pt-2 border-t border-gray-100">
                 <Button variant="outline" size="sm" className="h-7 text-xs gap-1.5"><Save className="w-3.5 h-3.5" /> Lưu nháp</Button>
-                {detail.status === 'proof_pending' && (
+                {detail.status?.toLowerCase() === 'proofpending' && (
                   <Button size="sm" className="h-7 text-xs gap-1.5" style={{ backgroundColor: WARNING }} onClick={() => setShowUpload(true)}><Upload className="w-3.5 h-3.5" /> Upload chứng từ</Button>
                 )}
-                {detail.status === 'proof_uploaded' && (
-                  <Button size="sm" className="h-7 text-xs gap-1.5" style={{ backgroundColor: PRIMARY }} onClick={() => postGoods(detail.id)}><Send className="w-3.5 h-3.5" /> Đăng sổ hàng xuất</Button>
+                {detail.status?.toLowerCase() === 'proofuploaded' && (
+                  <Button size="sm" className="h-7 text-xs gap-1.5" style={{ backgroundColor: PRIMARY }} onClick={() => postGoods(detail.id, detail.id)}><Send className="w-3.5 h-3.5" /> Đăng sổ hàng xuất</Button>
                 )}
                 <Button variant="outline" size="sm" className="h-7 text-xs gap-1.5"><FileText className="w-3.5 h-3.5" /> In phiếu xuất</Button>
                 <Button variant="outline" size="sm" className="h-7 text-xs ml-auto" onClick={() => setDetail(null)}>Đóng</Button>
@@ -354,8 +354,13 @@ export default function WarehouseProductionIssue() {
               </div>
             )}
             <div className="flex gap-2 justify-end">
+              {fileToUpload && !uploaded && (
+                <Button size="sm" className="h-7 text-xs gap-1.5" style={{ backgroundColor: PRIMARY }} onClick={() => uploadProof(detail.id)}>
+                  <Upload className="w-3.5 h-3.5" /> Tải lên
+                </Button>
+              )}
               {uploaded && detail && (
-                <Button size="sm" className="h-7 text-xs gap-1.5" style={{ backgroundColor: PRIMARY }} onClick={() => { postGoods(detail.id); setShowUpload(false); }}>
+                <Button size="sm" className="h-7 text-xs gap-1.5" style={{ backgroundColor: PRIMARY }} onClick={() => { postGoods(detail.id, detail.id); setShowUpload(false); }}>
                   <Send className="w-3.5 h-3.5" /> Đăng sổ ngay
                 </Button>
               )}
@@ -364,6 +369,13 @@ export default function WarehouseProductionIssue() {
           </div>
         </DialogContent>
       </Dialog>
+
+      {showCreateModal && (
+        <WarehouseProductionIssueFormModal 
+          onClose={() => setShowCreateModal(false)}
+          onSuccess={() => { setShowCreateModal(false); loadData(); }}
+        />
+      )}
     </div>
   );
 }

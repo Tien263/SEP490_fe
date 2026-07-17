@@ -98,6 +98,40 @@ export async function cancelStockTransfer(id) {
   return request('POST', `/stock-transfers/${id}/cancel`);
 }
 
+// ─── Goods Issue ───────────────────────────────────────────────
+
+export async function getGoodsIssues(type) {
+  return request('GET', `/goods-issues?type=${type || ''}`);
+}
+
+export async function createGoodsIssue(data) {
+  return request('POST', `/goods-issues`, data);
+}
+
+export async function uploadGoodsIssueProof(id, imageFile) {
+  const formData = new FormData();
+  formData.append('file', imageFile);
+  const accessToken = localStorage.getItem('accessToken');
+  const headers = {};
+  if (accessToken) headers['Authorization'] = `Bearer ${accessToken}`;
+
+  const res = await fetch(`${API_BASE}/goods-issues/${id}/upload-proof`, {
+    method: 'POST',
+    headers,
+    body: formData,
+  });
+  if (!res.ok) {
+    const json = await res.json().catch(() => ({}));
+    throw new Error(json.message || `Lỗi ${res.status}`);
+  }
+  return res.json();
+}
+
+export async function postGoodsIssue(id) {
+  return request('POST', `/goods-issues/${id}/post`);
+}
+
+
 export async function receiveStockTransfer(id, formData) {
   const accessToken = localStorage.getItem('accessToken');
   const headers = {};
@@ -131,36 +165,8 @@ export async function salesConfirmHandover(id) {
   return request('POST', `/handover-records/${id}/sales-confirm`);
 }
 
-export async function getGoodsIssues(type) {
-  return request('GET', `/goods-issues?type=${type || ''}`);
-}
-
 export async function getGoodsIssueById(id) {
   return request('GET', `/goods-issues/${id}`);
-}
-
-export async function createGoodsIssue(data) {
-  return request('POST', `/goods-issues`, data);
-}
-
-export async function postGoodsIssue(id) {
-  return request('POST', `/goods-issues/${id}/post`);
-}
-
-export async function postProductionMaterialIssue(id, file) {
-  const formData = new FormData();
-  formData.append('signedProof', file);
-  const accessToken = localStorage.getItem('accessToken');
-  const headers = {};
-  if (accessToken) headers['Authorization'] = `Bearer ${accessToken}`;
-
-  const res = await fetch(`${API_BASE}/production-material-issues/${id}/post`, {
-    method: 'POST',
-    headers,
-    body: formData,
-  });
-  if (!res.ok) throw new Error(`Lỗi ${res.status}`);
-  return res.json();
 }
 
 export async function getWarehouseInventory(warehouseId, params) {

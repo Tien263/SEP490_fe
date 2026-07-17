@@ -5,11 +5,12 @@ import CEOPriceNegotiationDetail from './CEOPriceNegotiationDetail';
 import CEOPurchaseOrderPage from './CEOPurchaseOrderPage';
 import CEOSupplierManagementPage from './CEOSupplierManagementPage';
 import CEOPurchaseOrderDetailPage from './CEOPurchaseOrderDetailPage';
+import CEOMaterialManagementPage from './CEOMaterialManagementPage';
 import { useAuth } from '../../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import {
   LayoutDashboard, DollarSign,
-  Package, Users, LogOut, Bell, Building
+  Package, Users, LogOut, Bell, Building, Layers
 } from 'lucide-react';
 import WarehouseManagement from '../warehouse/WarehouseManagement';
 import NotificationBell from '../../components/NotificationBell';
@@ -100,6 +101,8 @@ function CEOSidebar({ activeTab, setActiveTab }: { activeTab: string; setActiveT
         <NavGroup title="Cấu hình hệ thống">
           <NavItem icon={<Building className="w-4 h-4" />} label="Quản lý Kho"
             active={activeTab === 'warehouses'} onClick={() => setActiveTab('warehouses')} />
+          <NavItem icon={<Layers className="w-4 h-4" />} label="Quản lý Nguyên liệu"
+            active={activeTab === 'materials'} onClick={() => setActiveTab('materials')} />
         </NavGroup>
       </div>
     </div>
@@ -136,6 +139,8 @@ export default function CEOPortal() {
         return <CEOPurchaseOrderDetailPage poId={selectPOId} onBack={() => setActiveTab('purchase-orders')} />;
       case 'suppliers': 
         return <CEOSupplierManagementPage />;
+      case 'materials':
+        return <CEOMaterialManagementPage />;
       case 'warehouses':
         return <WarehouseManagement />;
       case 'notifications':
