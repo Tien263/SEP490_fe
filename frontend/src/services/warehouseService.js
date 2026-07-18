@@ -39,8 +39,11 @@ export async function consolidateWarehouseOrder(orderId) {
   return request('POST', `/warehouse/orders/${orderId}/consolidate`);
 }
 
-export async function handoverWarehouseOrder(orderId, signature) {
-  return request('POST', `/warehouse/orders/${orderId}/handover`, { signature });
+export async function handoverWarehouseOrder(orderId, warehouseSignature, salesSignature) {
+  return request('POST', `/warehouse/orders/${orderId}/handover`, { 
+    warehouseSignature: warehouseSignature || null, 
+    salesSignature: salesSignature || null 
+  });
 }
 
 export async function postGoodsIssueWarehouseOrder(orderId) {
