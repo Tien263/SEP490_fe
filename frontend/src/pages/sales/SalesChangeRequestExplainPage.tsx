@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { AlertCircle, ChevronDown, FileWarning, Paperclip, Send, X } from 'lucide-react';
+import { AlertCircle, ChevronDown, FileText, FileWarning, Paperclip, Send, X } from 'lucide-react';
 import {
   getRequestsAboutMe,
   submitExplanation,
@@ -29,6 +29,43 @@ type ChangeRequest = {
 };
 
 const MAX_FILES = 5;
+const MAX_FILE_MB = 10;
+const ALLOWED_EXT = /\.(jpe?g|png|gif|webp|pdf|docx?)$/i;
+const IMAGE_EXT = /\.(jpe?g|png|gif|webp)$/i;
+
+function isImageUrl(url: string) {
+  return IMAGE_EXT.test(url.split('?')[0]);
+}
+
+function fileNameFromUrl(url: string) {
+  try {
+    return decodeURIComponent(url.split('?')[0].split('/').pop() || 'file');
+  } catch {
+    return 'file';
+  }
+}
+
+// Thumbnail ảnh hoặc chip link cho file tài liệu (PDF/Word)
+function AttachmentLink({ url }: { url: string }) {
+  if (isImageUrl(url)) {
+    return (
+      <a href={url} target="_blank" rel="noreferrer">
+        <img src={url} alt="File giải trình" className="h-14 w-14 rounded border border-gray-200 object-cover" />
+      </a>
+    );
+  }
+  return (
+    <a
+      href={url}
+      target="_blank"
+      rel="noreferrer"
+      className="inline-flex max-w-[220px] items-center gap-1.5 rounded border border-gray-200 bg-gray-50 px-2.5 py-1.5 text-[12px] text-gray-700 hover:border-[#1F3B64] hover:text-[#1F3B64]"
+    >
+      <FileText className="h-3.5 w-3.5 flex-shrink-0" />
+      <span className="truncate">{fileNameFromUrl(url)}</span>
+    </a>
+  );
+}
 
 const STATUS_META: Record<string, { label: string; className: string }> = {
   Pending: { label: 'Đang chờ xử lý', className: 'bg-yellow-100 text-yellow-700' },
@@ -88,7 +125,19 @@ export default function SalesChangeRequestExplainPage() {
 
   function handleFilesChange(event: React.ChangeEvent<HTMLInputElement>) {
     const selected = Array.from(event.target.files || []);
-    setFiles((prev) => [...prev, ...selected].slice(0, MAX_FILES));
+    const valid: File[] = [];
+    for (const file of selected) {
+      if (!ALLOWED_EXT.test(file.name)) {
+        alert(`File "${file.name}" không được hỗ trợ. Chỉ chấp nhận ảnh, PDF, Word (doc/docx).`);
+        continue;
+      }
+      if (file.size > MAX_FILE_MB * 1024 * 1024) {
+        alert(`File "${file.name}" vượt quá ${MAX_FILE_MB}MB.`);
+        continue;
+      }
+      valid.push(file);
+    }
+    setFiles((prev) => [...prev, ...valid].slice(0, MAX_FILES));
     event.target.value = '';
   }
 
@@ -237,7 +286,7 @@ export default function SalesChangeRequestExplainPage() {
                           <input
                             ref={fileInputRef}
                             type="file"
-                            accept="image/*"
+                            accept="image/*,.pdf,.doc,.docx"
                             multiple
                             className="hidden"
                             onChange={handleFilesChange}
@@ -248,18 +297,25 @@ export default function SalesChangeRequestExplainPage() {
                             className="inline-flex items-center gap-1.5 rounded border border-dashed border-gray-300 px-3 py-2 text-[12px] text-gray-600 transition hover:border-[#1F3B64] hover:text-[#1F3B64]"
                           >
                             <Paperclip className="h-3.5 w-3.5" />
-                            Đính kèm file minh chứng (tối đa {MAX_FILES})
+                            Đính kèm minh chứng — ảnh, PDF, Word (tối đa {MAX_FILES}, ≤{MAX_FILE_MB}MB/file)
                           </button>
 
                           {files.length > 0 && (
                             <div className="flex flex-wrap gap-2">
                               {files.map((file, index) => (
                                 <div key={`${file.name}-${index}`} className="relative">
-                                  <img
-                                    src={URL.createObjectURL(file)}
-                                    alt={file.name}
-                                    className="h-14 w-14 rounded border border-gray-200 object-cover"
-                                  />
+                                  {file.type.startsWith('image/') ? (
+                                    <img
+                                      src={URL.createObjectURL(file)}
+                                      alt={file.name}
+                                      className="h-14 w-14 rounded border border-gray-200 object-cover"
+                                    />
+                                  ) : (
+                                    <span className="inline-flex max-w-[200px] items-center gap-1.5 rounded border border-gray-200 bg-gray-50 py-1.5 pl-2.5 pr-4 text-[12px] text-gray-700">
+                                      <FileText className="h-3.5 w-3.5 flex-shrink-0" />
+                                      <span className="truncate">{file.name}</span>
+                                    </span>
+                                  )}
                                   <button
                                     type="button"
                                     onClick={() => setFiles(files.filter((_, i) => i !== index))}
@@ -277,9 +333,7 @@ export default function SalesChangeRequestExplainPage() {
                               <p className="mb-1 text-[11px] text-gray-400">File đã gửi trước đó:</p>
                               <div className="flex flex-wrap gap-2">
                                 {request.saleExplanationFileUrls.map((url) => (
-                                  <a key={url} href={url} target="_blank" rel="noreferrer">
-                                    <img src={url} alt="File giải trình" className="h-14 w-14 rounded border border-gray-200 object-cover" />
-                                  </a>
+                                  <AttachmentLink key={url} url={url} />
                                 ))}
                               </div>
                             </div>
@@ -302,9 +356,7 @@ export default function SalesChangeRequestExplainPage() {
                           {request.saleExplanationFileUrls?.length > 0 && (
                             <div className="flex flex-wrap gap-2 pt-1">
                               {request.saleExplanationFileUrls.map((url) => (
-                                <a key={url} href={url} target="_blank" rel="noreferrer">
-                                  <img src={url} alt="File giải trình" className="h-14 w-14 rounded border border-gray-200 object-cover" />
-                                </a>
+                                <AttachmentLink key={url} url={url} />
                               ))}
                             </div>
                           )}
