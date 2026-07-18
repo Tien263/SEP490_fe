@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { AlertCircle, ArrowLeft, Check, CircleHelp, MessageSquareWarning, Truck, X } from 'lucide-react';
+import { AlertCircle, ArrowLeft, Check, CircleHelp, FileText, MessageSquareWarning, Truck, X } from 'lucide-react';
 import {
   approveRequest,
   getRequestDetail,
@@ -78,6 +78,38 @@ function formatDate(value?: string) {
 
 function formatPrice(value: number) {
   return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(value);
+}
+
+const IMAGE_EXT = /\.(jpe?g|png|gif|webp)$/i;
+
+function fileNameFromUrl(url: string) {
+  try {
+    return decodeURIComponent(url.split('?')[0].split('/').pop() || 'file');
+  } catch {
+    return 'file';
+  }
+}
+
+// Thumbnail ảnh hoặc chip link cho file tài liệu (PDF/Word) do Sale gửi kèm giải trình
+function AttachmentLink({ url }: { url: string }) {
+  if (IMAGE_EXT.test(url.split('?')[0])) {
+    return (
+      <a href={url} target="_blank" rel="noreferrer">
+        <img src={url} alt="File giải trình" className="h-16 w-16 rounded border border-gray-200 object-cover" />
+      </a>
+    );
+  }
+  return (
+    <a
+      href={url}
+      target="_blank"
+      rel="noreferrer"
+      className="inline-flex max-w-[240px] items-center gap-1.5 rounded border border-gray-200 bg-gray-50 px-2.5 py-1.5 text-[12px] text-gray-700 hover:border-[#1F3B64] hover:text-[#1F3B64]"
+    >
+      <FileText className="h-3.5 w-3.5 flex-shrink-0" />
+      <span className="truncate">{fileNameFromUrl(url)}</span>
+    </a>
+  );
 }
 
 export default function SalesManagerChangeRequestDetailPage() {
@@ -322,9 +354,7 @@ export default function SalesManagerChangeRequestDetailPage() {
                 {detail.saleExplanationFileUrls?.length > 0 && (
                   <div className="mt-2 flex flex-wrap gap-2">
                     {detail.saleExplanationFileUrls.map((url) => (
-                      <a key={url} href={url} target="_blank" rel="noreferrer">
-                        <img src={url} alt="File giải trình" className="h-16 w-16 rounded border border-gray-200 object-cover" />
-                      </a>
+                      <AttachmentLink key={url} url={url} />
                     ))}
                   </div>
                 )}
