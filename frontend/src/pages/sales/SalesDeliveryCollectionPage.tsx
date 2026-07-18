@@ -103,11 +103,21 @@ export default function SalesDeliveryCollectionPage() {
   // ─── Canvas signature ─────────────────────────────────────────────────────
 
   const getPos = (e: React.MouseEvent<HTMLCanvasElement> | React.TouchEvent<HTMLCanvasElement>) => {
-    const rect = canvasRef.current!.getBoundingClientRect();
+    const canvas = canvasRef.current!;
+    const rect = canvas.getBoundingClientRect();
+    const scaleX = canvas.width / rect.width;
+    const scaleY = canvas.height / rect.height;
+    
     if ('touches' in e) {
-      return { x: e.touches[0].clientX - rect.left, y: e.touches[0].clientY - rect.top };
+      return { 
+        x: (e.touches[0].clientX - rect.left) * scaleX, 
+        y: (e.touches[0].clientY - rect.top) * scaleY 
+      };
     }
-    return { x: (e as React.MouseEvent).clientX - rect.left, y: (e as React.MouseEvent).clientY - rect.top };
+    return { 
+      x: ((e as React.MouseEvent).clientX - rect.left) * scaleX, 
+      y: ((e as React.MouseEvent).clientY - rect.top) * scaleY 
+    };
   };
 
   const startDraw = (e: React.MouseEvent<HTMLCanvasElement> | React.TouchEvent<HTMLCanvasElement>) => {

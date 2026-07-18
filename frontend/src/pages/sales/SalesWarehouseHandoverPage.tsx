@@ -116,7 +116,7 @@ function SignaturePad({ title, onSign, onClear }: { title: string, onSign: (base
   );
 }
 
-export default function WarehouseHandover() {
+export default function SalesWarehouseHandoverPage() {
   const [data, setData] = useState<Handover[]>([]);
   const [loading, setLoading] = useState(false);
   const [search, setSearch] = useState('');
@@ -168,14 +168,14 @@ export default function WarehouseHandover() {
 
   const handleHandover = async () => {
     if (!detail) return;
-    if (!warehouseSig) {
-      alert('Vui lòng nhập chữ ký của Nhân viên Kho.');
+    if (!salesSig) {
+      alert('Vui lòng nhập chữ ký của Sales.');
       return;
     }
     
     try {
-      await handoverWarehouseOrder(detail.id, warehouseSig, null);
-      alert('Đã xác nhận phần chữ ký Kho thành công!');
+      await handoverWarehouseOrder(detail.id, null, salesSig);
+      alert('Đã xác nhận chữ ký Sales thành công!');
       setDetail(null);
       setWarehouseSig('');
       setSalesSig('');
@@ -202,11 +202,11 @@ export default function WarehouseHandover() {
     <div className="flex flex-col h-full">
       <div className="bg-white border-b border-gray-200 px-5 py-3 flex-shrink-0">
         <div className="flex items-center gap-1.5 text-[11px] mb-0.5">
-          <span className="text-gray-400">Kho hàng</span> <span className="text-gray-300">/</span> <span className="text-gray-400">Xuất kho (Outbound)</span> <span className="text-gray-300">/</span> <span className="text-gray-800 font-semibold">Bàn giao Sales</span>
+          <span className="text-gray-400">Giao hàng</span> <span className="text-gray-300">/</span> <span className="text-gray-800 font-semibold">Bàn giao từ Kho</span>
         </div>
         <div className="flex items-center justify-between mb-3">
           <div>
-            <h2 className="text-base font-bold text-gray-900">Xác nhận kép Bàn giao Sales</h2>
+            <h2 className="text-base font-bold text-gray-900">Quản lý Bàn giao hàng hóa</h2>
             <p className="text-xs text-gray-500 mt-0.5">{data.length} phiếu chờ xử lý</p>
           </div>
           <div className="flex items-center gap-2">
@@ -303,20 +303,23 @@ export default function WarehouseHandover() {
                 </div>
               </div>
               
-              {detail.status !== 'completed' && detail.status !== 'cancelled' && !detail.warehouseConfirmed && (
+              {detail.status !== 'completed' && detail.status !== 'cancelled' && !detail.salesConfirmed && (
                 <div className="mt-4">
-                  <SignaturePad title="Chữ ký Nhân viên Kho" onSign={setWarehouseSig} onClear={() => setWarehouseSig('')} />
+                  <SignaturePad title="Chữ ký Sales / Người nhận" onSign={setSalesSig} onClear={() => setSalesSig('')} />
                 </div>
               )}
 
               <div className="flex gap-2 pt-4 border-t border-gray-100">
-                {detail.status !== 'completed' && detail.status !== 'cancelled' && !detail.warehouseConfirmed && (
+                {detail.status !== 'completed' && detail.status !== 'cancelled' && !detail.salesConfirmed && detail.warehouseConfirmed && (
                   <Button size="sm" className="h-7 text-xs gap-1.5" style={{ backgroundColor: SUCCESS }} onClick={handleHandover}>
-                    <ShieldCheck className="w-3.5 h-3.5" /> Xác nhận chữ ký Kho
+                    <ShieldCheck className="w-3.5 h-3.5" /> Xác nhận chữ ký Sales
                   </Button>
                 )}
-                {detail.warehouseConfirmed && detail.status !== 'completed' && (
-                  <span className="text-sm text-orange-600 font-medium my-auto">Đang chờ Sales xác nhận chữ ký...</span>
+                {!detail.warehouseConfirmed && detail.status !== 'completed' && (
+                  <span className="text-sm text-orange-600 font-medium my-auto">Vui lòng chờ Kho ký xác nhận trước...</span>
+                )}
+                {detail.salesConfirmed && detail.status !== 'completed' && (
+                  <span className="text-sm text-green-600 font-medium my-auto">Đã gửi chữ ký Sales. Đợi hoàn tất...</span>
                 )}
                 <Button variant="outline" size="sm" className="h-7 text-xs ml-auto" onClick={() => setDetail(null)}>Đóng</Button>
               </div>

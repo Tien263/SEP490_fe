@@ -24,6 +24,7 @@ import {
   UserPlus,
   Users,
   X,
+  ShieldCheck,
 } from 'lucide-react';
 import SalesDashboardPage from './SalesDashboardPage';
 import SalesNegotiationPage from './SalesNegotiationPage';
@@ -32,6 +33,7 @@ import SalesOrdersPage from './SalesOrdersPage';
 import SalesOrderDetailPage from './SalesOrderDetailPage';
 import SalesDeliveryPage from './SalesDeliveryPage';
 import SalesWarehouseCoordPage from './SalesWarehouseCoordPage';
+import SalesWarehouseHandoverPage from './SalesWarehouseHandoverPage';
 import SalesDeliveryArrangementPage from './SalesDeliveryArrangementPage';
 import SalesDeliveryCollectionPage from './SalesDeliveryCollectionPage';
 import SalesMyCustomersPage from './SalesMyCustomersPage';
@@ -100,6 +102,12 @@ const NAV_ITEMS: NavItem[] = [
     path: '/sales/delivery',
     roles: ['SalesStaff', 'Admin'],
     children: [
+      {
+        id: 'delivery-handover',
+        label: 'Bàn giao từ Kho',
+        icon: <ShieldCheck className="w-3.5 h-3.5" />,
+        path: '/sales/delivery/handover',
+      },
       {
         id: 'delivery-warehouse',
         label: 'Phối hợp kho',
@@ -388,6 +396,7 @@ export default function SalesPortal() {
             <Route path="negotiation" element={<SalesNegotiationPage />} />
             <Route path="direct-purchase" element={<DirectPurchasePage />} />
             <Route path="delivery" element={<SalesDeliveryPage />} />
+            <Route path="delivery/handover" element={<SalesWarehouseHandoverPage />} />
             <Route path="delivery/warehouse" element={<SalesWarehouseCoordPage />} />
             <Route path="delivery/arrangement" element={<SalesDeliveryArrangementPage />} />
             <Route path="delivery/collection" element={<SalesDeliveryCollectionPage />} />
