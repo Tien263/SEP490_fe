@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { Button } from '../../components/sales-ui/button';
 import { Input } from '../../components/sales-ui/input';
 import { Search, Eye, RefreshCw, Download, Plus, Truck, CheckCircle, X, ArrowRight, UploadCloud } from 'lucide-react';
@@ -55,11 +56,11 @@ function Badge({ status }: { status: string }) {
   return <span className="text-[10px] font-semibold text-white px-2 py-0.5 inline-block whitespace-nowrap" style={{ backgroundColor: c.bg, borderRadius: 4 }}>{c.label}</span>;
 }
 
-function CreateForm({ onClose, onCreated, warehouses, staffUsers }: { onClose: () => void, onCreated: () => void, warehouses: any[], staffUsers: any[] }) {
-  const [items, setItems] = useState<TransferItem[]>([{ productId: '', productName: '', quantity: 0 }]);
+function CreateForm({ onClose, onCreated, warehouses, staffUsers, initialData }: { onClose: () => void, onCreated: () => void, warehouses: any[], staffUsers: any[], initialData?: any }) {
+  const [items, setItems] = useState<TransferItem[]>(initialData?.items?.length ? initialData.items.map((i: any) => ({ productId: i.sku, productName: i.name, quantity: i.quantity })) : [{ productId: '', productName: '', quantity: 0 }]);
   const [formData, setFormData] = useState({ 
-    sourceWarehouseId: '', 
-    targetWarehouseId: '', 
+    sourceWarehouseId: initialData?.sourceWarehouseId || '', 
+    targetWarehouseId: initialData?.targetWarehouseId || '', 
     note: '', 
     notificationEmail: '',
     expectedDispatchDate: '',
@@ -67,19 +68,39 @@ function CreateForm({ onClose, onCreated, warehouses, staffUsers }: { onClose: (
   });
   const [inventory, setInventory] = useState<any[]>([]);
 
+  const isInitialMount = useRef(true);
+
   // Fetch inventory when source warehouse changes
   useEffect(() => {
     if (formData.sourceWarehouseId) {
       import('../../services/warehouseService.js').then(module => {
         module.getWarehouseInventory(formData.sourceWarehouseId, { pageNumber: 1, pageSize: 1000 }).then(data => {
-          setInventory(data.items || []);
+          const invs = data.items || [];
+          setInventory(invs);
+          
+          if (isInitialMount.current && initialData?.items?.length > 0) {
+            const mappedItems = initialData.items.map((i: any) => {
+              const invItem = invs.find((inv: any) => inv.productSku === i.sku || inv.productId === i.productId);
+              return {
+                productId: invItem ? invItem.productId : (i.productId || ''),
+                productName: i.name || i.productName || (invItem ? invItem.productName : ''),
+                quantity: i.quantity
+              };
+            });
+            setItems(mappedItems);
+            isInitialMount.current = false;
+          } else if (!isInitialMount.current) {
+            setItems([{ productId: '', productName: '', quantity: 0 }]);
+          }
         });
       });
     } else {
       setInventory([]);
+      if (!isInitialMount.current) {
+        setItems([{ productId: '', productName: '', quantity: 0 }]);
+      }
     }
-    // Clear items when source warehouse changes
-    setItems([{ productId: '', productName: '', quantity: 0 }]);
+    isInitialMount.current = false;
   }, [formData.sourceWarehouseId]);
   
   const handleCreate = async () => {
@@ -266,6 +287,10 @@ function ReceiveForm({ transfer, onClose, onReceived }: { transfer: Transfer, on
 }
 
 export default function WarehouseStockTransfer() {
+  const location = useLocation();
+  const navigate = useNavigate();
+  const prefill = location.state?.prefill;
+
   const [tab, setTab] = useState<Tab>('create');
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
@@ -277,6 +302,24 @@ export default function WarehouseStockTransfer() {
   const [transfers, setTransfers] = useState<Transfer[]>([]);
   const [warehouses, setWarehouses] = useState<any[]>([]);
   const [staffUsers, setStaffUsers] = useState<any[]>([]);
+  const [prefillData, setPrefillData] = useState<any>(null);
+
+  useEffect(() => {
+    if (prefill && warehouses.length > 0) {
+      const sourceW = warehouses.find((w: any) => w.name === prefill.sourceWarehouse);
+      const targetW = warehouses.find((w: any) => w.name === 'Kho mặc định' || w.name === 'WH-DEFAULT' || w.code === 'WH-DEFAULT' || w.name.includes('WH-DEFAULT') || w.name === 'Kho Chính');
+      if (sourceW && targetW) {
+        setPrefillData({
+           sourceWarehouseId: sourceW.id,
+           targetWarehouseId: targetW.id,
+           items: prefill.items
+        });
+        setShowCreate(true);
+        // Clean history so refresh doesn't reopen
+        navigate(location.pathname, { replace: true, state: {} });
+      }
+    }
+  }, [prefill, warehouses, location.pathname, navigate]);
 
   const loadData = async () => {
     try {
@@ -517,7 +560,9 @@ export default function WarehouseStockTransfer() {
           <DialogHeader>
             <DialogTitle className="text-lg font-bold">Tạo lệnh chuyển kho mới</DialogTitle>
           </DialogHeader>
-          <CreateForm onClose={() => setShowCreate(false)} onCreated={loadData} warehouses={warehouses} staffUsers={staffUsers} />
+          {showCreate && (
+            <CreateForm key={prefillData ? 'prefill' : 'empty'} onClose={() => { setShowCreate(false); setPrefillData(null); }} onCreated={loadData} warehouses={warehouses} staffUsers={staffUsers} initialData={prefillData} />
+          )}
         </DialogContent>
       </Dialog>
       

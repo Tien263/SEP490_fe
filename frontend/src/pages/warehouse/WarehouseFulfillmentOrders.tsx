@@ -32,9 +32,9 @@ interface FulfillmentOrder {
   priority: 'urgent' | 'high' | 'normal';
   delivery: string; allocatedQty: number; reservedQty: number;
   pickStatus: string; packStatus: string; consolidation: string; handover: string;
-  createdDate: string; assignedPicker: string;
+  orderDate: string; allocatedWarehouse: string; orderProgress: number;
   status: 'waiting' | 'picking' | 'packing' | 'ready' | 'transferred' | 'cancelled';
-  products: { sku: string; name: string; aisle: string; rack: string; bin: string; orderedQty: number; allocatedQty: number; reservedQty: number }[];
+  products: { sku: string; name: string; physicalStock: number; orderedQty: number }[];
   timeline: { time: string; event: string; user: string }[];
 }
 
@@ -82,7 +82,7 @@ export default function WarehouseFulfillmentOrders() {
         id: d.orderId,
         soNo: d.orderCode,
         customer: 'Khách hàng',
-        warehouse: 'Kho Chính',
+        warehouse: d.allocatedWarehouse || 'Kho mặc định',
         priority: 'normal',
         delivery: 'Giao tận nơi',
         allocatedQty: d.totalQuantity,
@@ -91,9 +91,10 @@ export default function WarehouseFulfillmentOrders() {
         packStatus: 'Chưa bắt đầu',
         consolidation: 'Chưa',
         handover: 'Chưa',
-        createdDate: new Date(d.confirmedAt).toLocaleDateString('vi-VN'),
-        assignedPicker: 'Chưa phân công',
-        status: 'waiting',
+        orderDate: new Date(d.confirmedAt || Date.now()).toLocaleDateString('vi-VN'),
+        allocatedWarehouse: d.allocatedWarehouse || 'Kho mặc định',
+        orderProgress: d.orderProgress || 0,
+        status: d.status === 'Confirmed' || d.status === 'Allocated' ? 'waiting' : d.status === 'Picking' ? 'picking' : d.status === 'Ready' ? 'ready' : 'waiting',
         products: [],
         timeline: []
       }));
@@ -137,7 +138,7 @@ export default function WarehouseFulfillmentOrders() {
             <Button variant="outline" size="sm" className="h-7 text-xs gap-1.5"><Download className="w-3 h-3" /> Xuất Excel</Button>
             {selected.length > 0 && (
               <Button size="sm" className="h-7 text-xs gap-1.5" style={{ backgroundColor: PRIMARY }}>
-                <UserPlus className="w-3 h-3" /> Phân công ({selected.length})
+                <ClipboardList className="w-3 h-3" /> Tạo Pick Task ({selected.length})
               </Button>
             )}
           </div>
@@ -172,7 +173,6 @@ export default function WarehouseFulfillmentOrders() {
         {selected.length > 0 && (
           <div className="bg-[#EFF6FF] border border-[#BFDBFE] rounded px-3 py-2 mb-2 flex items-center gap-2 text-xs">
             <span className="font-semibold text-blue-700">Đã chọn {selected.length} lệnh</span>
-            <button className="h-6 px-2.5 text-[10px] font-medium rounded border border-blue-300 text-blue-700 hover:bg-blue-100">Phân công Picker</button>
             <button className="h-6 px-2.5 text-[10px] font-medium rounded border border-blue-300 text-blue-700 hover:bg-blue-100">Tạo Pick Task</button>
             <button className="h-6 px-2.5 text-[10px] font-medium rounded border border-blue-300 text-blue-700 hover:bg-blue-100">Xuất Excel</button>
             <button className="h-6 px-2.5 text-[10px] font-medium rounded border border-blue-300 text-blue-700 hover:bg-blue-100 ml-auto" onClick={() => setSelected([])}>Hủy chọn</button>
@@ -185,13 +185,10 @@ export default function WarehouseFulfillmentOrders() {
                 <th className="px-3 py-2.5 w-8"><input type="checkbox" checked={selected.length === filtered.length && filtered.length > 0} onChange={toggleAll} className="w-3.5 h-3.5" /></th>
                 <th className="text-left px-3 py-2.5 text-gray-700 font-semibold">Mã lệnh</th>
                 <th className="text-left px-3 py-2.5 text-gray-700 font-semibold">Đơn hàng</th>
-                <th className="text-left px-3 py-2.5 text-gray-700 font-semibold">Khách hàng</th>
-                <th className="text-left px-3 py-2.5 text-gray-700 font-semibold">Kho</th>
-                <th className="text-center px-3 py-2.5 text-gray-700 font-semibold">Ưu tiên</th>
-                <th className="text-center px-3 py-2.5 text-gray-700 font-semibold">Phân bổ</th>
-                <th className="text-left px-3 py-2.5 text-gray-700 font-semibold">Người pick</th>
+                <th className="text-left px-3 py-2.5 text-gray-700 font-semibold">Kho phân bổ</th>
+                <th className="text-center px-3 py-2.5 text-gray-700 font-semibold">Tiến trình</th>
                 <th className="text-center px-3 py-2.5 text-gray-700 font-semibold">Trạng thái</th>
-                <th className="text-left px-3 py-2.5 text-gray-700 font-semibold">Ngày tạo</th>
+                <th className="text-left px-3 py-2.5 text-gray-700 font-semibold">Ngày tạo đơn</th>
                 <th className="text-center px-3 py-2.5 text-gray-700 font-semibold">Thao tác</th>
               </tr>
             </thead>
@@ -208,15 +205,19 @@ export default function WarehouseFulfillmentOrders() {
               {filtered.map((o, i) => (
                 <tr key={o.id} className={`hover:bg-blue-50/30 transition-colors ${i % 2 === 1 ? 'bg-gray-50/50' : ''}`}>
                   <td className="px-3 py-2.5"><input type="checkbox" checked={selected.includes(o.id)} onChange={() => toggleSelect(o.id)} className="w-3.5 h-3.5" /></td>
-                  <td className="px-3 py-2.5 font-semibold" style={{ color: PRIMARY }}>{o.id}</td>
-                  <td className="px-3 py-2.5 text-gray-600 font-medium">{o.soNo}</td>
-                  <td className="px-3 py-2.5 font-medium text-gray-800">{o.customer}</td>
-                  <td className="px-3 py-2.5 text-gray-600">{o.warehouse}</td>
-                  <td className="px-3 py-2.5 text-center"><Badge status={o.priority} cfg={PRIORITY_CFG} /></td>
-                  <td className="px-3 py-2.5 text-center font-mono text-gray-700">{o.allocatedQty}/{o.reservedQty}</td>
-                  <td className="px-3 py-2.5 text-gray-700">{o.assignedPicker}</td>
+                  <td className="px-3 py-2.5 font-semibold text-gray-600">{o.id.substring(0,8).toUpperCase()}</td>
+                  <td className="px-3 py-2.5 font-semibold" style={{ color: PRIMARY }}>{o.soNo}</td>
+                  <td className="px-3 py-2.5 text-gray-600">{o.allocatedWarehouse}</td>
+                  <td className="px-3 py-2.5 text-center">
+                    <div className="flex items-center justify-center gap-1.5">
+                      <div className="w-16 h-1.5 bg-gray-200 rounded-full overflow-hidden">
+                        <div className="h-full bg-green-500 rounded-full" style={{ width: `${o.orderProgress}%` }} />
+                      </div>
+                      <span className="text-gray-600 font-mono text-[10px]">{o.orderProgress}%</span>
+                    </div>
+                  </td>
                   <td className="px-3 py-2.5 text-center"><Badge status={o.status} cfg={STATUS_CFG} /></td>
-                  <td className="px-3 py-2.5 text-gray-500">{o.createdDate}</td>
+                  <td className="px-3 py-2.5 text-gray-500">{o.orderDate}</td>
                   <td className="px-3 py-2.5 text-center">
                     <div className="flex items-center justify-center gap-1">
                       <button className="p-1 rounded hover:bg-blue-50 text-gray-400 hover:text-blue-600" onClick={async () => {
@@ -226,12 +227,14 @@ export default function WarehouseFulfillmentOrders() {
                           const mappedProducts = data.items.map((i: any) => ({
                             sku: i.sku,
                             name: i.productName,
-                            aisle: 'A', rack: '01', bin: '01',
-                            orderedQty: i.requestedQuantity,
-                            allocatedQty: i.requestedQuantity,
-                            reservedQty: i.requestedQuantity
+                            physicalStock: i.physicalStock,
+                            orderedQty: i.requestedQuantity
                           }));
-                          setDetail({ ...o, products: mappedProducts });
+                          setDetail({ ...o, 
+                            orderDate: new Date(data.createdAt || Date.now()).toLocaleDateString('vi-VN'),
+                            allocatedWarehouse: data.allocatedWarehouse || o.allocatedWarehouse,
+                            orderProgress: data.orderProgress || 0,
+                            products: mappedProducts });
                         } catch (e: any) {
                           alert('Lỗi lấy chi tiết: ' + e.message);
                         }
@@ -271,32 +274,28 @@ export default function WarehouseFulfillmentOrders() {
           <DialogHeader>
             <DialogTitle className="text-sm font-bold flex items-center gap-2">
               <Package className="w-4 h-4" style={{ color: PRIMARY }} />
-              Chi tiết lệnh xuất kho — {detail?.id}
+              Chi tiết lệnh xuất kho — {detail?.id.substring(0,8).toUpperCase()}
             </DialogTitle>
           </DialogHeader>
           {detail && (
             <div className="space-y-4 text-xs">
-              <div className="grid grid-cols-3 gap-3">
+              <div className="grid grid-cols-2 gap-3">
                 <div className="bg-gray-50 rounded p-3 space-y-1.5">
                   <p className="font-semibold text-gray-500 text-[10px] uppercase tracking-wide mb-2">Thông tin đơn hàng</p>
-                  <div className="flex justify-between"><span className="text-gray-500">Mã lệnh:</span><span className="font-semibold" style={{ color: PRIMARY }}>{detail.id}</span></div>
-                  <div className="flex justify-between"><span className="text-gray-500">Đơn SO:</span><span className="font-medium">{detail.soNo}</span></div>
-                  <div className="flex justify-between"><span className="text-gray-500">Khách hàng:</span><span className="font-medium text-gray-800">{detail.customer}</span></div>
-                  <div className="flex justify-between"><span className="text-gray-500">Giao hàng:</span><span>{detail.delivery}</span></div>
+                  <div className="flex justify-between"><span className="text-gray-500">Mã lệnh:</span><span className="font-semibold text-gray-600">{detail.id.substring(0,8).toUpperCase()}</span></div>
+                  <div className="flex justify-between"><span className="text-gray-500">Đơn SO:</span><span className="font-semibold" style={{ color: PRIMARY }}>{detail.soNo}</span></div>
+                  <div className="flex justify-between"><span className="text-gray-500">Ngày tạo đơn:</span><span>{detail.orderDate}</span></div>
                 </div>
                 <div className="bg-gray-50 rounded p-3 space-y-1.5">
-                  <p className="font-semibold text-gray-500 text-[10px] uppercase tracking-wide mb-2">Phân bổ kho</p>
-                  <div className="flex justify-between"><span className="text-gray-500">Kho:</span><span className="font-medium">{detail.warehouse}</span></div>
-                  <div className="flex justify-between"><span className="text-gray-500">Đã phân bổ:</span><span className="font-semibold">{detail.allocatedQty}</span></div>
-                  <div className="flex justify-between"><span className="text-gray-500">Đã dự trữ:</span><span className="font-semibold">{detail.reservedQty}</span></div>
-                  <div className="flex justify-between"><span className="text-gray-500">Người pick:</span><span>{detail.assignedPicker}</span></div>
-                </div>
-                <div className="bg-gray-50 rounded p-3 space-y-1.5">
-                  <p className="font-semibold text-gray-500 text-[10px] uppercase tracking-wide mb-2">Tiến trình</p>
+                  <p className="font-semibold text-gray-500 text-[10px] uppercase tracking-wide mb-2">Phân bổ & Tiến trình</p>
+                  <div className="flex justify-between"><span className="text-gray-500">Kho phân bổ:</span><span className="font-medium">{detail.allocatedWarehouse}</span></div>
                   <div className="flex justify-between"><span className="text-gray-500">Trạng thái:</span><Badge status={detail.status} cfg={STATUS_CFG} /></div>
-                  <div className="flex justify-between"><span className="text-gray-500">Picking:</span><span>{detail.pickStatus}</span></div>
-                  <div className="flex justify-between"><span className="text-gray-500">Packing:</span><span>{detail.packStatus}</span></div>
-                  <div className="flex justify-between"><span className="text-gray-500">Consolidation:</span><span>{detail.consolidation}</span></div>
+                  <div className="flex flex-col gap-1 mt-2">
+                    <span className="text-gray-500">Tiến trình đơn hàng: {detail.orderProgress}%</span>
+                    <div className="w-full h-1.5 bg-gray-200 rounded-full overflow-hidden">
+                      <div className="h-full bg-green-500 rounded-full" style={{ width: `${detail.orderProgress}%` }} />
+                    </div>
+                  </div>
                 </div>
               </div>
 
@@ -306,14 +305,10 @@ export default function WarehouseFulfillmentOrders() {
                   <table className="w-full border border-gray-200 rounded overflow-hidden">
                     <thead>
                       <tr className="bg-gray-50 border-b border-gray-200">
-                        <th className="text-left px-3 py-2 text-gray-700 font-semibold">SKU</th>
+                        <th className="text-left px-3 py-2 text-gray-700 font-semibold">Mã SP</th>
                         <th className="text-left px-3 py-2 text-gray-700 font-semibold">Tên sản phẩm</th>
-                        <th className="text-center px-3 py-2 text-gray-700 font-semibold">Dãy</th>
-                        <th className="text-center px-3 py-2 text-gray-700 font-semibold">Kệ</th>
-                        <th className="text-center px-3 py-2 text-gray-700 font-semibold">Ngăn</th>
-                        <th className="text-center px-3 py-2 text-gray-700 font-semibold">Đặt hàng</th>
-                        <th className="text-center px-3 py-2 text-gray-700 font-semibold">Phân bổ</th>
-                        <th className="text-center px-3 py-2 text-gray-700 font-semibold">Dự trữ</th>
+                        <th className="text-center px-3 py-2 text-gray-700 font-semibold">Số lượng tồn kho</th>
+                        <th className="text-center px-3 py-2 text-gray-700 font-semibold">Số lượng yêu cầu</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-gray-100">
@@ -321,12 +316,8 @@ export default function WarehouseFulfillmentOrders() {
                         <tr key={p.sku} className="hover:bg-gray-50">
                           <td className="px-3 py-2 font-mono text-gray-500">{p.sku}</td>
                           <td className="px-3 py-2 text-gray-800">{p.name}</td>
-                          <td className="px-3 py-2 text-center font-mono">{p.aisle}</td>
-                          <td className="px-3 py-2 text-center font-mono">{p.rack}</td>
-                          <td className="px-3 py-2 text-center font-mono">{p.bin}</td>
+                          <td className="px-3 py-2 text-center font-semibold" style={{ color: INFO }}>{p.physicalStock}</td>
                           <td className="px-3 py-2 text-center font-semibold">{p.orderedQty}</td>
-                          <td className="px-3 py-2 text-center font-semibold" style={{ color: SUCCESS }}>{p.allocatedQty}</td>
-                          <td className="px-3 py-2 text-center font-semibold" style={{ color: INFO }}>{p.reservedQty}</td>
                         </tr>
                       ))}
                     </tbody>
@@ -355,24 +346,19 @@ export default function WarehouseFulfillmentOrders() {
               )}
 
               <div className="flex gap-2 pt-2 border-t border-gray-100">
-                {detail.status === 'waiting' && (
+                {(detail.status === 'waiting' || detail.status === 'picking') && (
                   <Button size="sm" className="h-7 text-xs gap-1.5" style={{ backgroundColor: PRIMARY }} onClick={async () => {
                     try {
                       const { acceptWarehouseOrder } = await import('../../services/warehouseService.js');
                       await acceptWarehouseOrder(detail.id);
-                      alert('Nhận đơn thành công! Lệnh đã được chuyển sang Pick Task.');
+                      alert(detail.status === 'waiting' ? 'Nhận đơn thành công! Lệnh đã được chuyển sang Pick Task.' : 'Tạo Pick Tasks thành công.');
                       setDetail(null);
                       fetchOrders();
                     } catch (e: any) {
-                      alert('Lỗi nhận đơn: ' + e.message);
+                      alert('Lỗi: ' + e.message);
                     }
                   }}>
-                    <ClipboardList className="w-3.5 h-3.5" /> Nhận đơn & Tạo Pick Task
-                  </Button>
-                )}
-                {detail.status === 'waiting' && (
-                  <Button variant="outline" size="sm" className="h-7 text-xs gap-1.5">
-                    <UserPlus className="w-3.5 h-3.5" /> Phân công Picker
+                    <ClipboardList className="w-3.5 h-3.5" /> {detail.status === 'waiting' ? 'Nhận đơn & Tạo Pick Task' : 'Tạo lại Pick Tasks'}
                   </Button>
                 )}
                 <Button variant="outline" size="sm" className="h-7 text-xs ml-auto" onClick={() => setDetail(null)}>Đóng</Button>

@@ -53,28 +53,40 @@ export async function reportShortage(orderId, data) {
 
 // ─── Advanced Warehouse (v6.0) ───────────────────────────────────────────────
 
-export async function getPickTasks() {
-  return request('GET', `/warehouse/orders?tabType=InProgress`);
+export async function getPickTasks(tabType = 'InProgress', pageNumber = 1, pageSize = 50) {
+  return request('GET', `/warehouse/orders/pick-tasks?tabType=${tabType}&pageNumber=${pageNumber}&pageSize=${pageSize}`);
 }
 
 export async function getPickTaskById(id) {
-  return request('GET', `/warehouse/orders/${id}/detail`);
+  return request('GET', `/warehouse/orders/pick-tasks/${id}/detail`);
 }
 
-export async function completePickTask(id, imageFile) {
-  // WarehouseController CompletePickTask uses POST /warehouse/orders/{id}/complete-pick
+export async function acceptPickTask(id) {
+  return request('POST', `/warehouse/orders/pick-tasks/${id}/accept`);
+}
+
+export async function completePickTask(id) {
+  return request('POST', `/warehouse/orders/pick-tasks/${id}/complete`);
+}
+
+export async function updateItemPickProgress(pickTaskId, productId, packedQty, imageFile) {
   const formData = new FormData();
-  if (imageFile) formData.append('imageProof', imageFile);
+  formData.append('packedQty', packedQty);
+  if (imageFile) formData.append('imageFile', imageFile);
+
   const accessToken = localStorage.getItem('accessToken');
   const headers = {};
   if (accessToken) headers['Authorization'] = `Bearer ${accessToken}`;
 
-  const res = await fetch(`${API_BASE}/warehouse/orders/${id}/complete-pick`, {
+  const res = await fetch(`${API_BASE}/warehouse/orders/pick-tasks/${pickTaskId}/items/${productId}/pick-progress`, {
     method: 'POST',
     headers,
     body: formData,
   });
-  if (!res.ok) throw new Error(`Lỗi ${res.status}`);
+  if (!res.ok) {
+    const errorData = await res.json().catch(() => ({}));
+    throw new Error(errorData.message || `Lỗi ${res.status}`);
+  }
   return res.json();
 }
 

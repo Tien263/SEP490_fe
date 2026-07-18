@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Button } from '../../components/sales-ui/button';
 import { Input } from '../../components/sales-ui/input';
-import { Search, Eye, RefreshCw, Download, ArrowRight, RotateCcw, Clock, Package2, CheckCircle, AlertTriangle, X } from 'lucide-react';
+import { Search, Eye, RefreshCw, Download, ArrowRight, RotateCcw, Clock, Package2, CheckCircle, AlertTriangle, X, Truck } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../../components/sales-ui/dialog';
 import { getWarehouseOrders, consolidateWarehouseOrder } from '../../services/warehouseService';
 
@@ -20,14 +21,12 @@ const STATUS_CFG: Record<string, { label: string; bg: string }> = {
 };
 
 interface ConsolidationItem {
-  id: string; fulfillmentId: string; warehouse: string;
-  packages: number; boxes: number; weight: string;
-  preparedBy: string; preparedTime: string;
-  waitingDuration: string;
+  id: string; fulfillmentId: string; warehouse: string; warehouseCode: string;
+  quantity: number;
   status: 'waiting' | 'ready' | 'delayed' | 'completed';
-  packageList: { boxNo: string; weight: string; items: string; label: string }[];
-  remarks: string;
-  timeline: { time: string; event: string; user: string }[];
+  products?: { sku: string; name: string; quantity: number; transferStatus?: string; requiredTransferQuantity?: number }[];
+  pickTasks?: { id: string; warehouse: string; status: string; items: { name: string; requestedQty: number; packedQty: number }[] }[];
+  requiresTransfer?: boolean;
 }
 
 function Badge({ status }: { status: string }) {
@@ -36,6 +35,7 @@ function Badge({ status }: { status: string }) {
 }
 
 export default function WarehouseConsolidation() {
+  const navigate = useNavigate();
   const [data, setData] = useState<ConsolidationItem[]>([]);
   const [loading, setLoading] = useState(false);
   const [search, setSearch] = useState('');
@@ -53,17 +53,11 @@ export default function WarehouseConsolidation() {
       const mapped = result.map((d: any) => ({
         id: d.orderId,
         fulfillmentId: d.orderCode,
-        warehouse: 'Kho Chính',
-        packages: d.totalQuantity,
-        boxes: Math.ceil(d.totalQuantity / 10),
-        weight: '0 kg',
-        preparedBy: 'Hệ thống',
-        preparedTime: new Date(d.confirmedAt).toLocaleString('vi-VN'),
-        waitingDuration: '0 giờ',
-        status: 'waiting',
-        packageList: [],
-        remarks: '',
-        timeline: []
+        warehouse: d.allocatedWarehouse || 'Kho mặc định',
+        warehouseCode: d.allocatedWarehouseCode || 'WH-DEFAULT',
+        quantity: d.totalQuantity,
+        status: d.status === 'Ready' ? 'ready' : d.status === 'Consolidating' ? 'waiting' : 'waiting',
+        requiresTransfer: d.requiresTransfer,
       }));
       setData(mapped);
     } catch (e: any) {
@@ -90,7 +84,7 @@ export default function WarehouseConsolidation() {
 
   const filtered = data.filter(d => {
     const q = search.toLowerCase();
-    const ms = !q || d.id.toLowerCase().includes(q) || d.fulfillmentId.toLowerCase().includes(q) || d.preparedBy.toLowerCase().includes(q);
+    const ms = !q || d.id.toLowerCase().includes(q) || d.fulfillmentId.toLowerCase().includes(q);
     const mst = statusFilter === 'all' || d.status === statusFilter;
     const mw = warehouseFilter === 'all' || d.warehouse === warehouseFilter;
     return ms && mst && mw;
@@ -157,9 +151,8 @@ export default function WarehouseConsolidation() {
                 <th className="px-3 py-2.5"><input type="checkbox" className="w-3.5 h-3.5" checked={selected.length === filtered.length && filtered.length > 0} onChange={e => setSelected(e.target.checked ? filtered.map(d => d.id) : [])} /></th>
                 <th className="text-left px-3 py-2.5 text-gray-700 font-semibold">Mã đơn hàng</th>
                 <th className="text-left px-3 py-2.5 text-gray-700 font-semibold">Mã lệnh xuất</th>
-                <th className="text-left px-3 py-2.5 text-gray-700 font-semibold">Kho</th>
-                <th className="text-center px-3 py-2.5 text-gray-700 font-semibold">Kiện hàng</th>
-                <th className="text-center px-3 py-2.5 text-gray-700 font-semibold">Thùng</th>
+                <th className="text-left px-3 py-2.5 text-gray-700 font-semibold">Kho hiện tại</th>
+                <th className="text-center px-3 py-2.5 text-gray-700 font-semibold">Số lượng hàng hóa</th>
                 <th className="text-center px-3 py-2.5 text-gray-700 font-semibold">Trạng thái</th>
                 <th className="text-center px-3 py-2.5 text-gray-700 font-semibold">Thao tác</th>
               </tr>
@@ -170,16 +163,47 @@ export default function WarehouseConsolidation() {
               ) : filtered.map((d, i) => (
                 <tr key={d.id} className={`hover:bg-blue-50/30 transition-colors ${i % 2 === 1 ? 'bg-gray-50/50' : ''}`}>
                   <td className="px-3 py-2.5"><input type="checkbox" className="w-3.5 h-3.5" checked={selected.includes(d.id)} onChange={e => setSelected(prev => e.target.checked ? [...prev, d.id] : prev.filter(x => x !== d.id))} /></td>
-                  <td className="px-3 py-2.5 font-semibold" style={{ color: PRIMARY }}>{d.id}</td>
-                  <td className="px-3 py-2.5 text-gray-600">{d.fulfillmentId}</td>
+                  <td className="px-3 py-2.5 font-semibold" style={{ color: PRIMARY }}>{d.fulfillmentId}</td>
+                  <td className="px-3 py-2.5 font-semibold text-gray-600">{d.id.substring(0,8).toUpperCase()}</td>
                   <td className="px-3 py-2.5 text-gray-700">{d.warehouse}</td>
-                  <td className="px-3 py-2.5 text-center font-semibold text-gray-800">{d.packages}</td>
-                  <td className="px-3 py-2.5 text-center font-semibold text-gray-800">{d.boxes}</td>
+                  <td className="px-3 py-2.5 text-center font-semibold text-gray-800">{d.quantity}</td>
                   <td className="px-3 py-2.5 text-center"><Badge status={d.status} /></td>
                   <td className="px-3 py-2.5 text-center">
                     <div className="flex items-center justify-center gap-1">
-                      <button className="p-1 rounded hover:bg-blue-50 text-gray-400 hover:text-blue-600" onClick={() => setDetail(d)}><Eye className="w-3.5 h-3.5" /></button>
-                      <button className="p-1 rounded hover:bg-green-50 text-gray-400 hover:text-green-600" title="Hoàn tất tập kết" onClick={() => handleConsolidate(d.id)}><ArrowRight className="w-3.5 h-3.5" /></button>
+                      <button className="p-1 rounded hover:bg-blue-50 text-gray-400 hover:text-blue-600" title="Xem chi tiết" onClick={async () => {
+                        try {
+                          const { getWarehouseOrderDetail } = await import('../../services/warehouseService.js');
+                          const data = await getWarehouseOrderDetail(d.id);
+                          setDetail({
+                            ...d,
+                            products: data.items.map((i: any) => ({
+                              sku: i.sku, name: i.productName, quantity: i.requestedQuantity, requiredTransferQuantity: i.requiredTransferQuantity, transferStatus: '—'
+                            })),
+                            pickTasks: data.pickTasks?.map((pt: any) => ({
+                              id: pt.pickTaskId,
+                              warehouse: pt.warehouseName,
+                              status: pt.status,
+                              items: pt.items.map((i: any) => ({
+                                name: i.productName, requestedQty: i.requestedQuantity, packedQty: i.packedQuantity
+                              }))
+                            })) || []
+                          });
+                        } catch(e: any) { alert(e.message); }
+                      }}><Eye className="w-3.5 h-3.5" /></button>
+                      {(!d.requiresTransfer) ? (
+                        <button className="p-1 rounded hover:bg-green-50 text-gray-400 hover:text-green-600" title="Hoàn tất tập kết" onClick={() => handleConsolidate(d.id)}><ArrowRight className="w-3.5 h-3.5" /></button>
+                      ) : (
+                        <button className="p-1 rounded hover:bg-purple-50 text-gray-400 hover:text-purple-600" title="Điều chuyển nội bộ" onClick={async () => {
+                          try {
+                            const { getWarehouseOrderDetail } = await import('../../services/warehouseService.js');
+                            const data = await getWarehouseOrderDetail(d.id);
+                            const products = data.items.filter((i: any) => i.requiredTransferQuantity > 0).map((i: any) => ({
+                              sku: i.sku, name: i.productName, quantity: i.requiredTransferQuantity, transferStatus: '—'
+                            }));
+                            navigate('/warehouse/transfer/stock-transfer', { state: { prefill: { sourceWarehouse: d.warehouse, orderId: d.id, items: products } } });
+                          } catch(e: any) { alert(e.message); }
+                        }}><Truck className="w-3.5 h-3.5" /></button>
+                      )}
                     </div>
                   </td>
                 </tr>
@@ -196,24 +220,103 @@ export default function WarehouseConsolidation() {
           </DialogHeader>
           {detail && (
             <div className="space-y-4 text-xs">
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-2 gap-3 mb-4">
                 <div className="bg-gray-50 rounded p-3 space-y-1.5">
-                  <p className="font-semibold text-gray-500 text-[10px] uppercase tracking-wide mb-2">Thông tin lô hàng</p>
-                  <div className="flex justify-between"><span className="text-gray-500">Mã đơn hàng:</span><span className="font-semibold" style={{ color: PRIMARY }}>{detail.id}</span></div>
-                  <div className="flex justify-between"><span className="text-gray-500">Mã lệnh xuất:</span><span className="font-medium">{detail.fulfillmentId}</span></div>
-                  <div className="flex justify-between"><span className="text-gray-500">Kho:</span><span>{detail.warehouse}</span></div>
+                  <p className="font-semibold text-gray-500 text-[10px] uppercase tracking-wide mb-2">Thông tin lệnh</p>
+                  <div className="flex justify-between"><span className="text-gray-500">Mã đơn hàng:</span><span className="font-semibold" style={{ color: PRIMARY }}>{detail.fulfillmentId}</span></div>
+                  <div className="flex justify-between"><span className="text-gray-500">Mã lệnh xuất:</span><span className="font-medium text-gray-600">{detail.id.substring(0,8).toUpperCase()}</span></div>
                 </div>
                 <div className="bg-gray-50 rounded p-3 space-y-1.5">
-                  <p className="font-semibold text-gray-500 text-[10px] uppercase tracking-wide mb-2">Thống kê kiện hàng</p>
-                  <div className="flex justify-between"><span className="text-gray-500">Số kiện:</span><span className="font-semibold text-lg" style={{ color: PRIMARY }}>{detail.packages}</span></div>
-                  <div className="flex justify-between"><span className="text-gray-500">Số thùng:</span><span className="font-semibold">{detail.boxes}</span></div>
+                  <p className="font-semibold text-gray-500 text-[10px] uppercase tracking-wide mb-2">Tập kết</p>
+                  <div className="flex justify-between"><span className="text-gray-500">Kho hiện tại:</span><span className="font-semibold">{detail.warehouse}</span></div>
                   <div className="flex justify-between"><span className="text-gray-500">Trạng thái:</span><Badge status={detail.status} /></div>
                 </div>
               </div>
+
+              {detail.pickTasks && detail.pickTasks.length > 0 && (
+                <div className="mb-4">
+                  <p className="font-semibold text-gray-600 text-[10px] uppercase tracking-wide mb-2">Các lệnh xuất kho (Pick Tasks)</p>
+                  <div className="space-y-2">
+                    {detail.pickTasks.map(pt => (
+                      <div key={pt.id} className="border border-gray-200 rounded overflow-hidden">
+                        <div className="bg-gray-50 px-3 py-2 flex items-center justify-between border-b border-gray-200">
+                          <div>
+                            <span className="font-semibold text-gray-700">Mã: {pt.id.substring(0,8).toUpperCase()}</span>
+                            <span className="ml-2 text-gray-500">Kho: {pt.warehouse}</span>
+                          </div>
+                          <Badge status={pt.status === 'Completed' ? 'completed' : 'waiting'} />
+                        </div>
+                        <div className="px-3 py-2 bg-white">
+                          <table className="w-full text-[11px]">
+                            <thead>
+                              <tr className="text-gray-500 border-b border-gray-100">
+                                <th className="text-left font-medium pb-1">Tên hàng</th>
+                                <th className="text-center font-medium pb-1">SL Yêu cầu</th>
+                                <th className="text-center font-medium pb-1">SL Đã pick</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {pt.items.map((i, idx) => (
+                                <tr key={idx}>
+                                  <td className="py-1 text-gray-700">{i.name}</td>
+                                  <td className="py-1 text-center font-medium">{i.requestedQty}</td>
+                                  <td className="py-1 text-center text-green-600 font-medium">{i.packedQty}</td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {detail.products && detail.products.length > 0 && (
+                <div className="mb-4">
+                  <p className="font-semibold text-gray-600 text-[10px] uppercase tracking-wide mb-2">Tổng quan hàng hóa cần tập kết</p>
+                  <table className="w-full border border-gray-200 rounded overflow-hidden">
+                    <thead>
+                      <tr className="bg-gray-50 border-b border-gray-200">
+                        <th className="text-left px-3 py-2 text-gray-700 font-semibold">Mã SP</th>
+                        <th className="text-left px-3 py-2 text-gray-700 font-semibold">Tên hàng</th>
+                        <th className="text-center px-3 py-2 text-gray-700 font-semibold">Tổng Yêu cầu</th>
+                        <th className="text-center px-3 py-2 text-gray-700 font-semibold">Sẵn sàng ở Kho Chính</th>
+                        <th className="text-center px-3 py-2 text-gray-700 font-semibold">Cần điều chuyển thêm</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-100">
+                      {detail.products.map(p => {
+                        const readyQty = p.quantity - (p.requiredTransferQuantity || 0);
+                        return (
+                          <tr key={p.sku} className="hover:bg-gray-50">
+                            <td className="px-3 py-2 font-mono text-gray-500">{p.sku}</td>
+                            <td className="px-3 py-2 text-gray-800">{p.name}</td>
+                            <td className="px-3 py-2 text-center font-semibold">{p.quantity}</td>
+                            <td className={`px-3 py-2 text-center font-semibold ${readyQty > 0 ? 'text-green-600' : 'text-gray-400'}`}>{readyQty}</td>
+                            <td className={`px-3 py-2 text-center font-semibold ${p.requiredTransferQuantity > 0 ? 'text-red-500' : 'text-gray-400'}`}>{p.requiredTransferQuantity || 0}</td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              )}
               <div className="flex gap-2 pt-2 border-t border-gray-100">
-                <Button size="sm" className="h-7 text-xs gap-1.5" style={{ backgroundColor: PRIMARY }} onClick={() => handleConsolidate(detail.id)}>
-                  <ArrowRight className="w-3.5 h-3.5" /> Hoàn tất tập kết
-                </Button>
+                {(!detail.products || detail.products.every((p: any) => p.requiredTransferQuantity === undefined || p.requiredTransferQuantity === 0)) ? (
+                  <Button size="sm" className="h-7 text-xs gap-1.5" style={{ backgroundColor: PRIMARY }} onClick={() => handleConsolidate(detail.id)}>
+                    <ArrowRight className="w-3.5 h-3.5" /> Hoàn tất tập kết
+                  </Button>
+                ) : (
+                  <Button size="sm" className="h-7 text-xs gap-1.5" style={{ backgroundColor: '#7C3AED' }} onClick={() => {
+                    const productsToTransfer = (detail.products || []).filter((p: any) => p.requiredTransferQuantity > 0).map((p: any) => ({
+                      sku: p.sku, name: p.name, quantity: p.requiredTransferQuantity, transferStatus: '—'
+                    }));
+                    navigate('/warehouse/transfer/stock-transfer', { state: { prefill: { sourceWarehouse: detail.warehouse, orderId: detail.id, items: productsToTransfer } } });
+                  }}>
+                    <Truck className="w-3.5 h-3.5" /> Điều chuyển nội bộ
+                  </Button>
+                )}
                 <Button variant="outline" size="sm" className="h-7 text-xs ml-auto" onClick={() => setDetail(null)}>Đóng</Button>
               </div>
             </div>
