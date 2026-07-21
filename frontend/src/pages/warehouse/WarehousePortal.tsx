@@ -6,6 +6,7 @@ import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger,
 } from '../../components/sales-ui/dropdown-menu';
 import {
+  Archive, CheckCircle,
   LayoutDashboard, Package, ClipboardList, Layers, ArrowDownToLine, ArrowUpFromLine,
   History, ShoppingBag, BarChart3, AlertCircle, TrendingDown, FileBarChart,
   Bell, LogOut, ChevronDown, Search, Settings, Truck, GitMerge,
@@ -44,6 +45,7 @@ import WarehouseStockAdjustment from './WarehouseStockAdjustment';
 import WarehouseProductionIssue from './WarehouseProductionIssue';
 import WarehouseGoodsIssue from './WarehouseGoodsIssue';
 import WarehouseManagement from './WarehouseManagement';
+import WarehousePickupReceiving from './WarehousePickupReceiving';
 
 interface NavItem {
   id: string; label: string; icon: ReactNode; path: string;
@@ -84,6 +86,12 @@ const buildNavItems = (): NavItem[] => [
       { id: 'quarantine',       label: 'Cách ly & Kiểm định', icon: <ShieldCheck className="w-3.5 h-3.5" />, path: '/warehouse/inv-management/quarantine' },
       { id: 'inventory-count',  label: 'Kiểm kê tồn kho',     icon: <ClipboardCheck className="w-3.5 h-3.5" />, path: '/warehouse/inv-management/inventory-count' },
       { id: 'stock-adjustment', label: 'Duyệt điều chỉnh TK', icon: <SlidersHorizontal className="w-3.5 h-3.5" />, path: '/warehouse/inv-management/stock-adjustment' },
+    ],
+  },
+  {
+    id: 'returns', label: 'Đổi trả hàng', icon: <ArrowRightLeft className="w-4 h-4" />, path: '/warehouse/returns',
+    children: [
+      { id: 'pickup-receiving', label: 'Tiếp nhận xe hoàn', icon: <Truck className="w-3.5 h-3.5" />, path: '/warehouse/pickup-receiving' },
     ],
   },
   {
@@ -283,6 +291,9 @@ export default function WarehousePortal() {
             <Route path="purchase/goods-receipt"                 element={<WarehouseGoodsReceipt />} />
             <Route path="purchase/receiving-comparison"          element={<WarehouseReceivingComparison />} />
             <Route path="purchase/quality-inspection"            element={<WarehouseQualityInspection />} />
+            <Route path="quarantine"                             element={<WarehouseQuarantine />} />
+            <Route path="pickup-receiving"                       element={<WarehousePickupReceiving />} />
+            <Route path="quality-inspection"                     element={<WarehouseQualityInspection />} />
             <Route path="transfer/stock-transfer"                element={<WarehouseStockTransfer />} />
             <Route path="inv-management/quarantine"              element={<WarehouseQuarantine />} />
             <Route path="inv-management/inventory-count"         element={<WarehouseInventoryCount />} />

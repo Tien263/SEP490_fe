@@ -27,9 +27,11 @@ import {
   paymentStatusMeta,
   redInvoiceStatusMeta,
   requestVatInvoice,
-  requestCancelOrder
+  requestCancelOrder,
+  createExchangeRequest
 } from '../services/orderService.js'
 import { exportInvoiceToPdf } from '../utils/exportPdf.js'
+import ExchangeRequestModal from './sales/ExchangeRequestModal.tsx'
 
 function InfoRow({ icon: Icon, label, value }) {
   return (
@@ -75,6 +77,8 @@ export default function OrderDetail() {
   const [cancelModalOpen, setCancelModalOpen] = useState(false)
   const [cancelReason, setCancelReason] = useState('')
   const [cancelLoading, setCancelLoading] = useState(false)
+  const [showExchangeModal, setShowExchangeModal] = useState(false)
+  const [selectedReturnRequest, setSelectedReturnRequest] = useState(null)
 
   const fetchOrder = async () => {
     try {
@@ -132,6 +136,17 @@ export default function OrderDetail() {
       await exportInvoiceToPdf(order)
     } catch (err) {
       alert(err.message)
+    }
+  }
+
+  const handleExchangeRequest = async (payload) => {
+    try {
+      await createExchangeRequest(order.id, payload)
+      alert('Đã gửi yêu cầu đổi/trả hàng thành công!')
+      setShowExchangeModal(false)
+      fetchOrder()
+    } catch (err) {
+      alert(err.message || 'Lỗi khi tạo yêu cầu.')
     }
   }
 
@@ -263,6 +278,18 @@ export default function OrderDetail() {
                 >
                   <AlertCircle className="h-4 w-4" />
                   Yêu cầu hủy đơn
+                </Button>
+              )}
+
+              {/* Nút yêu cầu đổi/trả */}
+              {(order.orderStatus === 'Completed' || ['Delivered', 'PartiallyDelivered'].includes(order.deliveryStatus)) && (
+                <Button
+                  variant="outline"
+                  className="rounded-full text-sm text-orange-600 hover:bg-orange-50 hover:text-orange-700 gap-2"
+                  onClick={() => setShowExchangeModal(true)}
+                >
+                  <RefreshCw className="h-4 w-4" />
+                  Yêu cầu đổi/trả
                 </Button>
               )}
 
@@ -433,6 +460,46 @@ export default function OrderDetail() {
                 </div>
               </section>
 
+              {/* Lịch sử yêu cầu đổi/trả */}
+              {order.returnExchangeRequests && order.returnExchangeRequests.length > 0 && (
+                <section className="rounded-[1.75rem] border border-gray-100 bg-white p-6">
+                  <div className="mb-5 flex items-center justify-between gap-4">
+                    <div>
+                      <p className="text-xs font-semibold uppercase tracking-[0.2em] text-gray-400">Đổi/Trả</p>
+                      <h2 className="mt-2 text-xl font-semibold text-gray-900">Lịch sử Yêu cầu Đổi/Trả</h2>
+                    </div>
+                  </div>
+                  <div className="space-y-4">
+                    {order.returnExchangeRequests.map((req, idx) => (
+                      <div key={req.id} className="rounded-2xl border border-gray-100 bg-gray-50 p-5 flex justify-between items-center transition-colors hover:bg-gray-100">
+                        <div>
+                          <div className="flex items-center gap-3 mb-1">
+                            <h3 className="font-semibold text-gray-900">Yêu cầu #{idx + 1}</h3>
+                            <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider ${
+                              req.status === 'Pending' ? 'bg-amber-100 text-amber-700' :
+                              req.status === 'Approved' ? 'bg-green-100 text-green-700' :
+                              req.status === 'Rejected' ? 'bg-red-100 text-red-700' :
+                              'bg-gray-200 text-gray-700'
+                            }`}>
+                              {req.status === 'Pending' ? 'Đang xử lý' :
+                               req.status === 'Approved' ? 'Đã duyệt' :
+                               req.status === 'Rejected' ? 'Từ chối' : req.status}
+                            </span>
+                          </div>
+                          <p className="text-sm text-gray-500 truncate max-w-[200px] sm:max-w-md">Lý do: {req.reason}</p>
+                        </div>
+                        <button
+                          onClick={() => setSelectedReturnRequest(req)}
+                          className="text-sm font-semibold text-blue-600 hover:text-blue-700 bg-white border border-gray-200 px-4 py-2 rounded-xl shadow-sm hover:border-gray-300 transition-colors"
+                        >
+                          Xem chi tiết
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                </section>
+              )}
+
               {/* Timeline */}
               <section className="rounded-[1.75rem] border border-gray-100 bg-white p-6">
                 <p className="text-xs font-semibold uppercase tracking-[0.2em] text-gray-400">Tiến trình</p>
@@ -576,6 +643,100 @@ export default function OrderDetail() {
               <Button onClick={handleRequestCancel} disabled={cancelLoading} className="bg-red-600 hover:bg-red-700 text-white">
                 {cancelLoading ? 'Đang gửi...' : 'Gửi yêu cầu'}
               </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showExchangeModal && (
+        <ExchangeRequestModal
+          order={order}
+          onClose={() => setShowExchangeModal(false)}
+          onSubmit={handleExchangeRequest}
+        />
+      )}
+
+      {selectedReturnRequest && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-gray-900/60 backdrop-blur-sm">
+          <div className="bg-white rounded-3xl w-full max-w-2xl max-h-[90vh] flex flex-col shadow-2xl overflow-hidden">
+            <div className="flex items-center justify-between p-6 border-b border-gray-100 bg-gray-50/50">
+              <h2 className="text-xl font-bold text-gray-900">Chi tiết Yêu cầu Đổi/Trả</h2>
+              <button
+                onClick={() => setSelectedReturnRequest(null)}
+                className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-full transition-colors"
+              >
+                ×
+              </button>
+            </div>
+            
+            <div className="p-6 overflow-y-auto">
+              <div className="mb-6 flex justify-between items-start gap-4">
+                <div>
+                  <h4 className="text-sm font-semibold text-gray-900 mb-1">Lý do yêu cầu:</h4>
+                  <p className="text-gray-700">{selectedReturnRequest.reason}</p>
+                </div>
+                <span className={`px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider shrink-0 ${
+                  selectedReturnRequest.status === 'Pending' ? 'bg-amber-100 text-amber-700' :
+                  selectedReturnRequest.status === 'Approved' ? 'bg-green-100 text-green-700' :
+                  selectedReturnRequest.status === 'Rejected' ? 'bg-red-100 text-red-700' :
+                  'bg-gray-100 text-gray-700'
+                }`}>
+                  {selectedReturnRequest.status === 'Pending' ? 'Đang xử lý' :
+                   selectedReturnRequest.status === 'Approved' ? 'Đã duyệt' :
+                   selectedReturnRequest.status === 'Rejected' ? 'Từ chối' : selectedReturnRequest.status}
+                </span>
+              </div>
+
+              {selectedReturnRequest.managerNote && (
+                <div className="mb-6 bg-yellow-50 p-4 rounded-xl border border-yellow-100">
+                  <h4 className="text-sm font-semibold text-yellow-800 mb-1">Phản hồi từ cửa hàng:</h4>
+                  <p className="text-yellow-700 text-sm">{selectedReturnRequest.managerNote}</p>
+                </div>
+              )}
+
+              <div className="grid md:grid-cols-2 gap-6">
+                {selectedReturnRequest.returnItems && selectedReturnRequest.returnItems.length > 0 && (
+                  <div>
+                    <h4 className="text-xs font-bold text-gray-400 mb-3 uppercase tracking-wider flex items-center gap-2">
+                      <span className="w-1.5 h-1.5 rounded-full bg-red-400"></span>
+                      Sản phẩm trả lại
+                    </h4>
+                    <ul className="space-y-3">
+                      {selectedReturnRequest.returnItems.map((item, i) => (
+                        <li key={i} className="flex justify-between items-center bg-gray-50 p-3 rounded-xl border border-gray-100">
+                          <span className="font-medium text-sm text-gray-900 truncate pr-4">{item.productName}</span>
+                          <span className="font-bold text-sm text-gray-900 bg-white px-2 py-1 rounded-md shadow-sm">x{item.quantity}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+                {selectedReturnRequest.exchangeItems && selectedReturnRequest.exchangeItems.length > 0 && (
+                  <div>
+                    <h4 className="text-xs font-bold text-gray-400 mb-3 uppercase tracking-wider flex items-center gap-2">
+                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>
+                      Sản phẩm muốn đổi
+                    </h4>
+                    <ul className="space-y-3">
+                      {selectedReturnRequest.exchangeItems.map((item, i) => (
+                        <li key={i} className="flex justify-between items-center bg-gray-50 p-3 rounded-xl border border-gray-100">
+                          <span className="font-medium text-sm text-gray-900 truncate pr-4">{item.productName}</span>
+                          <span className="font-bold text-sm text-gray-900 bg-white px-2 py-1 rounded-md shadow-sm">x{item.quantity}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            <div className="p-4 border-t border-gray-100 flex justify-end">
+              <button
+                onClick={() => setSelectedReturnRequest(null)}
+                className="px-6 py-2.5 text-sm font-semibold text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-xl transition-colors"
+              >
+                Đóng
+              </button>
             </div>
           </div>
         </div>

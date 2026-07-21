@@ -87,11 +87,10 @@ function NavItemRow({
   return (
     <button
       onClick={() => onNavigate(item.path)}
-      className={`group flex w-full items-center justify-between rounded px-2 py-1.5 text-[12px] font-medium transition-colors ${
-        isActive
+      className={`group flex w-full items-center justify-between rounded px-2 py-1.5 text-[12px] font-medium transition-colors ${isActive
           ? 'bg-[rgba(255,255,255,0.15)] text-white'
           : 'text-white/60 hover:bg-[rgba(255,255,255,0.08)] hover:text-white'
-      }`}
+        }`}
     >
       <div className="flex items-center gap-2">
         <span className={isActive ? 'text-white' : 'text-white/40 group-hover:text-white/80'}>

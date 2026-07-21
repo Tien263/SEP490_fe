@@ -43,13 +43,13 @@ export async function processCancelRequest(orderId, body) {
  */
 export async function getOrderHistory(params = {}) {
   const qs = new URLSearchParams()
-  if (params.search)        qs.set('search',        params.search)
-  if (params.status)        qs.set('status',        params.status)
+  if (params.search) qs.set('search', params.search)
+  if (params.status) qs.set('status', params.status)
   if (params.paymentStatus) qs.set('paymentStatus', params.paymentStatus)
-  if (params.fromDate)      qs.set('fromDate',      params.fromDate)
-  if (params.toDate)        qs.set('toDate',        params.toDate)
-  if (params.page)          qs.set('page',          String(params.page))
-  if (params.pageSize)      qs.set('pageSize',      String(params.pageSize))
+  if (params.fromDate) qs.set('fromDate', params.fromDate)
+  if (params.toDate) qs.set('toDate', params.toDate)
+  if (params.page) qs.set('page', String(params.page))
+  if (params.pageSize) qs.set('pageSize', String(params.pageSize))
 
   const query = qs.toString()
   return request('GET', `/orders/my-history${query ? `?${query}` : ''}`)
@@ -95,26 +95,27 @@ export function downloadInvoicePdf(invoicePdfUrl) {
 // ─── Status Metadata ─────────────────────────────────────────────────────────
 
 export const orderStatusMeta = {
-  New:       { label: 'Đơn mới',        badgeClass: 'bg-blue-100 text-blue-700' },
-  Received:  { label: 'Đã tiếp nhận',   badgeClass: 'bg-indigo-100 text-indigo-700' },
-  Packing:   { label: 'Đang đóng gói',  badgeClass: 'bg-violet-100 text-violet-700' },
-  Shortage:  { label: 'Thiếu hàng',     badgeClass: 'bg-orange-100 text-orange-700' },
-  InTransit: { label: 'Đang giao',      badgeClass: 'bg-amber-100 text-amber-700' },
-  Delivered: { label: 'Đã giao',        badgeClass: 'bg-emerald-100 text-emerald-700' },
-  Cancelled: { label: 'Đã hủy',         badgeClass: 'bg-red-100 text-red-600' },
+  New: { label: 'Đơn mới', badgeClass: 'bg-blue-100 text-blue-700' },
+  Received: { label: 'Đã tiếp nhận', badgeClass: 'bg-indigo-100 text-indigo-700' },
+  Packing: { label: 'Đang đóng gói', badgeClass: 'bg-violet-100 text-violet-700' },
+  Shortage: { label: 'Thiếu hàng', badgeClass: 'bg-orange-100 text-orange-700' },
+  InTransit: { label: 'Đang giao', badgeClass: 'bg-amber-100 text-amber-700' },
+  Delivered: { label: 'Đã giao', badgeClass: 'bg-emerald-100 text-emerald-700' },
+  Cancelled: { label: 'Đã hủy', badgeClass: 'bg-red-100 text-red-600' },
+  Returned: { label: 'Đã đổi/trả', badgeClass: 'bg-orange-100 text-orange-700' },
 }
 
 export const paymentStatusMeta = {
-  Pending: { label: 'Chờ TT',    badgeClass: 'bg-amber-100 text-amber-700' },
-  Paid:    { label: 'Đã TT',     badgeClass: 'bg-emerald-100 text-emerald-700' },
-  Failed:  { label: 'TT thất bại', badgeClass: 'bg-red-100 text-red-600' },
+  Pending: { label: 'Chờ TT', badgeClass: 'bg-amber-100 text-amber-700' },
+  Paid: { label: 'Đã TT', badgeClass: 'bg-emerald-100 text-emerald-700' },
+  Failed: { label: 'TT thất bại', badgeClass: 'bg-red-100 text-red-600' },
 }
 
 export const redInvoiceStatusMeta = {
-  None:            { label: 'Chưa yêu cầu', badgeClass: 'bg-gray-100 text-gray-500' },
-  Pending:         { label: 'Đang xử lý',   badgeClass: 'bg-amber-100 text-amber-700' },
-  Issued:          { label: 'Đã phát hành', badgeClass: 'bg-blue-100 text-blue-700' },
-  SentToCustomer:  { label: 'Đã gửi',       badgeClass: 'bg-emerald-100 text-emerald-700' },
+  None: { label: 'Chưa yêu cầu', badgeClass: 'bg-gray-100 text-gray-500' },
+  Pending: { label: 'Đang xử lý', badgeClass: 'bg-amber-100 text-amber-700' },
+  Issued: { label: 'Đã phát hành', badgeClass: 'bg-blue-100 text-blue-700' },
+  SentToCustomer: { label: 'Đã gửi', badgeClass: 'bg-emerald-100 text-emerald-700' },
 }
 
 /**
@@ -124,9 +125,9 @@ export const redInvoiceStatusMeta = {
  */
 export function getOrderTimeline(orderStatus) {
   const steps = [
-    { key: 'New',       title: 'Đơn hàng mới' },
-    { key: 'Received',  title: 'Đã tiếp nhận' },
-    { key: 'Packing',   title: 'Đang đóng gói' },
+    { key: 'New', title: 'Đơn hàng mới' },
+    { key: 'Received', title: 'Đã tiếp nhận' },
+    { key: 'Packing', title: 'Đang đóng gói' },
     { key: 'InTransit', title: 'Đang giao hàng' },
     { key: 'Delivered', title: 'Giao thành công' },
   ]
@@ -137,4 +138,38 @@ export function getOrderTimeline(orderStatus) {
     ...step,
     done: idx <= currentIdx,
   }))
+}
+
+export async function createExchangeRequest(orderId, data) {
+  const token = localStorage.getItem('accessToken');
+  const res = await fetch(`/api/orders/${orderId}/exchange-request`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`
+    },
+    body: JSON.stringify(data)
+  });
+  if (!res.ok) {
+    const error = await res.json();
+    throw new Error(error.message || 'Lỗi khi tạo yêu cầu đổi/trả hàng.');
+  }
+  return res.json();
+}
+
+export async function processReturnExchangeRequest(id, data) {
+  const token = localStorage.getItem('accessToken');
+  const res = await fetch(`/api/orders/exchange-request/${id}/process`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`
+    },
+    body: JSON.stringify(data)
+  });
+  if (!res.ok) {
+    const error = await res.json();
+    throw new Error(error.message || 'Lỗi xử lý yêu cầu đổi/trả.');
+  }
+  return res.json();
 }
