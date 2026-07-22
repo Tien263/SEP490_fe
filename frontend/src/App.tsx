@@ -21,6 +21,7 @@ import SalesPortal from './pages/sales/SalesPortal.tsx'
 import AdminPortal from './pages/admin/AdminPortal.tsx'
 import CEOPortal from './pages/ceo/CEOPortal.tsx'
 import CustomerNotificationsPage from './pages/CustomerNotificationsPage.jsx'
+import OrderTracking from './pages/OrderTracking.jsx'
 import WarehousePortal from './pages/warehouse/WarehousePortal.tsx'
 import SalesManagerPortal from './pages/sales-manager/SalesManagerPortal.tsx'
 import ProtectedRouteImport from './components/ProtectedRoute.jsx'
@@ -39,6 +40,7 @@ function App() {
             <Route path="/home" element={<Home />} />
             <Route path="/products" element={<Products />} />
             <Route path="/products/:id" element={<ProductDetail />} />
+            <Route path="/track-order" element={<OrderTracking />} />
             <Route path="/login" element={<Login />} />
             <Route path="/register" element={<Register />} />
             <Route path="/forgot-password" element={<ForgotPassword />} />

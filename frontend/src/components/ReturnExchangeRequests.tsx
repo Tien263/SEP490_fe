@@ -22,6 +22,7 @@ type ReturnExchangeRequest = {
   evidenceUrls?: string[] | string;
   returnItems?: ReturnExchangeItem[];
   exchangeItems?: ReturnExchangeItem[];
+  replacementOrderId?: string | null;
 };
 
 type RequestSectionProps = {

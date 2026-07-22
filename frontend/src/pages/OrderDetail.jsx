@@ -32,6 +32,7 @@ import {
 } from '../services/orderService.js'
 import { exportInvoiceToPdf } from '../utils/exportPdf.js'
 import ExchangeRequestModal from './sales/ExchangeRequestModal.tsx'
+import { ReturnExchangeRequestDetailModal } from '../components/ReturnExchangeRequests'
 
 function InfoRow({ icon: Icon, label, value }) {
   return (
@@ -194,7 +195,7 @@ export default function OrderDetail() {
   const payMeta   = paymentStatusMeta[order.paymentStatus]   || { label: order.paymentStatus,   badgeClass: 'bg-gray-100 text-gray-500' }
   const orderMeta = orderStatusMeta[order.orderStatus]       || { label: order.orderStatus,     badgeClass: 'bg-gray-100 text-gray-500' }
   const vatMeta   = redInvoiceStatusMeta[order.redInvoiceStatus] || redInvoiceStatusMeta.None
-  const timeline  = getOrderTimeline(order.orderStatus)
+  const timeline  = getOrderTimeline(order.orderStatus, order.deliveryStatus)
 
   const vatDeadlineStr = order.vatDeadline
     ? new Date(order.vatDeadline).toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })
@@ -282,7 +283,9 @@ export default function OrderDetail() {
               )}
 
               {/* Nút yêu cầu đổi/trả */}
-              {(order.orderStatus === 'Completed' || ['Delivered', 'PartiallyDelivered'].includes(order.deliveryStatus)) && (
+              {order.orderStatus !== 'Returned' && 
+               !(order.returnExchangeRequests && order.returnExchangeRequests.length > 0) &&
+               (order.orderStatus === 'Completed' || ['Delivered', 'PartiallyDelivered'].includes(order.deliveryStatus)) && (
                 <Button
                   variant="outline"
                   className="rounded-full text-sm text-orange-600 hover:bg-orange-50 hover:text-orange-700 gap-2"
@@ -593,6 +596,31 @@ export default function OrderDetail() {
                       </div>
                     </div>
                   )}
+
+                  {/* SePay QR Code Box cho đơn cần thanh toán thêm */}
+                  {['Pending', 'Unpaid', 'PendingPayment'].includes(order.paymentStatus) && (order.finalPayment - (order.amountPaid || 0)) > 0 && (
+                    <div className="mt-4 border-t border-blue-100 pt-4">
+                      <div className="rounded-2xl border border-blue-200 bg-blue-50/60 p-4">
+                        <div className="flex items-center gap-2 mb-1.5">
+                          <CreditCard className="h-4 w-4 text-blue-600" />
+                          <h3 className="text-xs font-bold uppercase tracking-wider text-blue-900">Thanh toán SePay QR</h3>
+                        </div>
+                        <p className="text-xs text-blue-700 mb-3">
+                          Quét mã QR bằng App Ngân hàng bất kỳ để thanh toán khoản tiền còn thiếu:
+                        </p>
+                        <div className="flex flex-col items-center justify-center p-3 bg-white rounded-xl border border-blue-100 shadow-xs">
+                          <img
+                            src={`https://qr.sepay.vn/img?bank=MBBank&acc=0987654321&template=compact&amount=${order.finalPayment - (order.amountPaid || 0)}&des=${order.orderCode}`}
+                            alt="SePay QR Code"
+                            className="w-44 h-44 object-contain rounded-lg"
+                            onError={(e) => { e.currentTarget.style.display = 'none'; }}
+                          />
+                          <p className="mt-2 text-xs font-semibold text-slate-700">Số tiền cần chuyển: <span className="font-bold text-blue-600">{formatPrice(order.finalPayment - (order.amountPaid || 0))}</span></p>
+                          <p className="text-[11px] text-slate-500 mt-0.5">Nội dung CK: <span className="font-mono font-bold text-slate-900">{order.orderCode}</span></p>
+                        </div>
+                      </div>
+                    </div>
+                  )}
                 </div>
               </section>
 
@@ -657,89 +685,10 @@ export default function OrderDetail() {
       )}
 
       {selectedReturnRequest && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-gray-900/60 backdrop-blur-sm">
-          <div className="bg-white rounded-3xl w-full max-w-2xl max-h-[90vh] flex flex-col shadow-2xl overflow-hidden">
-            <div className="flex items-center justify-between p-6 border-b border-gray-100 bg-gray-50/50">
-              <h2 className="text-xl font-bold text-gray-900">Chi tiết Yêu cầu Đổi/Trả</h2>
-              <button
-                onClick={() => setSelectedReturnRequest(null)}
-                className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-full transition-colors"
-              >
-                ×
-              </button>
-            </div>
-            
-            <div className="p-6 overflow-y-auto">
-              <div className="mb-6 flex justify-between items-start gap-4">
-                <div>
-                  <h4 className="text-sm font-semibold text-gray-900 mb-1">Lý do yêu cầu:</h4>
-                  <p className="text-gray-700">{selectedReturnRequest.reason}</p>
-                </div>
-                <span className={`px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider shrink-0 ${
-                  selectedReturnRequest.status === 'Pending' ? 'bg-amber-100 text-amber-700' :
-                  selectedReturnRequest.status === 'Approved' ? 'bg-green-100 text-green-700' :
-                  selectedReturnRequest.status === 'Rejected' ? 'bg-red-100 text-red-700' :
-                  'bg-gray-100 text-gray-700'
-                }`}>
-                  {selectedReturnRequest.status === 'Pending' ? 'Đang xử lý' :
-                   selectedReturnRequest.status === 'Approved' ? 'Đã duyệt' :
-                   selectedReturnRequest.status === 'Rejected' ? 'Từ chối' : selectedReturnRequest.status}
-                </span>
-              </div>
-
-              {selectedReturnRequest.managerNote && (
-                <div className="mb-6 bg-yellow-50 p-4 rounded-xl border border-yellow-100">
-                  <h4 className="text-sm font-semibold text-yellow-800 mb-1">Phản hồi từ cửa hàng:</h4>
-                  <p className="text-yellow-700 text-sm">{selectedReturnRequest.managerNote}</p>
-                </div>
-              )}
-
-              <div className="grid md:grid-cols-2 gap-6">
-                {selectedReturnRequest.returnItems && selectedReturnRequest.returnItems.length > 0 && (
-                  <div>
-                    <h4 className="text-xs font-bold text-gray-400 mb-3 uppercase tracking-wider flex items-center gap-2">
-                      <span className="w-1.5 h-1.5 rounded-full bg-red-400"></span>
-                      Sản phẩm trả lại
-                    </h4>
-                    <ul className="space-y-3">
-                      {selectedReturnRequest.returnItems.map((item, i) => (
-                        <li key={i} className="flex justify-between items-center bg-gray-50 p-3 rounded-xl border border-gray-100">
-                          <span className="font-medium text-sm text-gray-900 truncate pr-4">{item.productName}</span>
-                          <span className="font-bold text-sm text-gray-900 bg-white px-2 py-1 rounded-md shadow-sm">x{item.quantity}</span>
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                )}
-                {selectedReturnRequest.exchangeItems && selectedReturnRequest.exchangeItems.length > 0 && (
-                  <div>
-                    <h4 className="text-xs font-bold text-gray-400 mb-3 uppercase tracking-wider flex items-center gap-2">
-                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>
-                      Sản phẩm muốn đổi
-                    </h4>
-                    <ul className="space-y-3">
-                      {selectedReturnRequest.exchangeItems.map((item, i) => (
-                        <li key={i} className="flex justify-between items-center bg-gray-50 p-3 rounded-xl border border-gray-100">
-                          <span className="font-medium text-sm text-gray-900 truncate pr-4">{item.productName}</span>
-                          <span className="font-bold text-sm text-gray-900 bg-white px-2 py-1 rounded-md shadow-sm">x{item.quantity}</span>
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                )}
-              </div>
-            </div>
-
-            <div className="p-4 border-t border-gray-100 flex justify-end">
-              <button
-                onClick={() => setSelectedReturnRequest(null)}
-                className="px-6 py-2.5 text-sm font-semibold text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-xl transition-colors"
-              >
-                Đóng
-              </button>
-            </div>
-          </div>
-        </div>
+        <ReturnExchangeRequestDetailModal
+          request={selectedReturnRequest}
+          onClose={() => setSelectedReturnRequest(null)}
+        />
       )}
     </div>
   )
