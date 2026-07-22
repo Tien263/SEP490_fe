@@ -177,6 +177,8 @@ export default function SalesManagerOrderDetailPage() {
   const [showRejectReturnModal, setShowRejectReturnModal] = useState(false);
   const [returnProcessNote, setReturnProcessNote] = useState('');
   const [selectedReturnRequest, setSelectedReturnRequest] = useState<any | null>(null);
+  const [showCreateReplacementModal, setShowCreateReplacementModal] = useState(false);
+  const [pendingReplacementRequestId, setPendingReplacementRequestId] = useState<string | null>(null);
 
   useEffect(() => {
     const fetchDetail = async () => {
@@ -266,6 +268,42 @@ export default function SalesManagerOrderDetailPage() {
       setOrder(data);
     } catch (err: any) {
       alert(err.message || 'Lỗi không xác định.');
+    }
+  };
+
+  const [isCreatingReplacement, setIsCreatingReplacement] = useState(false);
+
+  const handleCreateExchangeReplacement = async (requestId: string) => {
+    if (isCreatingReplacement) return;
+    setIsCreatingReplacement(true);
+    try {
+      const response = await fetch(`/api/delivery/exchange/${requestId}/replacement`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${localStorage.getItem('accessToken')}` },
+      });
+
+      let data: any = {};
+      try {
+        const text = await response.text();
+        if (text) data = JSON.parse(text);
+      } catch (e) {
+        console.error("Parse error", e);
+      }
+      
+      if (!response.ok) throw new Error(data.message || `Lỗi từ server: ${response.status} ${response.statusText}`);
+
+      alert(data.message || 'Tạo đơn thay thế thành công!');
+      
+      const res = await fetch(`/api/orders/sales/${id}`, {
+        headers: { Authorization: `Bearer ${localStorage.getItem('accessToken')}` }
+      });
+      const orderData = await res.json();
+      setOrder(orderData);
+      setSelectedReturnRequest(null);
+    } catch (err: any) {
+      alert(err.message || 'Lỗi không xác định.');
+    } finally {
+      setIsCreatingReplacement(false);
     }
   };
 
@@ -813,32 +851,36 @@ export default function SalesManagerOrderDetailPage() {
         <ReturnExchangeRequestDetailModal
           request={selectedReturnRequest}
           onClose={() => setSelectedReturnRequest(null)}
-          footerActions={selectedReturnRequest.status === 'Pending' && (
+          footerActions={
             <>
-              <button
-                onClick={() => {
-                  setReturnRequestIdToProcess(selectedReturnRequest.id);
-                  setReturnProcessNote('');
-                  setShowRejectReturnModal(true);
-                  setSelectedReturnRequest(null);
-                }}
-                className="rounded-xl border-2 border-red-200 bg-white px-5 py-2 text-sm font-semibold text-red-600 transition hover:bg-red-50"
-              >
-                Từ chối
-              </button>
-              <button
-                onClick={() => {
-                  setReturnRequestIdToProcess(selectedReturnRequest.id);
-                  setReturnProcessNote('');
-                  setShowApproveReturnModal(true);
-                  setSelectedReturnRequest(null);
-                }}
-                className="rounded-xl bg-emerald-500 px-5 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-emerald-600"
-              >
-                Duyệt yêu cầu
-              </button>
+              {selectedReturnRequest.status === 'Pending' && (
+                <>
+                  <button
+                    onClick={() => {
+                      setReturnRequestIdToProcess(selectedReturnRequest.id);
+                      setReturnProcessNote('');
+                      setShowRejectReturnModal(true);
+                      setSelectedReturnRequest(null);
+                    }}
+                    className="rounded-xl border-2 border-red-200 bg-white px-5 py-2 text-sm font-semibold text-red-600 transition hover:bg-red-50"
+                  >
+                    Từ chối
+                  </button>
+                  <button
+                    onClick={() => {
+                      setReturnRequestIdToProcess(selectedReturnRequest.id);
+                      setReturnProcessNote('');
+                      setShowApproveReturnModal(true);
+                      setSelectedReturnRequest(null);
+                    }}
+                    className="rounded-xl bg-emerald-500 px-5 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-emerald-600"
+                  >
+                    Duyệt yêu cầu
+                  </button>
+                </>
+              )}
             </>
-          )}
+          }
         />
       )}
 

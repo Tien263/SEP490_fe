@@ -24,6 +24,7 @@ const navigation = [
   { to: '/', label: 'Giới thiệu' },
   { to: '/home', label: 'Trang chủ' },
   { to: '/products', label: 'Sản phẩm' },
+  { to: '/profile?tab=tracking', label: 'Theo dõi đơn hàng' },
 ]
 
 const dropdownItems = [
