@@ -229,3 +229,15 @@ export async function deleteWarehouse(id) {
 export async function getStaffUsers() {
   return request('GET', `/warehouse-management/staff`);
 }
+
+// ==========================================
+// QUALITY INSPECTION / QUARANTINE
+// ==========================================
+
+export async function getQuarantineList() {
+  return request('GET', `/warehouse-management/quarantine`);
+}
+
+export async function dispatchQuarantine(id, decision) {
+  return request('POST', `/warehouse-management/quarantine/${id}/dispatch`, { decision });
+}

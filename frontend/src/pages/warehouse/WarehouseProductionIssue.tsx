@@ -48,9 +48,9 @@ export default function WarehouseProductionIssue() {
   const loadData = () => {
     getGoodsIssues('ProductionMaterial')
       .then(res => {
-        // Map DTO to match frontend expected format loosely
         const mapped = res.map((r: any) => ({
           ...r,
+          realId: r.id,
           id: r.code || r.id, // Display code as ID
           productionRequest: r.referenceId || 'N/A',
           warehouse: r.warehouseName,
@@ -59,8 +59,8 @@ export default function WarehouseProductionIssue() {
           issueDate: r.issueDate ? new Date(r.issueDate).toLocaleString('vi-VN') : (new Date(r.createdAt).toLocaleString('vi-VN')),
           hasProof: !!r.imageProofUrl,
           lines: (r.items || []).map((i: any) => ({
-            sku: i.productSku,
-            materialName: i.productName,
+            sku: i.itemSku,
+            materialName: i.itemName,
             unit: i.unit,
             requestedQty: i.quantity,
             issuedQty: i.quantity,
@@ -208,7 +208,7 @@ export default function WarehouseProductionIssue() {
                         <button className="p-1 rounded hover:bg-orange-50 text-gray-400 hover:text-orange-600" onClick={() => { setDetail(d); setShowUpload(true); setUploaded(false); }} title="Upload chứng từ"><Upload className="w-3.5 h-3.5" /></button>
                       )}
                       {d.status?.toLowerCase() === 'proofuploaded' && (
-                        <button className="p-1 rounded hover:bg-green-50 text-gray-400 hover:text-green-600" onClick={() => postGoods(d.id, d.id)} title="Đăng sổ"><Send className="w-3.5 h-3.5" /></button>
+                        <button className="p-1 rounded hover:bg-green-50 text-gray-400 hover:text-green-600" onClick={() => postGoods(d.id, d.realId)} title="Đăng sổ"><Send className="w-3.5 h-3.5" /></button>
                       )}
                     </div>
                   </td>
@@ -302,10 +302,14 @@ export default function WarehouseProductionIssue() {
               <div className="flex gap-2 pt-2 border-t border-gray-100">
                 <Button variant="outline" size="sm" className="h-7 text-xs gap-1.5"><Save className="w-3.5 h-3.5" /> Lưu nháp</Button>
                 {detail.status?.toLowerCase() === 'proofpending' && (
-                  <Button size="sm" className="h-7 text-xs gap-1.5" style={{ backgroundColor: WARNING }} onClick={() => setShowUpload(true)}><Upload className="w-3.5 h-3.5" /> Upload chứng từ</Button>
+                  <Button size="sm" className="h-7 text-xs gap-1.5" style={{ backgroundColor: WARNING }} onClick={() => uploadProof(detail.realId)}>
+                    <Upload className="w-3.5 h-3.5" /> Xác nhận Upload
+                  </Button>
                 )}
                 {detail.status?.toLowerCase() === 'proofuploaded' && (
-                  <Button size="sm" className="h-7 text-xs gap-1.5" style={{ backgroundColor: PRIMARY }} onClick={() => postGoods(detail.id, detail.id)}><Send className="w-3.5 h-3.5" /> Đăng sổ hàng xuất</Button>
+                  <Button size="sm" className="h-7 text-xs gap-1.5" style={{ backgroundColor: SUCCESS }} onClick={() => postGoods(detail.id, detail.realId)}>
+                    <Send className="w-3.5 h-3.5" /> Đăng sổ
+                  </Button>
                 )}
                 <Button variant="outline" size="sm" className="h-7 text-xs gap-1.5"><FileText className="w-3.5 h-3.5" /> In phiếu xuất</Button>
                 <Button variant="outline" size="sm" className="h-7 text-xs ml-auto" onClick={() => setDetail(null)}>Đóng</Button>

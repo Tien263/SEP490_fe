@@ -1,22 +1,31 @@
 import React, { useState, useEffect } from 'react';
 import { X, Search } from 'lucide-react';
-import { getProducts } from '../../services/productService';
+import { getMaterials } from '../../services/materialService';
 import { createGoodsIssue } from '../../services/warehouseService';
+import { getWarehouses } from '../../services/warehouseService';
 
 export default function WarehouseProductionIssueFormModal({ onClose, onSuccess }: { onClose: () => void, onSuccess: () => void }) {
   const [items, setItems] = useState<any[]>([]);
-  const [products, setProducts] = useState<any[]>([]);
-  const [warehouseId, setWarehouseId] = useState('b0f80bc2-a6f6-45a2-9904-bf747127e4fa'); // Mặc định Kho Hà Nội
+  const [materials, setMaterials] = useState<any[]>([]);
+  const [warehouseId, setWarehouseId] = useState('');
+  const [warehouses, setWarehouses] = useState<any[]>([]);
   const [factory, setFactory] = useState('Xưởng may A');
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    getProducts({ pageSize: 100 }).then(res => setProducts(res.items || [])).catch(console.error);
+    getMaterials().then(res => setMaterials(res || [])).catch(console.error);
+    getWarehouses().then(res => {
+      const whList = Array.isArray(res) ? res : (res?.items || []);
+      setWarehouses(whList);
+      if (whList.length > 0 && !warehouseId) {
+        setWarehouseId(whList[0].id);
+      }
+    }).catch(console.error);
   }, []);
 
   const handleAddItem = () => {
-    if (products.length === 0) return;
-    setItems([...items, { id: Date.now().toString(), productId: products[0].id, quantity: 1, note: '' }]);
+    if (materials.length === 0) return;
+    setItems([...items, { id: Date.now().toString(), materialId: materials[0].id, quantity: 1, note: '' }]);
   };
 
   const handleRemoveItem = (id: string) => {
@@ -36,7 +45,7 @@ export default function WarehouseProductionIssueFormModal({ onClose, onSuccess }
         warehouseId,
         note: `Xuất cho: ${factory}`,
         items: items.map(i => ({
-          productId: i.productId,
+          materialId: i.materialId,
           quantity: parseInt(i.quantity, 10),
           note: i.note
         }))
@@ -64,8 +73,9 @@ export default function WarehouseProductionIssueFormModal({ onClose, onSuccess }
             <div>
               <label className="block text-xs font-medium text-gray-600 mb-1">Kho xuất</label>
               <select className="w-full border border-gray-300 rounded px-3 py-2 bg-white focus:outline-none focus:border-blue-500" value={warehouseId} onChange={e => setWarehouseId(e.target.value)}>
-                <option value="b0f80bc2-a6f6-45a2-9904-bf747127e4fa">Kho Hà Nội</option>
-                {/* Giả lập các kho khác, ở thực tế cần fetch API getWarehouses */}
+                {warehouses.map(wh => (
+                  <option key={wh.id} value={wh.id}>{wh.name}</option>
+                ))}
               </select>
             </div>
             <div>
@@ -92,9 +102,9 @@ export default function WarehouseProductionIssueFormModal({ onClose, onSuccess }
                 {items.map(item => (
                   <tr key={item.id} className="border-b last:border-0">
                     <td className="py-2 pr-2">
-                      <select className="w-full border rounded px-2 py-1.5 bg-white" value={item.productId} onChange={e => handleItemChange(item.id, 'productId', e.target.value)}>
-                        {products.map(p => (
-                          <option key={p.id} value={p.id}>{p.sku} - {p.name}</option>
+                      <select className="w-full border rounded px-2 py-1.5 bg-white" value={item.materialId} onChange={e => handleItemChange(item.id, 'materialId', e.target.value)}>
+                        {materials.map(m => (
+                          <option key={m.id} value={m.id}>{m.name}</option>
                         ))}
                       </select>
                     </td>
