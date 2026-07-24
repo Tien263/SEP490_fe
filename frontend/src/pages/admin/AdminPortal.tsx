@@ -5,12 +5,14 @@ import AdminUsersPage from './AdminUsersPage';
 import AdminSystemConfigPage from './AdminSystemConfigPage';
 import AdminAuditLogPage from './AdminAuditLogPage';
 import AdminSystemHealthPage from './AdminSystemHealthPage';
+import AdminVehiclesPage from './AdminVehiclesPage';
+import AdminDiscountTiersPage from './AdminDiscountTiersPage';
 import { useAuth } from '../../context/AuthContext';
 import {
   LayoutDashboard, FileText, CheckSquare,
   Package, XCircle, AlertTriangle, Users, ShieldCheck,
   LogOut, BarChart2, Sparkles, History, Settings,
-  CreditCard, Wallet, ScrollText, Activity
+  CreditCard, Wallet, ScrollText, Activity, Truck, Percent
 } from 'lucide-react';
 import NotificationBell from '../../components/NotificationBell';
 import NotificationsPage from '../NotificationsPage';
@@ -78,10 +80,14 @@ const NAV_GROUPS: AdminNavGroup[] = [
     { id: 'system-health', label: 'Giám sát hệ thống', icon: <Activity className="w-4 h-4" />, path: '/admin/system-health' },
     { id: 'payment-confirm', label: 'Xác nhận thanh toán', icon: <CreditCard className="w-4 h-4" />, path: '/admin/payment-confirm', badge: 2 },
   ] },
+  { title: 'Dữ liệu chủ', items: [
+    { id: 'vehicles', label: 'Xe giao hàng', icon: <Truck className="w-4 h-4" />, path: '/admin/vehicles' },
+    { id: 'discount-tiers', label: 'Khung chiết khấu', icon: <Percent className="w-4 h-4" />, path: '/admin/discount-tiers' },
+  ] },
 ];
 
 // Các nav id đã có trang thật — phần còn lại vẫn hiển thị ComingSoon như trước (chưa có API backend).
-const WIRED_IDS = new Set(['dashboard', 'users', 'settings', 'audit-log', 'system-health']);
+const WIRED_IDS = new Set(['dashboard', 'users', 'settings', 'audit-log', 'system-health', 'vehicles', 'discount-tiers']);
 
 function NavItemButton({ item, onNavigate }: { item: AdminNavItem; onNavigate: (path: string) => void }) {
   const location = useLocation();
@@ -190,6 +196,8 @@ export default function AdminPortal() {
             <Route path="settings" element={<AdminSystemConfigPage />} />
             <Route path="audit-log" element={<AdminAuditLogPage />} />
             <Route path="system-health" element={<AdminSystemHealthPage />} />
+            <Route path="vehicles" element={<AdminVehiclesPage />} />
+            <Route path="discount-tiers" element={<AdminDiscountTiersPage />} />
             <Route path="notifications" element={<NotificationsPage />} />
             {stubItems.map(item => (
               <Route key={item.id} path={item.id} element={<ComingSoon label={item.label} />} />
