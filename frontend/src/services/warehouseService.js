@@ -146,6 +146,14 @@ export async function postGoodsIssue(id) {
   return request('POST', `/goods-issues/${id}/post`);
 }
 
+export async function updateGoodsIssueHandover(id, data) {
+  return request('PUT', `/goods-issues/${id}/handover`, data);
+}
+
+export async function createGoodsIssueReversal(id, data) {
+  return request('POST', `/goods-issues/${id}/reversal`, data);
+}
+
 
 export async function receiveStockTransfer(id, formData) {
   const accessToken = localStorage.getItem('accessToken');

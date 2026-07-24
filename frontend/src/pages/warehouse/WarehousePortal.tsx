@@ -101,21 +101,14 @@ const buildNavItems = (): NavItem[] => [
     ]
   },
   {
-    id: 'production', label: 'Sản xuất', icon: <Factory className="w-4 h-4" />, path: '/warehouse/production',
+    id: 'materials', label: 'Nguyên vật liệu SX', icon: <Layers className="w-4 h-4" />, path: '/warehouse/materials',
     children: [
-      { id: 'production-issue', label: 'Xuất NVL sản xuất', icon: <ArrowUpFromLine className="w-3.5 h-3.5" />, path: '/warehouse/production/issue' },
+      { id: 'mat-list',          label: 'Danh sách NVL',        icon: <Layers className="w-3.5 h-3.5" />, path: '/warehouse/materials' },
+      { id: 'production-issue',  label: 'Xuất NVL sản xuất',    icon: <ArrowUpFromLine className="w-3.5 h-3.5" />, path: '/warehouse/production/issue' },
+      { id: 'mat-history',       label: 'Lịch sử nhập xuất',    icon: <History className="w-3.5 h-3.5" />, path: '/warehouse/materials/history' },
     ],
   },
   { id: 'shift-inventory', label: 'Tồn kho theo ca', icon: <ClipboardList className="w-4 h-4" />, path: '/warehouse/shift-inventory' },
-  {
-    id: 'materials', label: 'Nguyên vật liệu SX', icon: <Layers className="w-4 h-4" />, path: '/warehouse/materials',
-    children: [
-      { id: 'mat-list',    label: 'Danh sách NVL',    icon: <Layers className="w-3.5 h-3.5" />, path: '/warehouse/materials' },
-      { id: 'mat-receive', label: 'Nhập nguyên liệu', icon: <ArrowDownToLine className="w-3.5 h-3.5" />, path: '/warehouse/materials/receive' },
-      { id: 'mat-issue',   label: 'Xuất nguyên liệu', icon: <ArrowUpFromLine className="w-3.5 h-3.5" />, path: '/warehouse/materials/issue' },
-      { id: 'mat-history', label: 'Lịch sử nhập xuất',icon: <History className="w-3.5 h-3.5" />, path: '/warehouse/materials/history' },
-    ],
-  },
   {
     id: 'goods', label: 'Hàng thương mại', icon: <ShoppingBag className="w-4 h-4" />, path: '/warehouse/goods',
     children: [
@@ -303,7 +296,7 @@ export default function WarehousePortal() {
             <Route path="shift-inventory"                        element={<WarehouseShiftInventory />} />
             <Route path="materials"                              element={<WarehouseMaterials />} />
             <Route path="materials/receive"                      element={<WarehouseMaterialReceiving />} />
-            <Route path="materials/issue"                        element={<WarehouseMaterialIssue />} />
+            <Route path="materials/issue"                        element={<WarehouseProductionIssue />} />
             <Route path="materials/history"                      element={<WarehouseMaterialHistory />} />
             <Route path="goods"                                  element={<WarehouseGoods />} />
             <Route path="goods/receive"                          element={<WarehouseGoodsReceive />} />

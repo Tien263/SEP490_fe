@@ -597,30 +597,7 @@ export default function OrderDetail() {
                     </div>
                   )}
 
-                  {/* SePay QR Code Box cho đơn cần thanh toán thêm */}
-                  {['Pending', 'Unpaid', 'PendingPayment'].includes(order.paymentStatus) && (order.finalPayment - (order.amountPaid || 0)) > 0 && (
-                    <div className="mt-4 border-t border-blue-100 pt-4">
-                      <div className="rounded-2xl border border-blue-200 bg-blue-50/60 p-4">
-                        <div className="flex items-center gap-2 mb-1.5">
-                          <CreditCard className="h-4 w-4 text-blue-600" />
-                          <h3 className="text-xs font-bold uppercase tracking-wider text-blue-900">Thanh toán SePay QR</h3>
-                        </div>
-                        <p className="text-xs text-blue-700 mb-3">
-                          Quét mã QR bằng App Ngân hàng bất kỳ để thanh toán khoản tiền còn thiếu:
-                        </p>
-                        <div className="flex flex-col items-center justify-center p-3 bg-white rounded-xl border border-blue-100 shadow-xs">
-                          <img
-                            src={`https://qr.sepay.vn/img?bank=MBBank&acc=0987654321&template=compact&amount=${order.finalPayment - (order.amountPaid || 0)}&des=${order.orderCode}`}
-                            alt="SePay QR Code"
-                            className="w-44 h-44 object-contain rounded-lg"
-                            onError={(e) => { e.currentTarget.style.display = 'none'; }}
-                          />
-                          <p className="mt-2 text-xs font-semibold text-slate-700">Số tiền cần chuyển: <span className="font-bold text-blue-600">{formatPrice(order.finalPayment - (order.amountPaid || 0))}</span></p>
-                          <p className="text-[11px] text-slate-500 mt-0.5">Nội dung CK: <span className="font-mono font-bold text-slate-900">{order.orderCode}</span></p>
-                        </div>
-                      </div>
-                    </div>
-                  )}
+
                 </div>
               </section>
 

@@ -68,14 +68,8 @@ export default function WarehouseMaterials() {
             <Button size="sm" variant="outline" className="h-8 text-xs gap-1.5" onClick={loadData} disabled={loading}>
               <RefreshCw className="w-3.5 h-3.5" /> Làm mới
             </Button>
-            <Button size="sm" variant="outline" className="h-8 text-xs gap-1.5" onClick={() => navigate('/warehouse/materials/history')}>
-              <History className="w-3.5 h-3.5" /> Lịch sử
-            </Button>
-            <Button size="sm" className="h-8 text-xs gap-1.5" style={{ backgroundColor: NEUTRAL }} onClick={() => navigate('/warehouse/materials/issue')}>
-              <ArrowUpFromLine className="w-3.5 h-3.5" /> Xuất nguyên liệu
-            </Button>
-            <Button size="sm" className="h-8 text-xs gap-1.5" style={{ backgroundColor: PRIMARY }} onClick={() => navigate('/warehouse/materials/receive')}>
-              <ArrowDownToLine className="w-3.5 h-3.5" /> Nhập nguyên liệu
+            <Button size="sm" variant="outline" className="h-8 text-xs gap-1.5" style={{ color: PRIMARY, borderColor: PRIMARY }} onClick={() => navigate('/warehouse/materials/history')}>
+              <History className="w-3.5 h-3.5" /> Lịch sử nhập xuất
             </Button>
           </div>
         </div>

@@ -57,6 +57,13 @@ export default function ExchangeRequestModal({ order, onClose, onSubmit }: Excha
     }
   };
 
+  const [confirmModalConfig, setConfirmModalConfig] = useState<{
+    isOpen: boolean;
+    title: string;
+    message: string;
+    onConfirm: () => void;
+  } | null>(null);
+
   const handleQuickAddSameSku = () => {
     const selectedReturns = returnItems.filter((i: any) => i.returnQty > 0);
     if (selectedReturns.length === 0) {
@@ -64,24 +71,29 @@ export default function ExchangeRequestModal({ order, onClose, onSubmit }: Excha
       return;
     }
 
+    const doQuickAdd = () => {
+      const newExchanges = selectedReturns.map((ret: any) => ({
+        ...ret,
+        productId: ret.productId,
+        name: ret.productName || ret.name,
+        standardListedPrice: ret.priceSnapshot || ret.unitPrice || 0,
+        exchangeQty: ret.returnQty,
+        isDifferentSku: false
+      }));
+      setExchangeItems(newExchanges);
+    };
+
     const hasDifferentSku = exchangeItems.some((e: any) => e.isDifferentSku);
     if (hasDifferentSku) {
-      const confirmSwitch = window.confirm(
-        'Bạn đã chọn sản phẩm đổi khác loại trước đó. Chuyển sang đổi "Cùng loại" sẽ làm mới danh sách sản phẩm đổi. Bạn có muốn tiếp tục?'
-      );
-      if (!confirmSwitch) return;
+      setConfirmModalConfig({
+        isOpen: true,
+        title: 'Xác nhận chuyển đổi loại sản phẩm đổi',
+        message: 'Bạn đã chọn sản phẩm đổi khác loại trước đó. Chuyển sang đổi "Cùng loại" sẽ làm mới danh sách sản phẩm đổi. Bạn có muốn tiếp tục?',
+        onConfirm: doQuickAdd
+      });
+    } else {
+      doQuickAdd();
     }
-
-    const newExchanges = selectedReturns.map((ret: any) => ({
-      ...ret,
-      productId: ret.productId,
-      name: ret.productName || ret.name,
-      standardListedPrice: ret.priceSnapshot || ret.unitPrice || 0,
-      exchangeQty: ret.returnQty,
-      isDifferentSku: false
-    }));
-
-    setExchangeItems(newExchanges);
   };
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -102,12 +114,7 @@ export default function ExchangeRequestModal({ order, onClose, onSubmit }: Excha
   };
 
   const handleAddExchangeItem = (product: any) => {
-    const hasSameSku = exchangeItems.some((e: any) => !e.isDifferentSku);
-    if (hasSameSku) {
-      const confirmSwitch = window.confirm(
-        `Bạn đang ở chế độ đổi sản phẩm cùng loại. Việc chọn món mới (${product.name}) sẽ chuyển sang Đổi sản phẩm khác loại. Bạn có muốn tiếp tục?`
-      );
-      if (!confirmSwitch) return;
+    const doAddItem = () => {
       setExchangeItems([{
         ...product,
         productId: product.id,
@@ -115,6 +122,18 @@ export default function ExchangeRequestModal({ order, onClose, onSubmit }: Excha
         exchangeQty: 1,
         isDifferentSku: true
       }]);
+      setSearchResults([]);
+      setSearchQuery('');
+    };
+
+    const hasSameSku = exchangeItems.some((e: any) => !e.isDifferentSku);
+    if (hasSameSku) {
+      setConfirmModalConfig({
+        isOpen: true,
+        title: 'Chuyển sang Đổi sản phẩm khác loại',
+        message: `Bạn đang ở chế độ đổi sản phẩm cùng loại. Việc chọn món mới (${product.name}) sẽ chuyển sang Đổi sản phẩm khác loại. Bạn có muốn tiếp tục?`,
+        onConfirm: doAddItem
+      });
     } else {
       if (exchangeItems.find((i) => i.productId === product.id)) return;
       setExchangeItems([...exchangeItems, { 
@@ -124,9 +143,9 @@ export default function ExchangeRequestModal({ order, onClose, onSubmit }: Excha
         exchangeQty: 1,
         isDifferentSku: true
       }]);
+      setSearchResults([]);
+      setSearchQuery('');
     }
-    setSearchResults([]);
-    setSearchQuery('');
   };
 
   const handleRemoveExchangeItem = (productId: string) => {
@@ -547,6 +566,42 @@ export default function ExchangeRequestModal({ order, onClose, onSubmit }: Excha
             </button>
           </div>
         </div>
+
+        {/* Custom Confirmation Modal */}
+        {confirmModalConfig && confirmModalConfig.isOpen && (
+          <div className="fixed inset-0 z-[200] bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
+            <div className="bg-white rounded-2xl max-w-md w-full p-5 shadow-2xl border border-gray-100 space-y-4 animate-in fade-in zoom-in-95 duration-150">
+              <div className="flex items-center gap-3 text-amber-600 font-bold text-sm">
+                <div className="w-9 h-9 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center flex-shrink-0">
+                  <AlertCircle className="w-5 h-5" />
+                </div>
+                <span>{confirmModalConfig.title}</span>
+              </div>
+              <p className="text-xs text-gray-600 leading-relaxed font-medium">
+                {confirmModalConfig.message}
+              </p>
+              <div className="flex items-center justify-end gap-2 pt-3 border-t border-gray-100">
+                <button
+                  type="button"
+                  onClick={() => setConfirmModalConfig(null)}
+                  className="px-4 py-2 rounded-xl text-xs font-semibold text-gray-600 bg-gray-100 hover:bg-gray-200 transition-colors"
+                >
+                  Hủy bỏ
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    confirmModalConfig.onConfirm();
+                    setConfirmModalConfig(null);
+                  }}
+                  className="px-4 py-2 rounded-xl text-xs font-semibold text-white bg-blue-600 hover:bg-blue-700 shadow-sm transition-colors"
+                >
+                  Đồng ý tiếp tục
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
 
       </div>
     </div>

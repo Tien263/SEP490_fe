@@ -20,10 +20,11 @@ import SalesManagerOrdersPage from './SalesManagerOrdersPage';
 import SalesManagerOrderDetailPage from './SalesManagerOrderDetailPage';
 import SalesManagerChangeRequestsPage from './SalesManagerChangeRequestsPage';
 import SalesManagerChangeRequestDetailPage from './SalesManagerChangeRequestDetailPage';
+import SalesManagerMarketingApproval from './SalesManagerMarketingApproval';
 import DirectPurchasePage from '../sales/DirectPurchasePage';
 import { useAuth } from '../../context/AuthContext';
 import { getQuotations } from '../../services/quotationService.js';
-import { FileText } from 'lucide-react';
+import { FileText, Sparkles } from 'lucide-react';
 import NotificationBell from '../../components/NotificationBell';
 import NotificationsPage from '../NotificationsPage';
 
@@ -71,6 +72,12 @@ const NAV_ITEMS: NavItem[] = [
     label: 'Duyệt yêu cầu đổi Sale',
     icon: <UserCog className="w-4 h-4" />,
     path: '/sales-manager/change-requests',
+  },
+  {
+    id: 'ai-marketing-approval',
+    label: 'Duyệt AI Marketing',
+    icon: <Sparkles className="w-4 h-4" />,
+    path: '/sales-manager/ai-marketing-approval',
   }
 ];
 
@@ -207,6 +214,7 @@ export default function SalesManagerPortal() {
             <Route path="sepay-exceptions" element={<SalesManagerSePayExceptionPage />} />
             <Route path="change-requests" element={<SalesManagerChangeRequestsPage />} />
             <Route path="change-requests/:id" element={<SalesManagerChangeRequestDetailPage />} />
+            <Route path="ai-marketing-approval" element={<SalesManagerMarketingApproval />} />
             <Route path="notifications" element={<NotificationsPage />} />
             <Route path="*" element={<SalesDashboardPage />} />
           </Routes>
