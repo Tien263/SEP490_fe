@@ -11,7 +11,7 @@ import {
   AlertTriangle,
   UserCog,
 } from 'lucide-react';
-import SalesDashboardPage from '../sales/SalesDashboardPage';
+import SalesManagerDashboardPage from './SalesManagerDashboardPage';
 import SalesManagerRoundRobinPage from './SalesManagerRoundRobinPage';
 import SalesManagerSePayExceptionPage from './SalesManagerSePayExceptionPage';
 import SalesManagerPriceNegotiation from './SalesManagerPriceNegotiation';
@@ -197,7 +197,7 @@ export default function SalesManagerPortal() {
 
         <main className="flex-1 overflow-auto">
           <Routes>
-            <Route path="dashboard" element={<SalesDashboardPage />} />
+            <Route path="dashboard" element={<SalesManagerDashboardPage />} />
             <Route path="round-robin" element={<SalesManagerRoundRobinPage />} />
             <Route path="manager-negotiation" element={<SalesManagerPriceNegotiation />} />
             <Route path="manager-negotiation/:id" element={<SalesManagerPriceNegotiationDetail />} />
@@ -208,7 +208,7 @@ export default function SalesManagerPortal() {
             <Route path="change-requests" element={<SalesManagerChangeRequestsPage />} />
             <Route path="change-requests/:id" element={<SalesManagerChangeRequestDetailPage />} />
             <Route path="notifications" element={<NotificationsPage />} />
-            <Route path="*" element={<SalesDashboardPage />} />
+            <Route path="*" element={<SalesManagerDashboardPage />} />
           </Routes>
         </main>
       </div>
