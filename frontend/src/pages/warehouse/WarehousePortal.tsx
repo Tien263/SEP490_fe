@@ -279,42 +279,44 @@ export default function WarehousePortal() {
           </div>
         </header>
 
-        <main className="flex-1 overflow-auto">
-          <Routes>
-            <Route path="dashboard"                              element={<WarehouseDashboard />} />
-            <Route path="fulfillment/orders"                     element={<WarehouseFulfillmentOrders />} />
-            <Route path="fulfillment/pick-packing"               element={<WarehousePickPacking />} />
-            <Route path="fulfillment/consolidation"              element={<WarehouseConsolidation />} />
-            <Route path="fulfillment/handover"                   element={<WarehouseHandover />} />
-            <Route path="fulfillment/goods-issue"                element={<WarehouseGoodsIssue />} />
-            <Route path="purchase/orders"                        element={<WarehousePurchaseOrders />} />
-            <Route path="purchase/goods-receipt"                 element={<WarehouseGoodsReceipt />} />
-            <Route path="purchase/receiving-comparison"          element={<WarehouseReceivingComparison />} />
-            <Route path="purchase/quality-inspection"            element={<WarehouseQualityInspection />} />
-            <Route path="quarantine"                             element={<WarehouseQuarantine />} />
-            <Route path="pickup-receiving"                       element={<WarehousePickupReceiving />} />
-            <Route path="quality-inspection"                     element={<WarehouseQualityInspection />} />
-            <Route path="transfer/stock-transfer"                element={<WarehouseStockTransfer />} />
-            <Route path="inv-management/quarantine"              element={<WarehouseQuarantine />} />
-            <Route path="inv-management/inventory-count"         element={<WarehouseInventoryCount />} />
-            <Route path="inv-management/stock-adjustment"        element={<WarehouseStockAdjustment />} />
-            <Route path="management/warehouses"                  element={<WarehouseManagement />} />
-            <Route path="production/issue"                       element={<WarehouseProductionIssue />} />
-            <Route path="shift-inventory"                        element={<WarehouseShiftInventory />} />
-            <Route path="materials"                              element={<WarehouseMaterials />} />
-            <Route path="materials/receive"                      element={<WarehouseMaterialReceiving />} />
-            <Route path="materials/issue"                        element={<WarehouseMaterialIssue />} />
-            <Route path="materials/history"                      element={<WarehouseMaterialHistory />} />
-            <Route path="goods"                                  element={<WarehouseGoods />} />
-            <Route path="goods/receive"                          element={<WarehouseGoodsReceive />} />
-            <Route path="goods/history"                          element={<WarehouseGoodsHistory />} />
-            <Route path="inventory/low-stock"                    element={<WarehouseLowStock />} />
-            <Route path="inventory/slow-moving"                  element={<WarehouseSlowMoving />} />
-            <Route path="inventory/report"                       element={<WarehouseReport />} />
-            <Route path="audit-log"                              element={<WarehouseAuditLog />} />
-            <Route path="notifications"                          element={<NotificationsPage />} />
-            <Route path="*"                                      element={<WarehouseDashboard />} />
-          </Routes>
+        <main className="flex-1 overflow-auto bg-gray-50/30">
+          <div className="hallmark-container min-h-full py-2 flex flex-col">
+            <Routes>
+              <Route path="dashboard"                              element={<WarehouseDashboard />} />
+              <Route path="fulfillment/orders"                     element={<WarehouseFulfillmentOrders />} />
+              <Route path="fulfillment/pick-packing"               element={<WarehousePickPacking />} />
+              <Route path="fulfillment/consolidation"              element={<WarehouseConsolidation />} />
+              <Route path="fulfillment/handover"                   element={<WarehouseHandover />} />
+              <Route path="fulfillment/goods-issue"                element={<WarehouseGoodsIssue />} />
+              <Route path="purchase/orders"                        element={<WarehousePurchaseOrders />} />
+              <Route path="purchase/goods-receipt"                 element={<WarehouseGoodsReceipt />} />
+              <Route path="purchase/receiving-comparison"          element={<WarehouseReceivingComparison />} />
+              <Route path="purchase/quality-inspection"            element={<WarehouseQualityInspection />} />
+              <Route path="quarantine"                             element={<WarehouseQuarantine />} />
+              <Route path="pickup-receiving"                       element={<WarehousePickupReceiving />} />
+              <Route path="quality-inspection"                     element={<WarehouseQualityInspection />} />
+              <Route path="transfer/stock-transfer"                element={<WarehouseStockTransfer />} />
+              <Route path="inv-management/quarantine"              element={<WarehouseQuarantine />} />
+              <Route path="inv-management/inventory-count"         element={<WarehouseInventoryCount />} />
+              <Route path="inv-management/stock-adjustment"        element={<WarehouseStockAdjustment />} />
+              <Route path="management/warehouses"                  element={<WarehouseManagement />} />
+              <Route path="production/issue"                       element={<WarehouseProductionIssue />} />
+              <Route path="shift-inventory"                        element={<WarehouseShiftInventory />} />
+              <Route path="materials"                              element={<WarehouseMaterials />} />
+              <Route path="materials/receive"                      element={<WarehouseMaterialReceiving />} />
+              <Route path="materials/issue"                        element={<WarehouseMaterialIssue />} />
+              <Route path="materials/history"                      element={<WarehouseMaterialHistory />} />
+              <Route path="goods"                                  element={<WarehouseGoods />} />
+              <Route path="goods/receive"                          element={<WarehouseGoodsReceive />} />
+              <Route path="goods/history"                          element={<WarehouseGoodsHistory />} />
+              <Route path="inventory/low-stock"                    element={<WarehouseLowStock />} />
+              <Route path="inventory/slow-moving"                  element={<WarehouseSlowMoving />} />
+              <Route path="inventory/report"                       element={<WarehouseReport />} />
+              <Route path="audit-log"                              element={<WarehouseAuditLog />} />
+              <Route path="notifications"                          element={<NotificationsPage />} />
+              <Route path="*"                                      element={<WarehouseDashboard />} />
+            </Routes>
+          </div>
         </main>
       </div>
     </div>
