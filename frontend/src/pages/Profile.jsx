@@ -1832,11 +1832,10 @@ function CreditHistoryTab() {
     async function loadData() {
       try {
         setLoading(true)
-        // Lấy profile để hiển thị số dư hiện tại
+        // Lấy profile để hiển thị số dư hiện tại trực tiếp từ DB
         const profileRes = await getCustomerProfile()
-        if (profileRes?.data) {
-          setBalance(profileRes.data.availableCredit || 0)
-        }
+        const directBalance = profileRes?.availableCredit ?? profileRes?.data?.availableCredit ?? 0
+        setBalance(directBalance)
 
         const res = await fetch('/api/customer-profile/credit-history', {
           headers: {

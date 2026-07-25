@@ -359,26 +359,7 @@ export default function OrderTracking() {
                       </div>
                     </div>
 
-                    {/* SePay QR Code Box if unpaid/pending */}
-                    {['Pending', 'Unpaid', 'PendingPayment'].includes(order.paymentStatus) && (order.finalPayment - (order.amountPaid || 0)) > 0 && (
-                      <div className="mt-4 pt-4 border-t border-slate-100">
-                        <div className="rounded-2xl border border-blue-200 bg-blue-50/70 p-4 text-center">
-                          <p className="text-xs font-bold uppercase tracking-wider text-blue-900 mb-1">Thanh toán SePay QR</p>
-                          <p className="text-[11px] text-blue-700 mb-3">Quét mã QR bằng App Ngân hàng bất kỳ:</p>
-                          
-                          <div className="bg-white p-3 rounded-xl border border-blue-100 shadow-xs inline-block">
-                            <img
-                              src={`https://qr.sepay.vn/img?bank=MBBank&acc=0987654321&template=compact&amount=${order.finalPayment - (order.amountPaid || 0)}&des=${order.orderCode}`}
-                              alt="SePay QR Code"
-                              className="w-40 h-40 object-contain rounded-lg"
-                              onError={(e) => { e.currentTarget.style.display = 'none'; }}
-                            />
-                            <p className="mt-2 text-xs font-bold text-slate-900">Tiền CK: <span className="text-blue-600">{formatPrice(order.finalPayment - (order.amountPaid || 0))}</span></p>
-                            <p className="text-[10px] text-slate-500">Cú pháp: <span className="font-mono font-bold text-slate-800">{order.orderCode}</span></p>
-                          </div>
-                        </div>
-                      </div>
-                    )}
+
                   </div>
                 </div>
 

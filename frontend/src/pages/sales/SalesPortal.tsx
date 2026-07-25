@@ -26,6 +26,7 @@ import {
   Users,
   X,
   ShieldCheck,
+  Sparkles,
 } from 'lucide-react';
 import SalesDashboardPage from './SalesDashboardPage';
 import SalesNegotiationPage from './SalesNegotiationPage';
@@ -40,6 +41,7 @@ import SalesPickupArrangementPage from './SalesPickupArrangementPage';
 import SalesDeliveryCollectionPage from './SalesDeliveryCollectionPage';
 import SalesMyCustomersPage from './SalesMyCustomersPage';
 import SalesChangeRequestExplainPage from './SalesChangeRequestExplainPage';
+import SalesAiContentStudio from './SalesAiContentStudio';
 import { useAuth } from '../../context/AuthContext';
 import NotificationBell from '../../components/NotificationBell';
 import NotificationsPage from '../NotificationsPage';
@@ -60,6 +62,13 @@ const NAV_ITEMS: NavItem[] = [
     label: 'Dashboard',
     icon: <LayoutDashboard className="w-4 h-4" />,
     path: '/sales/dashboard',
+  },
+  {
+    id: 'ai-content-studio',
+    label: 'AI Content Studio',
+    icon: <Sparkles className="w-4 h-4" />,
+    path: '/sales/ai-content-studio',
+    roles: ['SalesStaff', 'Admin'],
   },
   {
     id: 'my-customers',
@@ -398,6 +407,7 @@ export default function SalesPortal() {
           <Routes>
             <Route path="dashboard" element={<SalesDashboardPage />} />
             <Route path="my-customers" element={<SalesMyCustomersPage />} />
+            <Route path="ai-content-studio" element={<SalesAiContentStudio />} />
             <Route path="change-requests" element={<SalesChangeRequestExplainPage />} />
             <Route path="orders" element={<SalesOrdersPage />} />
             <Route path="orders/:id" element={<SalesOrderDetailPage />} />
