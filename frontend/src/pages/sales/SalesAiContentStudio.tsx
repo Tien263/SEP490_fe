@@ -77,8 +77,28 @@ export default function SalesAiContentStudio() {
   const [statusFilter, setStatusFilter] = useState<string>('ALL');
   const [saving, setSaving] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [generatingSingleImage, setGeneratingSingleImage] = useState(false);
 
   useEffect(() => { fetchProducts(); fetchMyPosts(); }, []);
+
+  const handleGenerateSingleImage = async () => {
+    if (!selectedProductId) return alert('Vui lòng chọn sản phẩm trước!');
+    const selectedProd = products.find(p => p.id === selectedProductId);
+    const imgPrompt = prompt.trim() || `${selectedProd?.name || 'Vật tư đóng gói'} commercial studio photography`;
+
+    setGeneratingSingleImage(true);
+    try {
+      const res = await api.post('/marketing-posts/generate-image', { prompt: imgPrompt });
+      if (res.data?.imageUrl) {
+        setEditedImageUrl(res.data.imageUrl);
+        alert('Đã sinh ảnh AI thành công qua Gemini Imagen 3!');
+      }
+    } catch (err: any) {
+      alert('Sinh ảnh AI thất bại: ' + (err.response?.data?.message || err.message));
+    } finally {
+      setGeneratingSingleImage(false);
+    }
+  };
 
   const fetchProducts = async () => {
     setLoadingProducts(true);
@@ -340,18 +360,25 @@ export default function SalesAiContentStudio() {
                 <div>
                   <label className="block text-[11px] font-semibold text-gray-600 mb-1">URL Hình ảnh</label>
                   <div className="flex gap-2">
-                    <input type="text" value={editedImageUrl} onChange={e => setEditedImageUrl(e.target.value)} className="flex-1 text-xs border border-gray-300 rounded-md py-2 px-3" placeholder="https://..." />
+                    <input type="text" value={editedImageUrl} onChange={e => setEditedImageUrl(e.target.value)} className="flex-1 text-xs border border-gray-300 rounded-md py-2 px-3 font-mono" placeholder="https://..." />
+                    {selectedProduct?.imageUrl && (
+                      <button
+                        type="button"
+                        onClick={() => setEditedImageUrl(selectedProduct.imageUrl!)}
+                        className="py-2 px-3 rounded-md text-xs font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 border border-gray-300 flex items-center gap-1 transition-colors whitespace-nowrap"
+                        title="Dùng ảnh gốc sản phẩm"
+                      >
+                        <ImageIcon className="w-3.5 h-3.5" /> Ảnh gốc
+                      </button>
+                    )}
                     <button
                       type="button"
-                      onClick={() => {
-                        if (!selectedProduct) return alert('Chọn sản phẩm trước');
-                        const seed = Math.floor(Math.random() * 900000) + 100000;
-                        const p = encodeURIComponent(`high quality commercial advertising photo of ${selectedProduct.name}, ${selectedProduct.sku}, warehouse packaging supply, studio lighting, 4k`);
-                        setEditedImageUrl(`https://image.pollinations.ai/prompt/${p}?model=flux&width=800&height=800&nologo=true&seed=${seed}`);
-                      }}
-                      className="py-2 px-3 rounded-md text-xs font-medium text-blue-700 bg-blue-50 hover:bg-blue-100 border border-blue-200 flex items-center gap-1 transition-colors"
+                      disabled={generatingSingleImage || !selectedProductId}
+                      onClick={handleGenerateSingleImage}
+                      className="py-2 px-3 rounded-md text-xs font-semibold text-white bg-purple-600 hover:bg-purple-700 shadow-xs flex items-center gap-1.5 transition-colors disabled:opacity-50 whitespace-nowrap"
                     >
-                      <Sparkles className="w-3 h-3" /> Sinh ảnh AI
+                      {generatingSingleImage ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <Sparkles className="w-3.5 h-3.5 text-amber-300" />}
+                      <span>{generatingSingleImage ? 'Đang tạo...' : 'Sinh ảnh AI Gemini'}</span>
                     </button>
                   </div>
                 </div>
