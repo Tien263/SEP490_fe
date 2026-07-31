@@ -36,11 +36,11 @@ function App() {
           <CartProvider>
             <Routes>
             {/* Public Routes */}
-            <Route path="/" element={<Landing />} />
-            <Route path="/home" element={<Home />} />
-            <Route path="/products" element={<Products />} />
-            <Route path="/products/:id" element={<ProductDetail />} />
-            <Route path="/track-order" element={<OrderTracking />} />
+            <Route path="/" element={<ProtectedRoute allowedRoles={['Customer']} allowGuest={true}><Landing /></ProtectedRoute>} />
+            <Route path="/home" element={<ProtectedRoute allowedRoles={['Customer']} allowGuest={true}><Home /></ProtectedRoute>} />
+            <Route path="/products" element={<ProtectedRoute allowedRoles={['Customer']} allowGuest={true}><Products /></ProtectedRoute>} />
+            <Route path="/products/:id" element={<ProtectedRoute allowedRoles={['Customer']} allowGuest={true}><ProductDetail /></ProtectedRoute>} />
+            <Route path="/track-order" element={<ProtectedRoute allowedRoles={['Customer']} allowGuest={true}><OrderTracking /></ProtectedRoute>} />
             <Route path="/login" element={<Login />} />
             <Route path="/register" element={<Register />} />
             <Route path="/forgot-password" element={<ForgotPassword />} />
@@ -49,11 +49,11 @@ function App() {
             <Route path="/reset-password" element={<ResetPassword />} />
 
             {/* Customer Routes */}
-            <Route path="/notifications" element={<ProtectedRoute><CustomerNotificationsPage /></ProtectedRoute>} />
-            <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
-            <Route path="/profile/orders/:orderId" element={<ProtectedRoute><OrderDetail /></ProtectedRoute>} />
+            <Route path="/notifications" element={<ProtectedRoute allowedRoles={['Customer']}><CustomerNotificationsPage /></ProtectedRoute>} />
+            <Route path="/profile" element={<ProtectedRoute allowedRoles={['Customer']}><Profile /></ProtectedRoute>} />
+            <Route path="/profile/orders/:orderId" element={<ProtectedRoute allowedRoles={['Customer']}><OrderDetail /></ProtectedRoute>} />
             <Route path="/profile/quotations/:id" element={<ProtectedRoute allowedRoles={['Customer']}><Negotiation /></ProtectedRoute>} />
-            <Route path="/cart" element={<Cart />} />
+            <Route path="/cart" element={<ProtectedRoute allowedRoles={['Customer']} allowGuest={true}><Cart /></ProtectedRoute>} />
             <Route path="/checkout" element={<ProtectedRoute allowedRoles={['Customer']}><Checkout /></ProtectedRoute>} />
             <Route path="/negotiation/:id" element={<ProtectedRoute allowedRoles={['Customer']}><Negotiation /></ProtectedRoute>} />
             <Route path="/negotiations" element={<ProtectedRoute allowedRoles={['Customer']}><NegotiationList /></ProtectedRoute>} />
