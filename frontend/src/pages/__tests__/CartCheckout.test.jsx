@@ -12,7 +12,7 @@ import Cart from '../Cart.jsx'
  * ⚠ L1-FCMP-06 (đếm ngược 15 phút của màn QR SePay) BỊ BLOCKED:
  *    Màn QR ở Checkout.jsx KHÔNG có bộ đếm ngược hạn giữ tồn; biến `countdown` hiện có là
  *    đếm 5 giây tự chuyển về trang chủ SAU KHI thanh toán thành công, không phải hạn 15 phút.
- *    Cả hai đều là tính năng CHƯA ĐƯỢC HIỆN THỰC. Xem DOC_MISMATCHES_v2.2.md.
+ *    Cả hai đều là tính năng CHƯA ĐƯỢC HIỆN THỰC. Xem DOC_MISMATCHES.md.
  */
 
 const mockUseCart = vi.fn()
