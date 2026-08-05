@@ -241,7 +241,7 @@ type AssignmentToast = {
 };
 
 const TOAST_SOURCE_LABELS: Record<string, string> = {
-  ROUND_ROBIN: 'Round-robin',
+  ROUND_ROBIN: 'Phân bổ khách hàng',
   REFERRAL: 'Giới thiệu',
   RETURNING_CUSTOMER: 'Khách cũ quay lại',
   MANUAL_REASSIGNMENT: 'Quản lý gán',

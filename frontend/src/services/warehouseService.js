@@ -218,6 +218,14 @@ export async function addInventory(data) {
   return request('POST', `/inventory/add`, data);
 }
 
+export async function getWarehouseShifts() {
+  return request('GET', `/warehouse-shifts`);
+}
+
+export async function submitShiftInventoryCount(data) {
+  return request('POST', `/inventory/shift-count`, data);
+}
+
 // Dummy for backward compatibility with WarehouseStockAdjustment
 export async function ceoDecisionStockAdjustment(id, data) {
   return request('POST', `/stock-adjustments/${id}/decision`, data);
