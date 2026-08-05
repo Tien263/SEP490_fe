@@ -13,7 +13,7 @@ const WARNING = '#F97316';
 const NEUTRAL = '#64748B';
 
 const SOURCE_LABELS: Record<string, { label: string; bg: string }> = {
-  ROUND_ROBIN: { label: 'Round-robin', bg: INFO },
+  ROUND_ROBIN: { label: 'Phân bổ khách hàng', bg: INFO },
   REFERRAL: { label: 'Giới thiệu', bg: SUCCESS },
   RETURNING_CUSTOMER: { label: 'Khách cũ', bg: WARNING },
   MANUAL_REASSIGNMENT: { label: 'Gán tay', bg: '#8B5CF6' },

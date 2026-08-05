@@ -45,7 +45,7 @@ const NAV_ITEMS: NavItem[] = [
   },
   {
     id: 'round-robin',
-    label: 'Quản lý Round-robin',
+    label: 'Phân bổ khách hàng',
     icon: <Shuffle className="w-4 h-4" />,
     path: '/sales-manager/round-robin',
   },
