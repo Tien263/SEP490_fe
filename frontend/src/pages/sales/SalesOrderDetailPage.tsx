@@ -7,7 +7,7 @@ import {
   Package, MapPin, Phone, User, Calendar, CreditCard, ArrowLeft,
   Clock, AlertTriangle, CheckCircle, XCircle, Truck, Building2,
   Mail, Hash, FileText, Download, ChevronRight, Box, Wallet,
-  ShieldCheck, CircleDot, Timer
+  ShieldCheck, CircleDot, Timer, RotateCcw
 } from 'lucide-react';
 
 const PRIMARY = '#1F3B64';
@@ -416,6 +416,28 @@ export default function SalesOrderDetailPage() {
       </div>
 
       <div className="max-w-7xl mx-auto px-6 py-6">
+        {/* ── Return/Exchange Request Banner ──────────────────────────── */}
+        {(order as any).hasReturnRequest && (
+          <div className="mb-6 rounded-2xl border border-purple-200 bg-purple-50 p-5 flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between shadow-sm">
+            <div className="flex items-center gap-3">
+              <div className="bg-purple-100 p-2.5 rounded-full flex-shrink-0 text-purple-600">
+                <RotateCcw className="w-6 h-6" />
+              </div>
+              <div>
+                <h3 className="text-purple-900 font-bold flex items-center gap-2">
+                  Đơn hàng có yêu cầu Đổi / Trả hàng
+                  <span className="text-xs bg-purple-200 text-purple-800 px-2 py-0.5 rounded-full font-semibold">
+                    {(order as any).returnRequestStatus === 'Approved' ? 'Đã duyệt' : (order as any).returnRequestStatus === 'Pending' ? 'Chờ xử lý' : 'Đã từ chối'}
+                  </span>
+                </h3>
+                <p className="text-sm text-purple-700 mt-0.5">
+                  Đơn hàng này có phát sinh yêu cầu thu hồi / đổi trả hàng.
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* ── Cancel Requested Banner ─────────────────────────────────── */}
         {order.orderStatus === 'CancelRequested' && (
           <div className="mb-6 rounded-2xl border border-red-200 bg-red-50 p-5 flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">

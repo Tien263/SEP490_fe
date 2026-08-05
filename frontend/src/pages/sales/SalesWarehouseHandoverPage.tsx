@@ -127,6 +127,7 @@ export default function SalesWarehouseHandoverPage() {
   const [detail, setDetail] = useState<Handover | null>(null);
   const [warehouseSig, setWarehouseSig] = useState('');
   const [salesSig, setSalesSig] = useState('');
+  const [submitting, setSubmitting] = useState(false);
 
   const fetchOrders = async () => {
     setLoading(true);
@@ -167,12 +168,13 @@ export default function SalesWarehouseHandoverPage() {
   }, []);
 
   const handleHandover = async () => {
-    if (!detail) return;
+    if (!detail || submitting) return;
     if (!salesSig) {
       alert('Vui lòng nhập chữ ký của Sales.');
       return;
     }
-    
+
+    setSubmitting(true);
     try {
       await handoverWarehouseOrder(detail.id, null, salesSig);
       alert('Đã xác nhận chữ ký Sales thành công!');
@@ -182,6 +184,8 @@ export default function SalesWarehouseHandoverPage() {
       fetchOrders();
     } catch (e: any) {
       alert('Lỗi: ' + e.message);
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -311,8 +315,8 @@ export default function SalesWarehouseHandoverPage() {
 
               <div className="flex gap-2 pt-4 border-t border-gray-100">
                 {detail.status !== 'completed' && detail.status !== 'cancelled' && !detail.salesConfirmed && detail.warehouseConfirmed && (
-                  <Button size="sm" className="h-7 text-xs gap-1.5" style={{ backgroundColor: SUCCESS }} onClick={handleHandover}>
-                    <ShieldCheck className="w-3.5 h-3.5" /> Xác nhận chữ ký Sales
+                  <Button size="sm" className="h-7 text-xs gap-1.5" style={{ backgroundColor: SUCCESS }} onClick={handleHandover} disabled={submitting}>
+                    <ShieldCheck className="w-3.5 h-3.5" /> {submitting ? 'Đang xử lý...' : 'Xác nhận chữ ký Sales'}
                   </Button>
                 )}
                 {!detail.warehouseConfirmed && detail.status !== 'completed' && (
