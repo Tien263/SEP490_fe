@@ -73,23 +73,25 @@ export default function SalesDeliveryCollectionPage() {
       if (!res.ok) throw new Error();
       const data: any[] = await res.json();
       setOrders(
-        data.map((o) => ({
-          id: o.id,
-          orderCode: o.orderCode,
-          customer: o.customerName,
-          phone: o.customerPhone,
-          address: o.shippingAddress,
-          total: o.finalPayment,
-          amountPaid: o.amountPaid,
-          payment: o.paymentMethod as any,
-          orderStatus: o.orderStatus,
-          deliveryStatus: o.deliveryStatus,
-          failedCount: o.failedDeliveryCount,
-          isBlocked: o.isBlocked,
-          itemCount: o.itemCount,
-          vehicleId: o.vehicleId,
-          shift: o.shift,
-        }))
+        data
+          .filter((o: any) => o.paymentMethod !== 'Transfer')
+          .map((o) => ({
+            id: o.id,
+            orderCode: o.orderCode,
+            customer: o.customerName,
+            phone: o.customerPhone,
+            address: o.shippingAddress,
+            total: o.finalPayment,
+            amountPaid: o.amountPaid,
+            payment: o.paymentMethod as any,
+            orderStatus: o.orderStatus,
+            deliveryStatus: o.deliveryStatus,
+            failedCount: o.failedDeliveryCount,
+            isBlocked: o.isBlocked,
+            itemCount: o.itemCount,
+            vehicleId: o.vehicleId,
+            shift: o.shift,
+          }))
       );
     } catch {
       showToast('Không thể tải danh sách giao hàng.', 'error');
