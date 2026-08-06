@@ -5,7 +5,6 @@ import { Input } from '../../components/ui/Input';
 import { getWarehouses, createWarehouse, updateWarehouse, deleteWarehouse } from '../../services/warehouseService';
 
 const PRIMARY = '#3b82f6';
-const ERROR = '#ef4444';
 
 export default function WarehouseManagement() {
   const [warehouses, setWarehouses] = useState<any[]>([]);
@@ -21,10 +20,6 @@ export default function WarehouseManagement() {
   // Xóa kho
   const [deletingId, setDeletingId] = useState<string | null>(null);
 
-  useEffect(() => {
-    fetchWarehouses();
-  }, []);
-
   const fetchWarehouses = async () => {
     try {
       setLoading(true);
@@ -37,6 +32,10 @@ export default function WarehouseManagement() {
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    fetchWarehouses();
+  }, []);
 
   const handleOpenModal = (warehouse: any = null) => {
     if (warehouse) {

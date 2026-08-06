@@ -3,7 +3,7 @@ import { getSuppliers } from '../../services/supplierService.js';
 import { getProducts } from '../../services/productService.js';
 import { getMaterials } from '../../services/materialService.js';
 import { createPurchaseOrder, getWarehouses, importPOFromExcel, importPOFromImage } from '../../services/purchaseOrderService.js';
-import { X, Plus, Trash2, Upload, FileSpreadsheet, Image as ImageIcon } from 'lucide-react';
+import { X, Plus, Trash2, FileSpreadsheet, Image as ImageIcon } from 'lucide-react';
 
 export default function CEOPurchaseOrderCreateModal({ onClose, onSuccess }: any) {
   const [suppliers, setSuppliers] = useState<any[]>([]);

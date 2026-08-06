@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { Plus, Truck } from 'lucide-react';
 import { useToast } from '../../context/ToastContext';
 import { getVehicles, createVehicle, updateVehicle } from '../../services/vehicleService.js';
@@ -110,7 +110,7 @@ export default function AdminVehiclesPage() {
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [editTarget, setEditTarget] = useState<any>(null);
 
-  const load = async () => {
+  const load = useCallback(async () => {
     setLoading(true);
     try {
       const result = await getVehicles();
@@ -120,9 +120,9 @@ export default function AdminVehiclesPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [toast]);
 
-  useEffect(() => { load(); }, []);
+  useEffect(() => { load(); }, [load]);
 
   return (
     <div className="flex flex-col gap-[20px] p-[24px]">

@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { Plus, Search, ShieldCheck, Lock, Unlock } from 'lucide-react';
 import { useToast } from '../../context/ToastContext';
 import {
@@ -155,7 +155,7 @@ export default function AdminUsersPage() {
   const [statusTarget, setStatusTarget] = useState<any>(null);
   const [newRole, setNewRole] = useState('');
 
-  const load = async () => {
+  const load = useCallback(async () => {
     setLoading(true);
     try {
       const result = await searchUsers({
@@ -170,9 +170,9 @@ export default function AdminUsersPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [page, searchQuery, roleFilter, activeFilter, toast]);
 
-  useEffect(() => { load(); }, [page, searchQuery, roleFilter, activeFilter]);
+  useEffect(() => { load(); }, [load]);
 
   const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault();

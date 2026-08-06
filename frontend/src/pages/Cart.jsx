@@ -115,10 +115,10 @@ export default function Cart() {
     setIsSubmittingQuotation(true)
     try {
       const { createFromCart } = await import('../services/quotationService.js');
-      const newQuotation = await createFromCart(quotationNote);
+      await createFromCart(quotationNote);
       setShowQuotationModal(false);
       setQuotationNote('');
-      navigate(`/negotiation/${newQuotation.id}`);
+      setQuotationSent(true);
     } catch (err) {
       alert(err.message || 'Lỗi khi gửi báo giá');
     } finally {
@@ -154,6 +154,10 @@ export default function Cart() {
   const automaticDiscountAmount = subtotal * automaticDiscountRate
   const shippingFee = 0
   const total = subtotal + shippingFee - automaticDiscountAmount
+
+  // Đơn từ 100 triệu chưa có giá thoả thuận PHẢI đi qua báo giá được duyệt (BR-026),
+  // không được đặt hàng trực tiếp bằng giá niêm yết.
+  const requiresQuotationFlow = subtotal >= 100000000 && !hasNegotiatedPrices
 
   if (cartItems.length === 0) {
     return (
@@ -320,7 +324,7 @@ export default function Cart() {
                   </div>
                 </div>
 
-                {subtotal >= 100000000 && !hasNegotiatedPrices && (
+                {requiresQuotationFlow && (
                   <motion.div
                     initial={{ opacity: 0, y: 10 }}
                     animate={{ opacity: 1, y: 0 }}
@@ -423,14 +427,16 @@ export default function Cart() {
                     </div>
                   </div>
 
-                  <Button
-                    size="lg"
-                    className="mb-4 w-full rounded-full bg-gray-900 text-white hover:bg-gray-800"
-                    onClick={goToCheckout}
-                  >
-                    Đặt Hàng & Xem Hóa Đơn
-                    <ArrowRight className="h-4 w-4" />
-                  </Button>
+                  {!requiresQuotationFlow && (
+                    <Button
+                      size="lg"
+                      className="mb-4 w-full rounded-full bg-gray-900 text-white hover:bg-gray-800"
+                      onClick={goToCheckout}
+                    >
+                      Đặt Hàng & Xem Hóa Đơn
+                      <ArrowRight className="h-4 w-4" />
+                    </Button>
+                  )}
 
                   <Link to="/negotiations" className="block mb-3">
                     <Button

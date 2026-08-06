@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { X, HelpCircle, Settings, Trash2, Plus, Calendar, Paperclip } from 'lucide-react';
+import { X, Settings, Trash2, Calendar, Paperclip } from 'lucide-react';
 
 interface ReceiptItem {
   id: string;

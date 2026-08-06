@@ -16,9 +16,9 @@ export default defineConfig({
       // Bộ test L1 luôn có ~10 test đỏ cố ý (assert theo SPEC), nếu để false sẽ không bao giờ
       // xuất được báo cáo.
       reportOnFailure: true,
-      // all: true -> đếm CẢ file chưa có test nào. Nếu bỏ, vitest chỉ đếm file được test
-      // import, mẫu số nhỏ đi và % cao giả tạo.
-      all: true,
+      // Khai báo include -> vitest tự đếm CẢ file chưa có test nào (thay cho option `all`
+      // đã bị bỏ khỏi vitest/coverage-v8 phiên bản mới). Nếu bỏ include, vitest chỉ đếm
+      // file được test import, mẫu số nhỏ đi và % cao giả tạo.
       include: ['src/**/*.{js,jsx,ts,tsx}'],
       exclude: [
         'src/test/**',            // hạ tầng test (MSW, setup), không phải code sản phẩm

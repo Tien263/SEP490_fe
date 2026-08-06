@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { Search, Filter, AlertCircle, PackageSearch, ArrowLeftRight, Clock, User, Check, Layers } from 'lucide-react';
+import React, { useState, useEffect, useCallback } from 'react';
+import { Search, Filter, AlertCircle, PackageSearch, ArrowLeftRight, Clock, User, Check } from 'lucide-react';
 import { Button } from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
 import { getWarehouseInventory, adjustInventory, getWarehouses, addInventory } from '../../services/warehouseService';
@@ -19,8 +19,8 @@ export default function WarehouseInventoryCount() {
   const [itemTypeFilter, setItemTypeFilter] = useState('all'); // all, Product, Material
   const [minQty, setMinQty] = useState('');
   const [maxQty, setMaxQty] = useState('');
-  const [fromDate, setFromDate] = useState('');
-  const [toDate, setToDate] = useState('');
+  const [fromDate] = useState('');
+  const [toDate] = useState('');
   
   // Pagination
   const [page, setPage] = useState(1);
@@ -55,11 +55,7 @@ export default function WarehouseInventoryCount() {
   const [newProductSpecs, setNewProductSpecs] = useState('');
   const [newProductImageFile, setNewProductImageFile] = useState<File | null>(null);
 
-  useEffect(() => {
-    fetchWarehousesList();
-  }, []);
-
-  const fetchWarehousesList = async () => {
+  const fetchWarehousesList = useCallback(async () => {
     try {
       const res: any = await getWarehouses();
       if (res && res.length > 0) {
@@ -69,15 +65,13 @@ export default function WarehouseInventoryCount() {
     } catch (err: any) {
       console.error('Error fetching warehouses:', err);
     }
-  };
+  }, []);
 
   useEffect(() => {
-    if (warehouseId) {
-      fetchInventory();
-    }
-  }, [warehouseId, page]);
+    fetchWarehousesList();
+  }, [fetchWarehousesList]);
 
-  const fetchInventory = async (isSearch = false) => {
+  const fetchInventory = useCallback(async (isSearch = false) => {
     try {
       setLoading(true);
       const currentPage = isSearch ? 1 : page;
@@ -102,7 +96,16 @@ export default function WarehouseInventoryCount() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [warehouseId, page, search, minQty, maxQty, fromDate, toDate]);
+
+  // Chỉ tự động tải lại khi đổi kho hoặc đổi trang; các ô lọc khác (search, minQty,...)
+  // chỉ áp dụng khi bấm nút tìm kiếm, không tự fetch khi gõ.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  useEffect(() => {
+    if (warehouseId) {
+      fetchInventory();
+    }
+  }, [warehouseId, page]);
 
   const handleSearch = () => {
     fetchInventory(true);

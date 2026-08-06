@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Button } from '../../components/sales-ui/button';
 import { Input } from '../../components/sales-ui/input';
-import { Search, Eye, RefreshCw, Download, Upload, Send, Save, CheckCircle, Camera, FileText, Plus, AlertTriangle, RotateCcw } from 'lucide-react';
+import { Search, Eye, RefreshCw, Upload, Send, CheckCircle, Camera, FileText, Plus, AlertTriangle, RotateCcw } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../../components/sales-ui/dialog';
 import { getGoodsIssues, postGoodsIssue, uploadGoodsIssueProof, updateGoodsIssueHandover, createGoodsIssueReversal } from '../../services/warehouseService';
 import WarehouseProductionIssueFormModal from './WarehouseProductionIssueFormModal';
@@ -31,7 +31,7 @@ function Badge({ status }: { status: string }) {
 export default function WarehouseProductionIssue() {
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
-  const [warehouseFilter, setWarehouseFilter] = useState('all');
+  const [warehouseFilter] = useState('all');
   const [selected, setSelected] = useState<string[]>([]);
   const [detail, setDetail] = useState<any | null>(null);
   const [items, setItems] = useState<any[]>([]);

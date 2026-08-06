@@ -1,13 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { Button } from '../../components/sales-ui/button';
 import { Input } from '../../components/sales-ui/input';
-import { Search, Eye, RefreshCw, Download, ArrowUpFromLine, CheckCircle, Package2, ShieldCheck, X } from 'lucide-react';
+import { Search, Eye, RefreshCw, Download, ArrowUpFromLine, CheckCircle, Package2 } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../../components/sales-ui/dialog';
 import { getWarehouseOrders, postGoodsIssueWarehouseOrder } from '../../services/warehouseService';
 
 const PRIMARY = '#1F3B64';
 const SUCCESS = '#16A34A';
-const WARNING = '#D97706';
 const ERROR   = '#DC2626';
 const INFO    = '#2563EB';
 const NEUTRAL = '#64748B';
@@ -45,8 +44,6 @@ export default function WarehouseGoodsIssue() {
   const [loading, setLoading] = useState(false);
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
-  const [dateFrom, setDateFrom] = useState('');
-  const [dateTo, setDateTo] = useState('');
   const [selected, setSelected] = useState<string[]>([]);
   const [detail, setDetail] = useState<GoodsIssue | null>(null);
 

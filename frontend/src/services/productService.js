@@ -33,7 +33,7 @@ async function request(method, url, body) {
 /**
  * Lấy danh sách sản phẩm có phân trang, lọc và tìm kiếm.
  * @param {{ page?, pageSize?, categoryId?, search? }} params
- * @returns {{ items, totalCount, page, pageSize, totalPages }}
+ * @returns {Promise<{ items, totalCount, page, pageSize, totalPages }>}
  */
 export async function getProducts({ page = 1, pageSize = 6, categoryId, search, sortBy } = {}) {
   const params = new URLSearchParams({ page, pageSize })
@@ -46,7 +46,7 @@ export async function getProducts({ page = 1, pageSize = 6, categoryId, search, 
 /**
  * Lấy chi tiết 1 sản phẩm theo ID (GUID).
  * @param {string} id
- * @returns {{ id, name, sku, standardListedPrice, description, specifications, imageUrl, categoryId, categoryName, physicalStock, availableStock }}
+ * @returns {Promise<{ id, name, sku, standardListedPrice, description, specifications, imageUrl, categoryId, categoryName, physicalStock, availableStock }>}
  */
 export async function getProductById(id) {
   return request('GET', `/products/${id}`)
@@ -54,7 +54,7 @@ export async function getProductById(id) {
 
 /**
  * Lấy danh sách danh mục đang hoạt động.
- * @returns {{ id, name, description }[]}
+ * @returns {Promise<{ id, name, description }[]>}
  */
 export async function getCategories() {
   return request('GET', '/products/categories')
@@ -62,7 +62,7 @@ export async function getCategories() {
 
 /**
  * Tạo sản phẩm mới hoàn toàn.
- * @param {{ name, sku, standardListedPrice, categoryId, unit }} data
+ * @param {{ name, sku, standardListedPrice, categoryId, unit } | FormData} data
  */
 export async function createProduct(data) {
   return request('POST', '/products', data)

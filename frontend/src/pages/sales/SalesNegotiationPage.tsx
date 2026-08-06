@@ -40,7 +40,7 @@ export default function SalesNegotiationPage() {
     if (active?.id) {
       getMessages(active.id).then(setMessages).catch(console.error);
     }
-  }, [active?.id]);
+  }, [active?.id, setMessages]);
 
   const loadData = () => {
     getQuotations().then(data => {
@@ -66,6 +66,10 @@ export default function SalesNegotiationPage() {
       .finally(() => setLoadingDetail(false));
   };
 
+  // Chỉ tải danh sách quotation MỘT LẦN khi mount; loadData đọc `active` chỉ để tự động
+  // chọn item đầu tiên lúc khởi tạo — thêm vào deps sẽ khiến tải lại cả danh sách mỗi
+  // khi người dùng chọn quotation khác.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => { loadData(); }, []);
   useEffect(() => { endRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [messages]);
 

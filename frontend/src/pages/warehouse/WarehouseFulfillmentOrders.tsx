@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Button } from '../../components/sales-ui/button';
 import { Input } from '../../components/sales-ui/input';
-import { Search, Eye, Download, RefreshCw, Filter, UserPlus, ClipboardList, X, Clock, CheckCircle, Package } from 'lucide-react';
+import { Search, Eye, Download, RefreshCw, Filter, ClipboardList, Package } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../../components/sales-ui/dialog';
 
 const PRIMARY = '#1F3B64';
@@ -37,8 +37,6 @@ interface FulfillmentOrder {
   products: { sku: string; name: string; physicalStock: number; orderedQty: number }[];
   timeline: { time: string; event: string; user: string }[];
 }
-
-const ORDERS: FulfillmentOrder[] = []; // Replaced by API call
 
 function Breadcrumb() {
   return (

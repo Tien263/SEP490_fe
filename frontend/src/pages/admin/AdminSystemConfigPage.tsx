@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { History as HistoryIcon, Pencil } from 'lucide-react';
 import { useToast } from '../../context/ToastContext';
 import { getAllConfigs, getConfigHistory, updateConfig } from '../../services/adminSystemConfigService.js';
@@ -141,7 +141,7 @@ export default function AdminSystemConfigPage() {
   const [editTarget, setEditTarget] = useState<any>(null);
   const [historyKey, setHistoryKey] = useState<string | null>(null);
 
-  const load = async () => {
+  const load = useCallback(async () => {
     setLoading(true);
     try {
       const data = await getAllConfigs();
@@ -151,9 +151,9 @@ export default function AdminSystemConfigPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [toast]);
 
-  useEffect(() => { load(); }, []);
+  useEffect(() => { load(); }, [load]);
 
   return (
     <div className="flex flex-col gap-[20px] p-[24px]">

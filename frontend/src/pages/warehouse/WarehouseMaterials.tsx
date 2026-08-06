@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Button } from '../../components/sales-ui/button';
 import { Input } from '../../components/sales-ui/input';
-import { Search, ArrowDownToLine, ArrowUpFromLine, History, AlertCircle, Download, RefreshCw } from 'lucide-react';
+import { Search, History, RefreshCw } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { getMaterials } from '../../services/materialService';
 
@@ -9,7 +9,6 @@ const PRIMARY = '#1F3B64';
 const SUCCESS = '#16A34A';
 const WARNING = '#F97316';
 const ERROR   = '#DC2626';
-const NEUTRAL = '#64748B';
 
 interface Material {
   id: string; name: string; unit: string;

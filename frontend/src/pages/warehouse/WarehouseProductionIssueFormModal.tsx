@@ -16,7 +16,7 @@ export default function WarehouseProductionIssueFormModal({ onClose, onSuccess }
   const [usagePurpose, setUsagePurpose] = useState('Xuất nguyên liệu phục vụ sản xuất');
   const [externalRecipientName, setExternalRecipientName] = useState('');
   const [paperDocumentNumber, setPaperDocumentNumber] = useState('');
-  const [note, setNote] = useState('');
+  const [note] = useState('');
   
   const [loading, setLoading] = useState(false);
 
@@ -26,7 +26,9 @@ export default function WarehouseProductionIssueFormModal({ onClose, onSuccess }
     getWarehouses().then(res => {
       const whList = Array.isArray(res) ? res : (res?.items || []);
       setWarehouses(whList);
-      if (whList.length > 0 && !warehouseId) {
+      // Chạy đúng 1 lần lúc mount, warehouseId luôn là '' tại thời điểm này nên chọn
+      // kho đầu tiên làm mặc định.
+      if (whList.length > 0) {
         setWarehouseId(whList[0].id);
       }
     }).catch(console.error);

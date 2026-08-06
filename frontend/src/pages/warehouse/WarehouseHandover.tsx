@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Button } from '../../components/sales-ui/button';
 import { Input } from '../../components/sales-ui/input';
-import { Search, Eye, RefreshCw, Download, CheckCircle2, ShieldCheck, CheckCircle, Package2, Clock, AlertTriangle, Truck, X } from 'lucide-react';
+import { Search, Eye, RefreshCw, Download, CheckCircle2, ShieldCheck, CheckCircle, Clock, Truck } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../../components/sales-ui/dialog';
 import { getWarehouseOrders, handoverWarehouseOrder } from '../../services/warehouseService';
 
@@ -121,12 +121,9 @@ export default function WarehouseHandover() {
   const [loading, setLoading] = useState(false);
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
-  const [dateFrom, setDateFrom] = useState('');
-  const [dateTo, setDateTo] = useState('');
   const [selected, setSelected] = useState<string[]>([]);
   const [detail, setDetail] = useState<Handover | null>(null);
   const [warehouseSig, setWarehouseSig] = useState('');
-  const [salesSig, setSalesSig] = useState('');
 
   const fetchOrders = async () => {
     setLoading(true);
@@ -178,7 +175,6 @@ export default function WarehouseHandover() {
       alert('Đã xác nhận phần chữ ký Kho thành công!');
       setDetail(null);
       setWarehouseSig('');
-      setSalesSig('');
       fetchOrders();
     } catch (e: any) {
       alert('Lỗi: ' + e.message);
@@ -272,7 +268,7 @@ export default function WarehouseHandover() {
                   <td className="px-3 py-2.5 text-center">
                     <div className="flex items-center justify-center gap-1">
                       <button className="p-1 rounded hover:bg-blue-50 text-gray-400 hover:text-blue-600" onClick={() => setDetail(d)}><Eye className="w-3.5 h-3.5" /></button>
-                      <button className="p-1 rounded hover:bg-green-50 text-gray-400 hover:text-green-600" title="Bàn giao (Xác nhận kép)" onClick={() => { setDetail(d); setWarehouseSig(''); setSalesSig(''); }}><ShieldCheck className="w-3.5 h-3.5" /></button>
+                      <button className="p-1 rounded hover:bg-green-50 text-gray-400 hover:text-green-600" title="Bàn giao (Xác nhận kép)" onClick={() => { setDetail(d); setWarehouseSig(''); }}><ShieldCheck className="w-3.5 h-3.5" /></button>
                     </div>
                   </td>
                 </tr>

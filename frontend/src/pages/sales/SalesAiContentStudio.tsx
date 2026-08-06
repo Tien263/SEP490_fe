@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import {
   Sparkles, Send, Save, RefreshCw, Image as ImageIcon,
   CheckCircle2, Clock, AlertCircle, XCircle, ChevronRight,
-  Tag, ThumbsUp, MessageSquare, Share2, Globe, Plus
+  Tag, ThumbsUp, MessageSquare, Share2, Globe
 } from 'lucide-react';
 import api from '../../services/api';
 
@@ -79,27 +79,6 @@ export default function SalesAiContentStudio() {
   const [submitting, setSubmitting] = useState(false);
   const [generatingSingleImage, setGeneratingSingleImage] = useState(false);
 
-  useEffect(() => { fetchProducts(); fetchMyPosts(); }, []);
-
-  const handleGenerateSingleImage = async () => {
-    if (!selectedProductId) return alert('Vui lòng chọn sản phẩm trước!');
-    const selectedProd = products.find(p => p.id === selectedProductId);
-    const imgPrompt = prompt.trim() || `${selectedProd?.name || 'Vật tư đóng gói'} commercial studio photography`;
-
-    setGeneratingSingleImage(true);
-    try {
-      const res = await api.post('/marketing-posts/generate-image', { prompt: imgPrompt });
-      if (res.data?.imageUrl) {
-        setEditedImageUrl(res.data.imageUrl);
-        alert('Đã sinh ảnh AI thành công qua Gemini Imagen 3!');
-      }
-    } catch (err: any) {
-      alert('Sinh ảnh AI thất bại: ' + (err.response?.data?.message || err.message));
-    } finally {
-      setGeneratingSingleImage(false);
-    }
-  };
-
   const fetchProducts = async () => {
     setLoadingProducts(true);
     try {
@@ -119,6 +98,27 @@ export default function SalesAiContentStudio() {
       setMyPosts(Array.isArray(res.data) ? res.data : []);
     } catch (err) { console.error('Failed to fetch posts:', err); }
     finally { setLoadingPosts(false); }
+  };
+
+  useEffect(() => { fetchProducts(); fetchMyPosts(); }, []);
+
+  const handleGenerateSingleImage = async () => {
+    if (!selectedProductId) return alert('Vui lòng chọn sản phẩm trước!');
+    const selectedProd = products.find(p => p.id === selectedProductId);
+    const imgPrompt = prompt.trim() || `${selectedProd?.name || 'Vật tư đóng gói'} commercial studio photography`;
+
+    setGeneratingSingleImage(true);
+    try {
+      const res = await api.post('/marketing-posts/generate-image', { prompt: imgPrompt });
+      if (res.data?.imageUrl) {
+        setEditedImageUrl(res.data.imageUrl);
+        alert('Đã sinh ảnh AI thành công qua Gemini Imagen 3!');
+      }
+    } catch (err: any) {
+      alert('Sinh ảnh AI thất bại: ' + (err.response?.data?.message || err.message));
+    } finally {
+      setGeneratingSingleImage(false);
+    }
   };
 
   const handleGenerateAi = async () => {

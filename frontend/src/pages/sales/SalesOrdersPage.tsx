@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import {
   FileText,
   Search,
@@ -172,7 +172,7 @@ export default function SalesOrdersPage() {
     alert('Tính năng hủy đơn chưa được triển khai.');
   };
 
-  const fetchDashboard = async () => {
+  const fetchDashboard = useCallback(async () => {
     try {
       const response = await fetch('/api/orders/sales-dashboard', {
         headers: { Authorization: `Bearer ${localStorage.getItem('accessToken')}` },
@@ -184,9 +184,9 @@ export default function SalesOrdersPage() {
     } catch (err) {
       console.error('Failed to load dashboard stats', err);
     }
-  };
+  }, []);
 
-  const fetchOrdersList = async () => {
+  const fetchOrdersList = useCallback(async () => {
     setLoading(true);
     setError('');
     try {
@@ -219,7 +219,7 @@ export default function SalesOrdersPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [page, searchQuery, statusFilter, paymentFilter]);
 
   const handleConfirmOrder = (orderId: string) => {
     setOrderToConfirm(orderId);
@@ -275,14 +275,14 @@ export default function SalesOrdersPage() {
 
   useEffect(() => {
     fetchDashboard();
-  }, []);
+  }, [fetchDashboard]);
 
   useEffect(() => {
     const timer = setTimeout(() => {
       fetchOrdersList();
     }, 400);
     return () => clearTimeout(timer);
-  }, [searchQuery, statusFilter, paymentFilter, page]);
+  }, [fetchOrdersList]);
 
   return (
     <div className="flex h-full flex-col bg-[#F5F7FA]">
@@ -495,7 +495,7 @@ export default function SalesOrdersPage() {
                               Chi tiết
                             </button>
                             <button
-                              onClick={() => handleCancelOrder(order.id)}
+                              onClick={() => handleCancelOrder()}
                               className="inline-flex items-center gap-1 rounded bg-red-100 border border-red-200 px-2 py-1 text-[11px] font-semibold text-red-600 hover:bg-red-200"
                               title="Hủy đơn hàng"
                             >

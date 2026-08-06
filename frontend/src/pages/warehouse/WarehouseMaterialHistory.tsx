@@ -1,23 +1,17 @@
 import React, { useState, useEffect } from 'react';
 import { Input } from '../../components/sales-ui/input';
 import { Button } from '../../components/sales-ui/button';
-import { Search, Download, RefreshCw, ArrowUpFromLine, ArrowDownToLine, Layers, Eye, FileText, CheckCircle, RotateCcw, Calendar, User, Building } from 'lucide-react';
+import { Search, Download, RefreshCw, ArrowUpFromLine, ArrowDownToLine, Layers, Eye, FileText, CheckCircle, RotateCcw } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../../components/sales-ui/dialog';
 import { getGoodsIssues } from '../../services/warehouseService';
 
 const PRIMARY = '#1F3B64';
-const SUCCESS = '#16A34A';
-const WARNING = '#F97316';
-const ERROR   = '#DC2626';
-const INFO    = '#2563EB';
 
 export default function WarehouseMaterialHistory() {
   const [loading, setLoading] = useState(false);
   const [historyItems, setHistoryItems] = useState<any[]>([]);
   const [search, setSearch] = useState('');
   const [typeFilter, setTypeFilter] = useState('all'); // all, receive, issue, reversal
-  const [dateFrom, setDateFrom] = useState('');
-  const [dateTo, setDateTo] = useState('');
   const [selectedDetail, setSelectedDetail] = useState<any | null>(null);
 
   const fetchHistory = async () => {
@@ -58,7 +52,7 @@ export default function WarehouseMaterialHistory() {
       setHistoryItems(mapped);
     } catch (err: any) {
       console.error('Lỗi khi tải lịch sử xuất nhập NVL:', err);
-    } fontinally: {
+    } {
       setLoading(false);
     }
   };

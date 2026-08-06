@@ -40,7 +40,7 @@ function numberToVietnameseWords(amount: number): string {
   }
 
   let strAmount = Math.floor(amount).toString();
-  let groups: string[] = [];
+  const groups: string[] = [];
   while (strAmount.length > 0) {
     groups.push(strAmount.substring(Math.max(0, strAmount.length - 3)));
     strAmount = strAmount.substring(0, Math.max(0, strAmount.length - 3));
@@ -334,6 +334,8 @@ export default function DirectPurchasePage() {
       setItems([
         ...items,
         {
+          // handleAddProduct chỉ chạy trong onClick khi chọn sản phẩm, không phải lúc render.
+          // eslint-disable-next-line react-hooks/purity
           id: `${Date.now()}-${product.id}`,
           productId: product.id,
           name: product.name,

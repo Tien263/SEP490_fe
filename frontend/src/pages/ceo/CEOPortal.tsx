@@ -10,12 +10,11 @@ import { useAuth } from '../../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import {
   LayoutDashboard, DollarSign,
-  Package, Users, LogOut, Bell, Building, Layers
+  Package, Users, LogOut, Building, Layers
 } from 'lucide-react';
 import WarehouseManagement from '../warehouse/WarehouseManagement';
 import NotificationBell from '../../components/NotificationBell';
 import NotificationsPage from '../NotificationsPage';
-import { Routes, Route } from 'react-router-dom';
 
 // ─── Sidebar primitives (Same as Admin) ───────────────────────────────────────
 function SidebarHeader() {

@@ -7,7 +7,7 @@ import {
   Package, MapPin, Phone, User, Calendar, CreditCard, ArrowLeft,
   Clock, AlertTriangle, CheckCircle, XCircle, Truck, Building2,
   Mail, Hash, FileText, Download, ChevronRight, Box, Wallet,
-  ShieldCheck, CircleDot, Timer, RotateCcw
+  Timer, RotateCcw
 } from 'lucide-react';
 
 const PRIMARY = '#1F3B64';
@@ -177,8 +177,6 @@ export default function SalesManagerOrderDetailPage() {
   const [showRejectReturnModal, setShowRejectReturnModal] = useState(false);
   const [returnProcessNote, setReturnProcessNote] = useState('');
   const [selectedReturnRequest, setSelectedReturnRequest] = useState<any | null>(null);
-  const [showCreateReplacementModal, setShowCreateReplacementModal] = useState(false);
-  const [pendingReplacementRequestId, setPendingReplacementRequestId] = useState<string | null>(null);
 
   useEffect(() => {
     const fetchDetail = async () => {
@@ -268,42 +266,6 @@ export default function SalesManagerOrderDetailPage() {
       setOrder(data);
     } catch (err: any) {
       alert(err.message || 'Lỗi không xác định.');
-    }
-  };
-
-  const [isCreatingReplacement, setIsCreatingReplacement] = useState(false);
-
-  const handleCreateExchangeReplacement = async (requestId: string) => {
-    if (isCreatingReplacement) return;
-    setIsCreatingReplacement(true);
-    try {
-      const response = await fetch(`/api/delivery/exchange/${requestId}/replacement`, {
-        method: 'POST',
-        headers: { Authorization: `Bearer ${localStorage.getItem('accessToken')}` },
-      });
-
-      let data: any = {};
-      try {
-        const text = await response.text();
-        if (text) data = JSON.parse(text);
-      } catch (e) {
-        console.error("Parse error", e);
-      }
-      
-      if (!response.ok) throw new Error(data.message || `Lỗi từ server: ${response.status} ${response.statusText}`);
-
-      alert(data.message || 'Tạo đơn thay thế thành công!');
-      
-      const res = await fetch(`/api/orders/sales/${id}`, {
-        headers: { Authorization: `Bearer ${localStorage.getItem('accessToken')}` }
-      });
-      const orderData = await res.json();
-      setOrder(orderData);
-      setSelectedReturnRequest(null);
-    } catch (err: any) {
-      alert(err.message || 'Lỗi không xác định.');
-    } finally {
-      setIsCreatingReplacement(false);
     }
   };
 

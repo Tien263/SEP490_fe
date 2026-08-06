@@ -32,10 +32,12 @@ export function CartProvider({ children }) {
     }
   }, [isAuthenticated])
 
-  // Gộp giỏ hàng tạm (localStorage) vào giỏ hàng thật trên server sau khi đăng nhập
+  // Gộp giỏ hàng tạm (localStorage) vào giỏ hàng thật trên server sau khi đăng nhập.
+  // Trả về thông báo lỗi nếu gộp thất bại (giữ nguyên guestCart để thử lại), null nếu thành công.
   const mergeGuestCartIntoServer = useCallback(async () => {
-    if (mergingRef.current) return
+    if (mergingRef.current) return null
     mergingRef.current = true
+    let mergeError = null
     try {
       const guestItems = cartService.getGuestCartItems()
       for (const item of guestItems) {
@@ -44,21 +46,27 @@ export function CartProvider({ children }) {
           cartService.removeGuestCartItem(item.productId)
         } catch (err) {
           console.error('Không thể gộp sản phẩm vào giỏ hàng:', item.productId, err)
+          mergeError = err.message || 'Không thể gộp giỏ hàng tạm vào giỏ hàng của bạn.'
           break
         }
       }
     } finally {
       mergingRef.current = false
     }
+    return mergeError
   }, [])
 
   // Load cart khi trạng thái đăng nhập thay đổi; nếu vừa đăng nhập thì gộp giỏ tạm trước
   useEffect(() => {
     (async () => {
+      let mergeError = null
       if (isAuthenticated) {
-        await mergeGuestCartIntoServer()
+        mergeError = await mergeGuestCartIntoServer()
       }
       await fetchCart()
+      // fetchCart() vừa reset error về null khi thành công — báo lại lỗi gộp giỏ (nếu có)
+      // sau cùng để người dùng biết giỏ tạm chưa được gộp, thay vì chỉ console.error.
+      if (mergeError) setError(mergeError)
     })()
   }, [isAuthenticated, mergeGuestCartIntoServer, fetchCart])
 

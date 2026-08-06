@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Filter, Search, Settings, ChevronDown, ChevronUp } from 'lucide-react';
+import { Search, Settings, ChevronDown } from 'lucide-react';
 import WarehouseReceiptFormModal from './WarehouseReceiptFormModal';
 
 // Mock Data

@@ -1,7 +1,7 @@
-import React, { useEffect, useState, useRef } from 'react';
+import React, { useCallback, useEffect, useState, useRef } from 'react';
 import {
   Bell, Check, X, Clock, ShoppingCart, AlertTriangle, CreditCard, Package,
-  Truck, Users, FileText, ArrowRight, CheckCircle, MailOpen, DollarSign
+  Truck, Users, FileText, ArrowRight, CheckCircle, MailOpen
 } from 'lucide-react';
 import * as signalR from '@microsoft/signalr';
 import { useNavigate } from 'react-router-dom';
@@ -43,7 +43,7 @@ function timeAgo(dateStr: string) {
   return new Date(dateStr).toLocaleDateString('vi-VN');
 }
 
-export default function NotificationBell({ role, onViewAll }: { role: string; onViewAll?: () => void }) {
+export default function NotificationBell({ onViewAll }: { role?: string; onViewAll?: () => void }) {
   const [unreadCount, setUnreadCount] = useState(0);
   const [notifications, setNotifications] = useState<any[]>([]);
   const [isOpen, setIsOpen] = useState(false);
@@ -71,7 +71,7 @@ export default function NotificationBell({ role, onViewAll }: { role: string; on
     }
   };
 
-  const fetchNotifications = async () => {
+  const fetchNotifications = useCallback(async () => {
     setLoading(true);
     try {
       const isRead = activeTab === 'unread' ? false : null;
@@ -82,7 +82,7 @@ export default function NotificationBell({ role, onViewAll }: { role: string; on
     } finally {
       setLoading(false);
     }
-  };
+  }, [activeTab]);
 
   useEffect(() => {
     const accessToken = localStorage.getItem('accessToken');
@@ -111,7 +111,7 @@ export default function NotificationBell({ role, onViewAll }: { role: string; on
     if (isOpen) {
       fetchNotifications();
     }
-  }, [isOpen, activeTab]);
+  }, [isOpen, fetchNotifications]);
 
   const handleMarkAsRead = async (id: number, e?: React.MouseEvent) => {
     if (e) e.stopPropagation();
@@ -235,7 +235,7 @@ export default function NotificationBell({ role, onViewAll }: { role: string; on
               </div>
             ) : (
               <div className="flex flex-col">
-                {displayNotifications.map((notif, idx) => {
+                {displayNotifications.map((notif) => {
                   const style = getNotifStyle(notif.type);
                   const Icon = style.icon;
                   return (

@@ -10,7 +10,6 @@ import {
 } from '../../components/sales-ui/dropdown-menu';
 import {
   Archive,
-  Bell,
   ChevronDown,
   DollarSign,
   FileText,

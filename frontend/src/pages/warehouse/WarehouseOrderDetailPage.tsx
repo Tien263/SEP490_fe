@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { getWarehouseOrderDetail, acceptWarehouseOrder, reportShortage } from '../../services/warehouseService';
 import { ArrowLeft, CheckCircle, AlertTriangle, Package } from 'lucide-react';
@@ -16,11 +16,7 @@ export default function WarehouseOrderDetailPage() {
   const [note, setNote] = useState('');
   const [actionLoading, setActionLoading] = useState(false);
 
-  useEffect(() => {
-    if (id) fetchDetail();
-  }, [id]);
-
-  const fetchDetail = async () => {
+  const fetchDetail = useCallback(async () => {
     try {
       setLoading(true);
       const data = await getWarehouseOrderDetail(id);
@@ -30,7 +26,11 @@ export default function WarehouseOrderDetailPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [id]);
+
+  useEffect(() => {
+    if (id) fetchDetail();
+  }, [id, fetchDetail]);
 
   const handleAccept = async () => {
     try {

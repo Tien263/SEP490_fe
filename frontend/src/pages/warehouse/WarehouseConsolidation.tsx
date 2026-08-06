@@ -2,13 +2,12 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '../../components/sales-ui/button';
 import { Input } from '../../components/sales-ui/input';
-import { Search, Eye, RefreshCw, Download, ArrowRight, RotateCcw, Clock, Package2, CheckCircle, AlertTriangle, X, Truck } from 'lucide-react';
+import { Search, Eye, RefreshCw, Download, ArrowRight, Clock, Package2, CheckCircle, AlertTriangle, Truck } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../../components/sales-ui/dialog';
 import { getWarehouseOrders, consolidateWarehouseOrder } from '../../services/warehouseService';
 
 const PRIMARY = '#1F3B64';
 const SUCCESS = '#16A34A';
-const WARNING = '#D97706';
 const ERROR   = '#DC2626';
 const INFO    = '#2563EB';
 const NEUTRAL = '#64748B';
@@ -40,8 +39,6 @@ export default function WarehouseConsolidation() {
   const [loading, setLoading] = useState(false);
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
-  const [dateFrom, setDateFrom] = useState('');
-  const [dateTo, setDateTo] = useState('');
   const [warehouseFilter, setWarehouseFilter] = useState('all');
   const [selected, setSelected] = useState<string[]>([]);
   const [detail, setDetail] = useState<ConsolidationItem | null>(null);
@@ -294,7 +291,7 @@ export default function WarehouseConsolidation() {
                             <td className="px-3 py-2 text-gray-800">{p.name}</td>
                             <td className="px-3 py-2 text-center font-semibold">{p.quantity}</td>
                             <td className={`px-3 py-2 text-center font-semibold ${readyQty > 0 ? 'text-green-600' : 'text-gray-400'}`}>{readyQty}</td>
-                            <td className={`px-3 py-2 text-center font-semibold ${p.requiredTransferQuantity > 0 ? 'text-red-500' : 'text-gray-400'}`}>{p.requiredTransferQuantity || 0}</td>
+                            <td className={`px-3 py-2 text-center font-semibold ${(p.requiredTransferQuantity || 0) > 0 ? 'text-red-500' : 'text-gray-400'}`}>{p.requiredTransferQuantity || 0}</td>
                           </tr>
                         );
                       })}

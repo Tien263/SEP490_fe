@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { Plus, Percent } from 'lucide-react';
 import { useToast } from '../../context/ToastContext';
 import { getDiscountTiers, createDiscountTier, updateDiscountTier } from '../../services/discountTierService.js';
@@ -103,7 +103,7 @@ export default function AdminDiscountTiersPage() {
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [editTarget, setEditTarget] = useState<any>(null);
 
-  const load = async () => {
+  const load = useCallback(async () => {
     setLoading(true);
     try {
       const result = await getDiscountTiers();
@@ -115,9 +115,9 @@ export default function AdminDiscountTiersPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [toast]);
 
-  useEffect(() => { load(); }, []);
+  useEffect(() => { load(); }, [load]);
 
   return (
     <div className="flex flex-col gap-[20px] p-[24px]">

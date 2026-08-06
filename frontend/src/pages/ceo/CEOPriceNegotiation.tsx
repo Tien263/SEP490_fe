@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { getQuotations, ceoReview } from '../../services/quotationService.js';
+import { getQuotations } from '../../services/quotationService.js';
 import { Eye } from 'lucide-react';
 const getStatusLabel = (status: string) => {
   switch (status) {

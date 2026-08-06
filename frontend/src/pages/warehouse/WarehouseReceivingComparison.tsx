@@ -45,8 +45,8 @@ export default function WarehouseReceivingComparison() {
 
   const [poList, setPoList] = useState<any[]>([]);
   const [selectedPoId, setSelectedPoId] = useState<string>('');
-  const [poDetail, setPoDetail] = useState<any>(null);
-  const [loading, setLoading] = useState(false);
+  const [, setPoDetail] = useState<any>(null);
+  const [, setLoading] = useState(false);
 
   const loadPOs = async () => {
     try {

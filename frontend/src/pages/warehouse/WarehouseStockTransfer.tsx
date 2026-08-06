@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { Button } from '../../components/sales-ui/button';
 import { Input } from '../../components/sales-ui/input';
-import { Search, Eye, RefreshCw, Download, Plus, Truck, CheckCircle, X, ArrowRight, UploadCloud, Send } from 'lucide-react';
+import { Search, Eye, RefreshCw, Plus, Truck, CheckCircle, X, ArrowRight, Send } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../../components/sales-ui/dialog';
 
 const PRIMARY = '#1F3B64';
@@ -106,6 +106,10 @@ function CreateForm({ onClose, onCreated, warehouses, staffUsers, initialData }:
       }
     }
     isInitialMount.current = false;
+    // initialData chỉ dùng để mồi giá trị ban đầu (chặn bằng isInitialMount.current) — cố ý
+    // KHÔNG thêm vào deps: initialData là prop object mới mỗi lần cha re-render, thêm vào sẽ
+    // khiến effect chạy lại ngoài ý muốn và xoá mất các dòng item người dùng đang nhập dở.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [formData.sourceWarehouseId]);
   
   const handleCreate = async () => {
@@ -352,7 +356,7 @@ export default function WarehouseStockTransfer() {
   }, []);
 
   const tabFilters: Record<Tab, (t: Transfer) => boolean> = {
-    create:   t => true, // Tất cả lệnh
+    create:   () => true, // Tất cả lệnh
     dispatch: t => ['Draft', 'TransportRequested', 'TransportArranged'].includes(t.status), // Cần xuất kho
     receive:  t => ['Dispatched'].includes(t.status), // Cần nhận hàng
     completed:t => ['Received', 'Cancelled'].includes(t.status), // Đã hoàn thành hoặc Hủy

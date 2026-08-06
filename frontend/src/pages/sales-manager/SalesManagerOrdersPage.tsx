@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import {
   FileText,
   Search,
@@ -198,14 +198,14 @@ export default function SalesManagerOrdersPage() {
         const data = await response.json();
         alert(data.message || 'Lỗi khi hủy đơn hàng');
       }
-    } catch (err) {
+    } catch {
       alert('Đã xảy ra lỗi khi kết nối với máy chủ');
     } finally {
       setCancelModalOrder(null);
     }
   };
 
-  const fetchDashboard = async () => {
+  const fetchDashboard = useCallback(async () => {
     try {
       const response = await fetch('/api/orders/sales-dashboard', {
         headers: { Authorization: `Bearer ${localStorage.getItem('accessToken')}` },
@@ -217,9 +217,9 @@ export default function SalesManagerOrdersPage() {
     } catch (err) {
       console.error('Failed to load dashboard stats', err);
     }
-  };
+  }, []);
 
-  const fetchOrdersList = async () => {
+  const fetchOrdersList = useCallback(async () => {
     setLoading(true);
     setError('');
     try {
@@ -252,7 +252,7 @@ export default function SalesManagerOrdersPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [page, searchQuery, statusFilter, paymentFilter]);
 
   const handleConfirmOrder = (orderId: string) => {
     setOrderToConfirm(orderId);
@@ -305,14 +305,14 @@ export default function SalesManagerOrdersPage() {
 
   useEffect(() => {
     fetchDashboard();
-  }, []);
+  }, [fetchDashboard]);
 
   useEffect(() => {
     const timer = setTimeout(() => {
       fetchOrdersList();
     }, 400);
     return () => clearTimeout(timer);
-  }, [searchQuery, statusFilter, paymentFilter, page]);
+  }, [fetchOrdersList]);
 
   return (
     <div className="flex h-full flex-col bg-[#F5F7FA]">

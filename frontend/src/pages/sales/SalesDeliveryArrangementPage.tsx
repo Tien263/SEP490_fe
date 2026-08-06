@@ -1,6 +1,5 @@
-import { useEffect, useMemo, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { AlertCircle, CheckCircle, Lock, MapPin, Package, RefreshCw, Truck, User, X, ArrowLeftRight } from 'lucide-react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { AlertCircle, CheckCircle, Lock, MapPin, Package, RefreshCw, Truck, User, X } from 'lucide-react';
 import { useToast } from '../../context/ToastContext';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
@@ -91,7 +90,6 @@ function api(path: string, opts?: RequestInit) {
 }
 
 export default function SalesDeliveryArrangementPage() {
-  const navigate = useNavigate();
   const [activeShift, setActiveShift] = useState(0);
   const [selectedDate, setSelectedDate] = useState(() => {
     const today = new Date();
@@ -122,7 +120,9 @@ export default function SalesDeliveryArrangementPage() {
     return true;
   }, [selectedDate, activeShift]);
 
-  const fetchOrders = async () => {
+  const VEHICLES_META = useCallback((): Vehicle[] => INITIAL_VEHICLES.map((v) => ({ ...v, orders: [] })), []);
+
+  const fetchOrders = useCallback(async () => {
     setLoading(true);
     try {
       const [resOrders, resPickups] = await Promise.all([
@@ -205,14 +205,12 @@ export default function SalesDeliveryArrangementPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [selectedDate, activeShift, toast, VEHICLES_META]);
 
   // Reload danh sách khi đổi Ngày giao hoặc Ca giao
   useEffect(() => {
     fetchOrders();
-  }, [selectedDate, activeShift]);
-
-  const VEHICLES_META = (): Vehicle[] => INITIAL_VEHICLES.map((v) => ({ ...v, orders: [] }));
+  }, [fetchOrders]);
 
   // Chỉ tính số lượng đơn mới được xếp lên xe trong phiên làm việc hiện tại (chưa chốt trên server)
   const newlyAssignedCount = useMemo(() => {

@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { getQuotationById, managerReview, getMessages } from '../../services/quotationService.js';
 import { Input } from '../../components/sales-ui/input';
-import { ArrowLeft, CheckCircle, XCircle, MessageSquare, User } from 'lucide-react';
+import { ArrowLeft, CheckCircle, XCircle, MessageSquare } from 'lucide-react';
 
 export default function SalesManagerPriceNegotiationDetail() {
   const { id } = useParams<{ id: string }>();

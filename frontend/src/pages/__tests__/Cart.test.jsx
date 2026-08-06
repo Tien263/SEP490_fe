@@ -1,14 +1,49 @@
 import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router-dom'
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
+import { http, HttpResponse } from 'msw'
+import { server } from '../../test/msw/server.js'
 import { AuthProvider } from '../../context/AuthContext.jsx'
 import { CartProvider } from '../../context/CartContext.jsx'
 import Cart from '../Cart.jsx'
 
+// Header render NotificationBell, mở WebSocket thật khi có accessToken -> stub để chạy offline.
+vi.mock('@microsoft/signalr', () => {
+  const connection = {
+    start: vi.fn().mockResolvedValue(undefined),
+    stop: vi.fn().mockResolvedValue(undefined),
+    on: vi.fn(),
+    off: vi.fn(),
+    onclose: vi.fn(),
+    invoke: vi.fn().mockResolvedValue(undefined),
+  }
+  class HubConnectionBuilder {
+    withUrl() { return this }
+    withAutomaticReconnect() { return this }
+    configureLogging() { return this }
+    build() { return connection }
+  }
+  return { HubConnectionBuilder, LogLevel: { Information: 1, Error: 4, None: 6 }, HttpTransportType: {} }
+})
+
 describe('Cart', () => {
   it('opens quotation modal and shows success notice after submit', async () => {
     const user = userEvent.setup()
+
+    // Đăng nhập sẵn + giỏ hàng >= 100 triệu để nút "Gửi yêu cầu báo giá với Sales" hiển thị.
+    localStorage.setItem('accessToken', 'jwt-1')
+    localStorage.setItem('authUser', JSON.stringify({ id: 'U1', role: 'Customer' }))
+    server.use(
+      http.get('/api/cart', () => HttpResponse.json({
+        id: 'C1',
+        items: [{ id: 'CI1', productId: 'P1', productName: 'Ống PVC D21', quantity: 3, unitPrice: 40_000_000 }],
+        totalItems: 3,
+        totalPrice: 120_000_000,
+      })),
+      http.get('/api/Quotation', () => HttpResponse.json([])),
+      http.post('/api/Quotation/from-cart', () => HttpResponse.json({ id: 'Q1' })),
+    )
 
     render(
       <AuthProvider>
@@ -20,7 +55,7 @@ describe('Cart', () => {
       </AuthProvider>,
     )
 
-    await user.click(screen.getByRole('button', { name: /Gửi yêu cầu báo giá với Sales/i }))
+    await user.click(await screen.findByRole('button', { name: /Gửi yêu cầu báo giá với Sales/i }))
 
     expect(screen.getByRole('heading', { name: /Gửi yêu cầu báo giá\?/i })).toBeInTheDocument()
 

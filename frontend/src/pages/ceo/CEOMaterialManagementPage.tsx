@@ -1,6 +1,6 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { getMaterials, createMaterial, updateMaterial, deleteMaterial } from '../../services/materialService.js';
-import { Search, Plus, Edit2, Trash2, ShieldAlert } from 'lucide-react';
+import { Search, Plus } from 'lucide-react';
 
 export default function CEOMaterialManagementPage() {
   const [materials, setMaterials] = useState<any[]>([]);
@@ -16,7 +16,7 @@ export default function CEOMaterialManagementPage() {
     safetyThreshold: 0
   });
 
-  const loadMaterials = async () => {
+  const loadMaterials = useCallback(async () => {
     try {
       setLoading(true);
       const data = await getMaterials({ search });
@@ -26,14 +26,14 @@ export default function CEOMaterialManagementPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [search]);
 
   useEffect(() => {
     const delayDebounceFn = setTimeout(() => {
       loadMaterials();
     }, 500);
     return () => clearTimeout(delayDebounceFn);
-  }, [search]);
+  }, [loadMaterials]);
 
   const handleOpenModal = (material: any = null) => {
     if (material) {
@@ -79,9 +79,7 @@ export default function CEOMaterialManagementPage() {
     }
   };
 
-  const PRIMARY = '#1F3B64';
   const SUCCESS = '#16A34A';
-  const WARNING = '#F97316';
   const ERROR   = '#DC2626';
 
   const criticalCount = materials.filter(m => m.isBelowSafetyThreshold).length;

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Button } from '../../components/sales-ui/button';
 import { Input } from '../../components/sales-ui/input';
 import { Search, Eye, RefreshCw, CheckCircle, XCircle, AlertTriangle, Check, X } from 'lucide-react';
@@ -7,7 +7,6 @@ import { getQuarantineList, dispatchQuarantine } from '../../services/warehouseS
 
 const PRIMARY = '#1F3B64';
 const SUCCESS = '#16A34A';
-const WARNING = '#D97706';
 const ERROR   = '#DC2626';
 const NEUTRAL = '#64748B';
 
@@ -52,12 +51,12 @@ export default function WarehouseQualityInspection() {
   // Toast notification state
   const [toast, setToast] = useState<{ text: string; type: 'success' | 'error' } | null>(null);
 
-  const showToast = (text: string, type: 'success' | 'error' = 'success') => {
+  const showToast = useCallback((text: string, type: 'success' | 'error' = 'success') => {
     setToast({ text, type });
     setTimeout(() => setToast(null), 4000);
-  };
+  }, []);
 
-  const loadData = async () => {
+  const loadData = useCallback(async () => {
     setLoading(true);
     try {
       const data = await getQuarantineList();
@@ -77,11 +76,11 @@ export default function WarehouseQualityInspection() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [showToast]);
 
   useEffect(() => {
     loadData();
-  }, []);
+  }, [loadData]);
 
   const filtered = items.filter(d => {
     const q = search.toLowerCase();

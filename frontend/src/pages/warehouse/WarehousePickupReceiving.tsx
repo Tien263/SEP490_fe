@@ -1,7 +1,7 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { Archive, CheckCircle, Package, RefreshCw, Truck, User, AlertCircle } from 'lucide-react';
 import { Button } from '../../components/sales-ui/button';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../../components/sales-ui/dialog';
+import { Dialog, DialogContent } from '../../components/sales-ui/dialog';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -42,12 +42,12 @@ export default function WarehousePickupReceiving() {
   const [toast, setToast] = useState<{ msg: string; type: 'success' | 'error' } | null>(null);
   const [confirmReq, setConfirmReq] = useState<PickupRequest | null>(null);
 
-  const showToast = (msg: string, type: 'success' | 'error' = 'success') => {
+  const showToast = useCallback((msg: string, type: 'success' | 'error' = 'success') => {
     setToast({ msg, type });
     setTimeout(() => setToast(null), 5000);
-  };
+  }, []);
 
-  const fetchPickups = async () => {
+  const fetchPickups = useCallback(async () => {
     setLoading(true);
     try {
       const res = await api('/api/delivery/pickups');
@@ -78,11 +78,11 @@ export default function WarehousePickupReceiving() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [showToast]);
 
   useEffect(() => {
     fetchPickups();
-  }, []);
+  }, [fetchPickups]);
 
   const handleReceiveQuarantine = async (req: PickupRequest) => {
     setProcessingId(req.id);

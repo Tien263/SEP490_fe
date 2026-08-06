@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { RefreshCw, Eye } from 'lucide-react';
 import { useToast } from '../../context/ToastContext';
 import {
@@ -65,7 +65,7 @@ function JobRunsPanel() {
   const [jobNameFilter, setJobNameFilter] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
 
-  const loadSummary = async () => {
+  const loadSummary = useCallback(async () => {
     setLoadingSummary(true);
     try {
       setSummary(await getJobRunsSummary());
@@ -74,9 +74,9 @@ function JobRunsPanel() {
     } finally {
       setLoadingSummary(false);
     }
-  };
+  }, [toast]);
 
-  const loadRuns = async () => {
+  const loadRuns = useCallback(async () => {
     setLoadingRuns(true);
     try {
       const result = await searchJobRuns({
@@ -92,10 +92,10 @@ function JobRunsPanel() {
     } finally {
       setLoadingRuns(false);
     }
-  };
+  }, [page, jobNameFilter, statusFilter, toast]);
 
-  useEffect(() => { loadSummary(); }, []);
-  useEffect(() => { loadRuns(); }, [page, jobNameFilter, statusFilter]);
+  useEffect(() => { loadSummary(); }, [loadSummary]);
+  useEffect(() => { loadRuns(); }, [loadRuns]);
 
   const handleRetry = async (jobName: string) => {
     setRetryingJob(jobName);
@@ -253,7 +253,7 @@ function WebhookLogsPanel() {
   const [detailLog, setDetailLog] = useState<any>(null);
   const [retryingId, setRetryingId] = useState<string | null>(null);
 
-  const load = async () => {
+  const load = useCallback(async () => {
     setLoading(true);
     try {
       const result = await searchWebhookLogs({ page, pageSize: 20, status: statusFilter || undefined });
@@ -265,9 +265,9 @@ function WebhookLogsPanel() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [page, statusFilter, toast]);
 
-  useEffect(() => { load(); }, [page, statusFilter]);
+  useEffect(() => { load(); }, [load]);
 
   const handleRetry = async (id: string) => {
     setRetryingId(id);

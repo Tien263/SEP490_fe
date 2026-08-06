@@ -1,10 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { History, Search, Filter, Clock } from 'lucide-react';
 import { Button } from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
 import { searchAuditLogs } from '../../services/adminAuditLogService';
-
-const PRIMARY = '#3b82f6';
 
 export default function WarehouseAuditLog() {
   const [search, setSearch] = useState('');
@@ -16,11 +14,7 @@ export default function WarehouseAuditLog() {
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
 
-  useEffect(() => {
-    fetchLogs();
-  }, [page, actionFilter]);
-
-  const fetchLogs = async () => {
+  const fetchLogs = useCallback(async () => {
     try {
       setLoading(true);
       const res: any = await searchAuditLogs({
@@ -40,7 +34,14 @@ export default function WarehouseAuditLog() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [page, actionFilter, search]);
+
+  // Chỉ tự động tải lại khi đổi trang hoặc bộ lọc hành động; gõ ô tìm kiếm không tự
+  // fetch — người dùng phải bấm nút "Tìm kiếm" (xem handleSearch bên dưới).
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  useEffect(() => {
+    fetchLogs();
+  }, [page, actionFilter]);
 
   const handleSearch = () => {
     if (page === 1) fetchLogs();

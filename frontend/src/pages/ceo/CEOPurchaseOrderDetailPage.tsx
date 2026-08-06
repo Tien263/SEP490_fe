@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { 
   getPurchaseOrderById, 
   issuePurchaseOrder, 
@@ -21,7 +21,7 @@ export default function CEOPurchaseOrderDetailPage({ poId, onBack }: any) {
   const [resData, setResData] = useState({ resolutionType: 'AcceptExcess', reason: '' });
   const [confirmConfig, setConfirmConfig] = useState<{ fn: any, msg: string } | null>(null);
 
-  const loadData = async () => {
+  const loadData = useCallback(async () => {
     setLoading(true);
     try {
       const data = await getPurchaseOrderById(poId);
@@ -35,11 +35,11 @@ export default function CEOPurchaseOrderDetailPage({ poId, onBack }: any) {
     } finally {
       setLoading(false);
     }
-  };
+  }, [poId]);
 
   useEffect(() => {
     if (poId) loadData();
-  }, [poId]);
+  }, [poId, loadData]);
 
   const handleAction = async (actionFn: any, confirmMsg?: string) => {
     if (confirmMsg) {

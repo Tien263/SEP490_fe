@@ -9,7 +9,6 @@ import { useEffect } from 'react';
 const PRIMARY = '#1F3B64';
 const SUCCESS = '#16A34A';
 const WARNING = '#D97706';
-const ERROR   = '#DC2626';
 const INFO    = '#2563EB';
 const NEUTRAL = '#64748B';
 
@@ -55,7 +54,7 @@ export default function WarehouseGoodsReceipt() {
   const [detail, setDetail] = useState<GoodsReceipt | null>(null);
   const [editItems, setEditItems] = useState<ReceiptItem[]>([]);
   const [DATA, setDATA] = useState<GoodsReceipt[]>([]);
-  const [loading, setLoading] = useState(false);
+  const [, setLoading] = useState(false);
 
   const loadData = async () => {
     setLoading(true);

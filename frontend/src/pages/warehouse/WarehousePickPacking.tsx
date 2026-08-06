@@ -1,7 +1,7 @@
-import React, { useState, useRef } from 'react';
+import React, { useState } from 'react';
 import { Button } from '../../components/sales-ui/button';
 import { Input } from '../../components/sales-ui/input';
-import { Search, Eye, Download, RefreshCw, Play, CheckCircle, Printer, Upload, X, Package, Save } from 'lucide-react';
+import { Search, Eye, Download, RefreshCw, Play, CheckCircle, Upload, Package, Save } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../../components/sales-ui/dialog';
 
 const PRIMARY = '#1F3B64';
@@ -38,8 +38,6 @@ interface PickTask {
   items: PickItem[];
 }
 
-const TASKS: PickTask[] = []; // Replaced by API call
-
 function Breadcrumb() {
   return (
     <div className="flex items-center gap-1.5 text-[11px] text-gray-500 mb-0.5">
@@ -54,16 +52,6 @@ function Breadcrumb() {
 
 function Badge({ status }: { status: string }) {
   const c = STATUS_CFG[status] || { label: status, bg: NEUTRAL };
-  return <span className="text-[10px] font-semibold text-white px-2 py-0.5 inline-block whitespace-nowrap" style={{ backgroundColor: c.bg, borderRadius: 4 }}>{c.label}</span>;
-}
-
-function PriBadge({ p }: { p: string }) {
-  const m: Record<string, { label: string; bg: string }> = {
-    urgent: { label: 'Khẩn cấp', bg: ERROR },
-    high:   { label: 'Cao',      bg: WARNING },
-    normal: { label: 'Thường',   bg: NEUTRAL },
-  };
-  const c = m[p] || m.normal;
   return <span className="text-[10px] font-semibold text-white px-2 py-0.5 inline-block whitespace-nowrap" style={{ backgroundColor: c.bg, borderRadius: 4 }}>{c.label}</span>;
 }
 

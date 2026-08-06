@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import * as signalR from '@microsoft/signalr';
 import { getWarehouseOrders } from '../../services/warehouseService';
@@ -17,7 +17,7 @@ export default function WarehouseOrdersPage() {
   const [error, setError] = useState('');
   const navigate = useNavigate();
 
-  const fetchOrders = async () => {
+  const fetchOrders = useCallback(async () => {
     try {
       setLoading(true);
       setError('');
@@ -28,11 +28,11 @@ export default function WarehouseOrdersPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [activeTab]);
 
   useEffect(() => {
     fetchOrders();
-  }, [activeTab]);
+  }, [fetchOrders]);
 
   useEffect(() => {
     const token = localStorage.getItem('accessToken');
@@ -59,7 +59,7 @@ export default function WarehouseOrdersPage() {
     return () => {
       connection.stop();
     };
-  }, [activeTab]);
+  }, [activeTab, fetchOrders]);
 
   return (
     <div className="p-6">

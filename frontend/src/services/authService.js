@@ -1,16 +1,44 @@
 // ─── Base config ─────────────────────────────────────────────────────────────
 const API_BASE = '/api'  // Vite proxy → http://localhost:5112
 
-export async function fetchWithToken(method, url, body) {
+async function doFetchWithToken(method, url, body) {
   const accessToken = localStorage.getItem('accessToken');
   const headers = { 'Content-Type': 'application/json' };
   if (accessToken) headers['Authorization'] = `Bearer ${accessToken}`;
 
-  const res = await fetch(`${API_BASE}${url}`, {
+  return fetch(`${API_BASE}${url}`, {
     method,
     headers,
     body: body ? JSON.stringify(body) : undefined,
   });
+}
+
+// Refresh token bằng RefreshToken lưu trong localStorage. Trả về true nếu accessToken mới
+// đã được lưu lại, false nếu refresh thất bại (RefreshToken thiếu hoặc hết hạn).
+async function tryRefreshAccessToken() {
+  const storedRefreshToken = localStorage.getItem('refreshToken');
+  if (!storedRefreshToken) return false;
+
+  try {
+    const res = await refreshToken({ refreshToken: storedRefreshToken });
+    const { accessToken, refreshToken: newRefreshToken } = res.data || {};
+    if (!accessToken) return false;
+
+    localStorage.setItem('accessToken', accessToken);
+    if (newRefreshToken) localStorage.setItem('refreshToken', newRefreshToken);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+export async function fetchWithToken(method, url, body) {
+  let res = await doFetchWithToken(method, url, body);
+
+  // Access token hết hạn -> silent refresh rồi thử lại request gốc đúng 1 lần.
+  if (res.status === 401 && (await tryRefreshAccessToken())) {
+    res = await doFetchWithToken(method, url, body);
+  }
 
   const text = await res.text();
   const json = text ? JSON.parse(text) : {};
@@ -18,6 +46,7 @@ export async function fetchWithToken(method, url, body) {
   if (!res.ok) {
     if (res.status === 401) {
       localStorage.removeItem('accessToken');
+      localStorage.removeItem('refreshToken');
       localStorage.removeItem('user');
       window.location.href = '/login';
     }

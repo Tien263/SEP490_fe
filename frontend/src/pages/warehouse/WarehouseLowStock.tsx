@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { AlertCircle, Search, Filter, ArrowRight, Package } from 'lucide-react';
+import React, { useState, useEffect, useCallback } from 'react';
+import { AlertCircle, Search, ArrowRight, Package } from 'lucide-react';
 import { Button } from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
 import { getWarehouses, getWarehouseInventory } from '../../services/warehouseService';
@@ -16,11 +16,7 @@ export default function WarehouseLowStock() {
   const [warehouseId, setWarehouseId] = useState('');
   const [itemTypeFilter, setItemTypeFilter] = useState('all');
 
-  useEffect(() => {
-    fetchWarehouses();
-  }, []);
-
-  const fetchWarehouses = async () => {
+  const fetchWarehouses = useCallback(async () => {
     try {
       const res: any = await getWarehouses();
       if (res && res.length > 0) {
@@ -30,32 +26,32 @@ export default function WarehouseLowStock() {
     } catch (err) {
       console.error('Failed to load warehouses', err);
     }
-  };
+  }, []);
 
   useEffect(() => {
-    if (warehouseId) {
-      fetchInventory();
-    }
-  }, [warehouseId]);
+    fetchWarehouses();
+  }, [fetchWarehouses]);
 
-  const fetchInventory = async () => {
+  const fetchInventory = useCallback(async () => {
     try {
       setLoading(true);
       const res: any = await getWarehouseInventory(warehouseId, { pageNumber: 1, pageSize: 1000 });
       const allItems = res.items || [];
       // Filter pseudo-low-stock based on availableQuantity < 50
-      let lowStock = allItems.filter((item: any) => item.availableQuantity < 50);
+      const lowStock = allItems.filter((item: any) => item.availableQuantity < 50);
       setItems(lowStock);
     } catch (err: any) {
       alert('Lỗi tải dữ liệu tồn kho: ' + err.message);
     } finally {
       setLoading(false);
     }
-  };
+  }, [warehouseId]);
 
-  const handleSearch = () => {
-    fetchInventory();
-  };
+  useEffect(() => {
+    if (warehouseId) {
+      fetchInventory();
+    }
+  }, [warehouseId, fetchInventory]);
 
   const filteredItems = items.filter(item => {
     const term = search.toLowerCase();

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { getPurchaseOrders } from '../../services/purchaseOrderService.js';
 import { Plus, Search, Eye } from 'lucide-react';
 import CEOPurchaseOrderCreateModal from './CEOPurchaseOrderCreateModal';
@@ -11,7 +11,7 @@ export default function CEOPurchaseOrderPage({ setActiveTab, setSelectPOId }: an
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [statusFilter, setStatusFilter] = useState('');
 
-  const loadData = async () => {
+  const loadData = useCallback(async () => {
     setLoading(true);
     try {
       const data = await getPurchaseOrders(statusFilter);
@@ -21,11 +21,11 @@ export default function CEOPurchaseOrderPage({ setActiveTab, setSelectPOId }: an
     } finally {
       setLoading(false);
     }
-  };
+  }, [statusFilter, toast]);
 
   useEffect(() => {
     loadData();
-  }, [statusFilter]);
+  }, [loadData]);
 
   const PO_STATUS_MAP: Record<string, { label: string; style: string }> = {
     'Draft': { label: 'Bản nháp', style: 'bg-gray-100 text-gray-700' },

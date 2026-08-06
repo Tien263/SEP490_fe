@@ -1,5 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { AlertCircle, CheckCircle, MapPin, Package, RefreshCw, Truck, User, X } from 'lucide-react';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
@@ -47,7 +46,6 @@ function api(path: string, opts?: RequestInit) {
 }
 
 export default function SalesPickupArrangementPage() {
-  const navigate = useNavigate();
   const [activeShift, setActiveShift] = useState(0);
   const [selectedDate, setSelectedDate] = useState(() => {
     const today = new Date();
@@ -77,13 +75,15 @@ export default function SalesPickupArrangementPage() {
     return true;
   }, [selectedDate, activeShift]);
 
-  const showToast = (msg: string, type: 'success' | 'error' = 'success') => {
+  const showToast = useCallback((msg: string, type: 'success' | 'error' = 'success') => {
     setToast({ msg, type });
     if (toastTimer.current) clearTimeout(toastTimer.current);
     toastTimer.current = setTimeout(() => setToast(null), 5000);
-  };
+  }, []);
 
-  const fetchPickups = async () => {
+  const VEHICLES_META = useCallback((): Vehicle[] => INITIAL_VEHICLES.map((v) => ({ ...v, requests: [] })), []);
+
+  const fetchPickups = useCallback(async () => {
     setLoading(true);
     try {
       const res = await api('/api/delivery/pickups');
@@ -128,13 +128,11 @@ export default function SalesPickupArrangementPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [selectedDate, activeShift, showToast, VEHICLES_META]);
 
   useEffect(() => {
     fetchPickups();
-  }, [selectedDate, activeShift]);
-
-  const VEHICLES_META = (): Vehicle[] => INITIAL_VEHICLES.map((v) => ({ ...v, requests: [] }));
+  }, [fetchPickups]);
 
   const newlyAssignedCount = useMemo(() => {
     return vehicles.reduce((sum, v) => {

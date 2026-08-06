@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '../../components/sales-ui/button';
 import { Input } from '../../components/sales-ui/input';
-import { Search, Eye, Download, RefreshCw, Upload, FileSpreadsheet, ScanLine, Play, X, CheckCircle, AlertCircle } from 'lucide-react';
+import { Search, Eye, Download, RefreshCw, Upload, FileSpreadsheet, ScanLine, Play, CheckCircle, AlertCircle } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../../components/sales-ui/dialog';
 import ConfirmModal from '../../components/ui/ConfirmModal';
 import { getPurchaseOrders, getPurchaseOrderById, createGoodsReceipt, uploadGoodsReceiptProof, postGoodsReceipt } from '../../services/purchaseOrderService.js';
@@ -57,10 +57,10 @@ export default function WarehousePurchaseOrders() {
   const [detail, setDetail] = useState<PurchaseOrder | null>(null);
   const [showImportExcel, setShowImportExcel] = useState(false);
   const [showImportOCR, setShowImportOCR] = useState(false);
-  const [ocrStep, setOcrStep] = useState<'upload' | 'processing' | 'result'>('upload');
+  const [, setOcrStep] = useState<'upload' | 'processing' | 'result'>('upload');
 
   const [DATA, setDATA] = useState<PurchaseOrder[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [, setLoading] = useState(true);
 
   // Receiving Modal State
   const [isReceiveModalOpen, setIsReceiveModalOpen] = useState(false);

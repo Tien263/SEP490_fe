@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { Search, Download, Eye } from 'lucide-react';
 import { useToast } from '../../context/ToastContext';
 import { searchAuditLogs, exportAuditLogsCsv } from '../../services/adminAuditLogService.js';
@@ -61,16 +61,16 @@ export default function AdminAuditLogPage() {
   const [filters, setFilters] = useState({ entityName: '', action: '', searchQuery: '', fromDate: '', toDate: '' });
   const [searchInput, setSearchInput] = useState('');
 
-  const currentQuery = () => ({
+  const currentQuery = useCallback(() => ({
     page, pageSize: 20,
     entityName: filters.entityName || undefined,
     action: filters.action || undefined,
     searchQuery: filters.searchQuery || undefined,
     fromDate: filters.fromDate ? new Date(filters.fromDate).toISOString() : undefined,
     toDate: filters.toDate ? new Date(filters.toDate).toISOString() : undefined,
-  });
+  }), [page, filters]);
 
-  const load = async () => {
+  const load = useCallback(async () => {
     setLoading(true);
     try {
       const result = await searchAuditLogs(currentQuery());
@@ -82,9 +82,9 @@ export default function AdminAuditLogPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [currentQuery, toast]);
 
-  useEffect(() => { load(); }, [page, filters]);
+  useEffect(() => { load(); }, [load]);
 
   const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault();
