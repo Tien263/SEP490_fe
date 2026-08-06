@@ -6,6 +6,7 @@ import {
 import * as signalR from '@microsoft/signalr';
 import { useNavigate } from 'react-router-dom';
 import { getNotifications, getUnreadCount, markAsRead, markAllAsRead } from '../services/notificationService';
+import type { Notification } from '../types/notification';
 
 const PRIMARY = '#1f3b64';
 
@@ -45,7 +46,7 @@ function timeAgo(dateStr: string) {
 
 export default function NotificationBell({ onViewAll }: { role?: string; onViewAll?: () => void }) {
   const [unreadCount, setUnreadCount] = useState(0);
-  const [notifications, setNotifications] = useState<any[]>([]);
+  const [notifications, setNotifications] = useState<Notification[]>([]);
   const [isOpen, setIsOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [activeTab, setActiveTab] = useState<'all' | 'unread'>('all');
@@ -76,7 +77,7 @@ export default function NotificationBell({ onViewAll }: { role?: string; onViewA
     try {
       const isRead = activeTab === 'unread' ? false : null;
       const data = await getNotifications(1, 15, isRead);
-      setNotifications(data.items || data.Items || []);
+      setNotifications(data.items || []);
     } catch (err) {
       console.error('Error fetching notifications', err);
     } finally {
@@ -95,7 +96,7 @@ export default function NotificationBell({ onViewAll }: { role?: string; onViewA
       .withAutomaticReconnect()
       .build();
 
-    connection.on('ReceiveNotification', (notification: any) => {
+    connection.on('ReceiveNotification', (notification: Notification) => {
       setUnreadCount((prev) => prev + 1);
       setNotifications((prev) => [notification, ...prev]);
     });
@@ -113,7 +114,7 @@ export default function NotificationBell({ onViewAll }: { role?: string; onViewA
     }
   }, [isOpen, fetchNotifications]);
 
-  const handleMarkAsRead = async (id: number, e?: React.MouseEvent) => {
+  const handleMarkAsRead = async (id: string, e?: React.MouseEvent) => {
     if (e) e.stopPropagation();
     try {
       await markAsRead(id);
