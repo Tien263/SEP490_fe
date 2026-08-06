@@ -47,6 +47,14 @@ export default function CEOPurchaseOrderCreateModal({ onClose, onSuccess }: CEOP
     { itemId: '', itemName: '', expectedQuantity: 1, unitPrice: 0, unit: 'Cái', note: '' }
   ]);
 
+  // Khi thay đổi loại PO, reset danh sách mặt hàng — set state trực tiếp trong render
+  // (thay vì useEffect) để tránh 1 frame hiển thị danh sách cũ trước khi effect kịp xoá.
+  const [prevPoType, setPrevPoType] = useState(poType);
+  if (poType !== prevPoType) {
+    setPrevPoType(poType);
+    setItems([{ itemId: '', itemName: '', expectedQuantity: 1, unitPrice: 0, unit: poType === 'Product' ? 'Cái' : 'Kg', note: '' }]);
+  }
+
   useEffect(() => {
     async function loadInitialData() {
       try {
@@ -82,11 +90,6 @@ export default function CEOPurchaseOrderCreateModal({ onClose, onSuccess }: CEOP
     }
     loadInitialData();
   }, []);
-
-  // Khi thay đổi loại PO, reset danh sách mặt hàng
-  useEffect(() => {
-    setItems([{ itemId: '', itemName: '', expectedQuantity: 1, unitPrice: 0, unit: poType === 'Product' ? 'Cái' : 'Kg', note: '' }]);
-  }, [poType]);
 
   const handleItemChange = (index: number, itemId: string) => {
     const selectedItem: Product | Material | undefined = poType === 'Product'

@@ -75,12 +75,16 @@ export default function WarehouseShiftInventory() {
     fetchInventory();
   }, [fetchInventory]);
 
-  // Đổi ca giữa chừng coi như bắt đầu phiên đếm mới -> xoá số liệu đã nhập tránh nhầm ca
-  useEffect(() => {
+  // Đổi ca giữa chừng coi như bắt đầu phiên đếm mới -> xoá số liệu đã nhập tránh nhầm ca.
+  // Set state trực tiếp trong render (thay vì useEffect) để tránh 1 frame hiển thị số liệu
+  // ca cũ trước khi effect kịp xoá.
+  const [prevShiftId, setPrevShiftId] = useState(shiftId);
+  if (shiftId !== prevShiftId) {
+    setPrevShiftId(shiftId);
     setItems(prev => prev.map(i => ({ ...i, actualQty: '', note: '' })));
     setConfirmed(false);
     setResultMsg('');
-  }, [shiftId]);
+  }
 
   const updateActual = (inventoryId: string, val: string) => {
     if (val !== '') {
