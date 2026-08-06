@@ -7,6 +7,7 @@ import {
 } from 'recharts';
 import { Button } from '../../components/ui/Button';
 import { getWarehouses, getInventoryReport } from '../../services/warehouseService';
+import type { InventoryReport, Warehouse } from '../../types/warehouse';
 
 const PRIMARY = '#3b82f6';
 const SUCCESS = '#16A34A';
@@ -22,38 +23,6 @@ const PERIOD_OPTIONS = [
 const formatCurrency = (n: number) => `${new Intl.NumberFormat('vi-VN').format(n || 0)} đ`;
 const formatDateShort = (iso: string) => new Date(iso).toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit' });
 const toDateInputValue = (d: Date) => d.toISOString().slice(0, 10);
-
-interface CategoryStock {
-  categoryName: string;
-  itemCount: number;
-  totalOnHand: number;
-  totalValue: number;
-}
-
-interface StockMovementPoint {
-  date: string;
-  totalIn: number;
-  totalOut: number;
-}
-
-interface LowStockItem {
-  id: string;
-  itemName: string;
-  itemSku: string;
-  itemType: string;
-  onHandQuantity: number;
-  availableQuantity: number;
-}
-
-interface ReportData {
-  totalSkus: number;
-  totalInventoryValue: number;
-  totalWarehouses: number;
-  lowStockCount: number;
-  categoryBreakdown: CategoryStock[];
-  stockMovement: StockMovementPoint[];
-  topLowStockItems: LowStockItem[];
-}
 
 function KpiCard({ label, value, sub, icon, color, onClick }: { label: string; value: string; sub: string; icon: React.ReactNode; color: string; onClick?: () => void }) {
   return (
@@ -73,15 +42,15 @@ function KpiCard({ label, value, sub, icon, color, onClick }: { label: string; v
 
 export default function WarehouseReport() {
   const navigate = useNavigate();
-  const [warehouses, setWarehouses] = useState<any[]>([]);
+  const [warehouses, setWarehouses] = useState<Warehouse[]>([]);
   const [warehouseId, setWarehouseId] = useState('');
   const [periodKey, setPeriodKey] = useState('30');
-  const [data, setData] = useState<ReportData | null>(null);
+  const [data, setData] = useState<InventoryReport | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
   useEffect(() => {
-    getWarehouses().then((res: any) => setWarehouses(res || [])).catch(() => setWarehouses([]));
+    getWarehouses().then((res: Warehouse[]) => setWarehouses(res || [])).catch(() => setWarehouses([]));
   }, []);
 
   const fetchReport = useCallback(async () => {
@@ -99,7 +68,7 @@ export default function WarehouseReport() {
       };
       if (warehouseId) params.warehouseId = warehouseId;
 
-      const res: any = await getInventoryReport(params);
+      const res: InventoryReport = await getInventoryReport(params);
       setData(res);
     } catch (err: unknown) {
       setError(getErrorMessage(err, 'Không thể tải báo cáo tồn kho.'));

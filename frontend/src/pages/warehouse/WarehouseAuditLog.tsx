@@ -6,9 +6,25 @@ import { Button } from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
 import { searchAuditLogs } from '../../services/adminAuditLogService';
 
+interface AuditLog {
+  id: string;
+  entityName: string;
+  entityId: string;
+  action: string;
+  actorEmail?: string;
+  actorRole?: string;
+  reason?: string;
+  createdAt: string;
+}
+
+interface AuditLogPage {
+  items: AuditLog[];
+  totalPages: number;
+}
+
 export default function WarehouseAuditLog() {
   const [search, setSearch] = useState('');
-  const [logs, setLogs] = useState<any[]>([]);
+  const [logs, setLogs] = useState<AuditLog[]>([]);
   const [loading, setLoading] = useState(false);
   const [actionFilter, setActionFilter] = useState('');
   
@@ -19,7 +35,7 @@ export default function WarehouseAuditLog() {
   const fetchLogs = useCallback(async () => {
     try {
       setLoading(true);
-      const res: any = await searchAuditLogs({
+      const res: AuditLogPage = await searchAuditLogs({
         page: page,
         pageSize: 15,
         searchQuery: search,
@@ -126,11 +142,11 @@ export default function WarehouseAuditLog() {
                       {new Date(log.createdAt).toLocaleString('vi-VN')}
                     </div>
                   </td>
-                  <td className="px-4 py-3 font-medium text-gray-900">{log.actorUserName || log.actorUserEmail || 'Hệ thống'}</td>
+                  <td className="px-4 py-3 font-medium text-gray-900">{log.actorEmail || 'Hệ thống'}</td>
                   <td className="px-4 py-3 text-blue-600 font-medium">{log.action}</td>
                   <td className="px-4 py-3 font-mono text-gray-600 text-xs">{log.entityName}</td>
-                  <td className="px-4 py-3 text-gray-600 text-xs truncate max-w-sm" title={log.details}>
-                    {log.details || '-'}
+                  <td className="px-4 py-3 text-gray-600 text-xs truncate max-w-sm" title={log.reason}>
+                    {log.reason || '-'}
                   </td>
                 </tr>
               ))}

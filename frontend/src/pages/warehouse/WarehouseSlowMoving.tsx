@@ -4,6 +4,7 @@ import { Button } from '../../components/sales-ui/button';
 import { Input } from '../../components/sales-ui/input';
 import { Search, Download } from 'lucide-react';
 import { getWarehouses, getSlowMovingItems } from '../../services/warehouseService';
+import type { SlowMovingItem, Warehouse } from '../../types/warehouse';
 
 const PRIMARY = '#1F3B64';
 const WARNING = '#F97316';
@@ -29,20 +30,8 @@ const SUGGESTION_COLOR: Record<string, string> = {
   'Cân nhắc thanh lý hoặc tái chế':        ERROR,
 };
 
-interface SlowMovingItem {
-  id: string;
-  itemType: string;
-  sku: string;
-  itemName: string;
-  unit: string;
-  onHandQuantity: number;
-  lastOutboundAt: string | null;
-  daysSinceLastOutbound: number | null;
-  suggestion: string;
-}
-
 export default function WarehouseSlowMoving() {
-  const [warehouses, setWarehouses] = useState<any[]>([]);
+  const [warehouses, setWarehouses] = useState<Warehouse[]>([]);
   const [warehouseId, setWarehouseId] = useState('');
   const [days, setDays] = useState(14);
   const [search, setSearch] = useState('');
@@ -51,7 +40,7 @@ export default function WarehouseSlowMoving() {
   const [error, setError] = useState('');
 
   useEffect(() => {
-    getWarehouses().then((res: any) => {
+    getWarehouses().then((res: Warehouse[]) => {
       setWarehouses(res || []);
       if (res && res.length > 0) setWarehouseId(res[0].id);
     }).catch(() => setWarehouses([]));
@@ -62,7 +51,7 @@ export default function WarehouseSlowMoving() {
     try {
       setLoading(true);
       setError('');
-      const res: any = await getSlowMovingItems({ warehouseId, days });
+      const res: SlowMovingItem[] = await getSlowMovingItems({ warehouseId, days });
       setItems(res || []);
     } catch (err: unknown) {
       setError(getErrorMessage(err, 'Không thể tải danh sách hàng chậm luân chuyển.'));

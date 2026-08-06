@@ -5,6 +5,7 @@ import { Input } from '../../components/sales-ui/input';
 import { Search, Eye, RefreshCw, CheckCircle, XCircle, AlertTriangle, Check, X } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../../components/sales-ui/dialog';
 import { getQuarantineList, dispatchQuarantine } from '../../services/warehouseService.js';
+import type { QuarantineListItem } from '../../types/warehouse';
 
 const PRIMARY = '#1F3B64';
 const SUCCESS = '#16A34A';
@@ -60,16 +61,16 @@ export default function WarehouseQualityInspection() {
   const loadData = useCallback(async () => {
     setLoading(true);
     try {
-      const data = await getQuarantineList();
-      const mapped = data.map((d: any) => ({
+      const data: QuarantineListItem[] = await getQuarantineList();
+      const mapped: InspectionItem[] = data.map((d) => ({
         id: d.id,
         quarantineCode: d.quarantineCode,
-        sku: d.sku || '-',
-        product: d.productName || '-',
+        sku: d.itemSku || '-',
+        product: d.itemName || '-',
         quantity: d.quantity,
-        status: d.status?.toLowerCase() === 'waiting' ? 'waiting' : d.dispatchedAction || 'waiting',
+        status: d.status?.toLowerCase() === 'waiting' ? 'waiting' : (d.dispatchedAction as 'available' | 'damaged') || 'waiting',
         inspectionDate: d.createdAt ? new Date(d.createdAt).toLocaleString('vi-VN') : '',
-        notes: d.notes || ''
+        notes: d.reason || ''
       }));
       setItems(mapped);
     } catch (err: unknown) {

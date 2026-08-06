@@ -5,6 +5,7 @@ import { Button } from '../../components/sales-ui/button';
 import { Input } from '../../components/sales-ui/input';
 import { Search, Eye, RefreshCw, Plus, Truck, CheckCircle, X, ArrowRight, Send } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../../components/sales-ui/dialog';
+import type { InventoryItem, StaffUser, StockTransfer, Warehouse } from '../../types/warehouse';
 
 const PRIMARY = '#1F3B64';
 const SUCCESS = '#16A34A';
@@ -26,35 +27,28 @@ const STATUS_TRANSFER: Record<string, { label: string; bg: string }> = {
   Cancelled:          { label: 'Đã hủy',           bg: ERROR   },
 };
 
-interface TransferItem { 
-  id?: string; 
-  productId: string; 
-  productName: string; 
-  quantity: number; 
-  receivedQuantity?: number;
+// Dòng hàng đang soạn trong form Tạo lệnh chuyển kho — khác StockTransferItem thật (chưa có
+// id/receivedQuantity vì lệnh chưa tồn tại trên server), lấy productName trực tiếp từ tồn kho
+// nguồn để hiển thị cho người dùng chọn.
+interface DraftTransferItem {
+  productId: string;
+  productName: string;
+  quantity: number;
 }
 
-interface Transfer {
-  id: string; 
-  code: string; 
+// Item mồi sẵn khi điều hướng từ trang khác (vd. WarehouseConsolidation) sang tạo lệnh chuyển kho.
+interface PrefillItem {
+  sku?: string;
+  productId?: string;
+  name?: string;
+  productName?: string;
+  quantity: number;
+}
+
+interface TransferPrefillData {
   sourceWarehouseId: string;
-  sourceWarehouseName: string; 
-  destinationWarehouseId: string;
-  destinationWarehouseName: string; 
-  createdByUserName: string;
-  createdAt: string; 
-  expectedDispatchDate?: string;
-  expectedReceiveDate?: string;
-  dispatchedAt?: string;
-  receivedAt?: string;
-  status: string;
-  note: string;
-  receiveNote?: string;
-  proofImageUrl?: string;
-  items: TransferItem[];
-  deliveryVehicleId?: number;
-  deliveryShift?: string;
-  scheduledDeliveryDate?: string;
+  targetWarehouseId: string;
+  items: PrefillItem[];
 }
 
 function Badge({ status }: { status: string }) {
@@ -62,8 +56,8 @@ function Badge({ status }: { status: string }) {
   return <span className="text-[10px] font-semibold text-white px-2 py-0.5 inline-block whitespace-nowrap" style={{ backgroundColor: c.bg, borderRadius: 4 }}>{c.label}</span>;
 }
 
-function CreateForm({ onClose, onCreated, warehouses, staffUsers, initialData }: { onClose: () => void, onCreated: () => void, warehouses: any[], staffUsers: any[], initialData?: any }) {
-  const [items, setItems] = useState<TransferItem[]>(initialData?.items?.length ? initialData.items.map((i: any) => ({ productId: i.sku, productName: i.name, quantity: i.quantity })) : [{ productId: '', productName: '', quantity: 0 }]);
+function CreateForm({ onClose, onCreated, warehouses, staffUsers, initialData }: { onClose: () => void, onCreated: () => void, warehouses: Warehouse[], staffUsers: StaffUser[], initialData?: TransferPrefillData | null }) {
+  const [items, setItems] = useState<DraftTransferItem[]>(initialData?.items?.length ? initialData.items.map((i) => ({ productId: i.sku || i.productId || '', productName: i.name || i.productName || '', quantity: i.quantity })) : [{ productId: '', productName: '', quantity: 0 }]);
   const [formData, setFormData] = useState({ 
     sourceWarehouseId: initialData?.sourceWarehouseId || '', 
     targetWarehouseId: initialData?.targetWarehouseId || '', 
@@ -72,7 +66,7 @@ function CreateForm({ onClose, onCreated, warehouses, staffUsers, initialData }:
     expectedDispatchDate: '',
     expectedReceiveDate: ''
   });
-  const [inventory, setInventory] = useState<any[]>([]);
+  const [inventory, setInventory] = useState<InventoryItem[]>([]);
 
   const isInitialMount = useRef(true);
 
@@ -80,15 +74,15 @@ function CreateForm({ onClose, onCreated, warehouses, staffUsers, initialData }:
   useEffect(() => {
     if (formData.sourceWarehouseId) {
       import('../../services/warehouseService.js').then(module => {
-        module.getWarehouseInventory(formData.sourceWarehouseId, { pageNumber: 1, pageSize: 1000 }).then(data => {
+        module.getWarehouseInventory(formData.sourceWarehouseId, { pageNumber: 1, pageSize: 1000 }).then((data: { items?: InventoryItem[] }) => {
           const invs = data.items || [];
           setInventory(invs);
-          
-          if (isInitialMount.current && initialData?.items?.length > 0) {
-            const mappedItems = initialData.items.map((i: any) => {
-              const invItem = invs.find((inv: any) => inv.productSku === i.sku || inv.productId === i.productId);
+
+          if (isInitialMount.current && initialData && initialData.items.length > 0) {
+            const mappedItems = initialData.items.map((i) => {
+              const invItem = invs.find((inv) => inv.productSku === i.sku || inv.productId === i.productId);
               return {
-                productId: invItem ? invItem.productId : (i.productId || ''),
+                productId: (invItem ? invItem.productId : i.productId) || '',
                 productName: i.name || i.productName || (invItem ? invItem.productName : ''),
                 quantity: i.quantity
               };
@@ -227,9 +221,9 @@ function CreateForm({ onClose, onCreated, warehouses, staffUsers, initialData }:
   );
 }
 
-function ReceiveForm({ transfer, onClose, onReceived }: { transfer: Transfer, onClose: () => void, onReceived: () => void }) {
+function ReceiveForm({ transfer, onClose, onReceived }: { transfer: StockTransfer, onClose: () => void, onReceived: () => void }) {
   const [items, setItems] = useState<{productId: string, receivedQuantity: number}[]>(
-    transfer.items.map(i => ({ productId: i.productId, receivedQuantity: i.quantity }))
+    transfer.items.map(i => ({ productId: i.productId || '', receivedQuantity: i.quantity }))
   );
   const [note, setNote] = useState('');
   const [files, setFiles] = useState<File[]>([]);
@@ -269,7 +263,7 @@ function ReceiveForm({ transfer, onClose, onReceived }: { transfer: Transfer, on
               return (
                 <tr key={idx}>
                   <td className="px-3 py-2 font-mono text-gray-500 text-xs">{item.productId.substring(0, 8)}...</td>
-                  <td className="px-3 py-2">{original?.productName || (original as any)?.itemName || 'N/A'}</td>
+                  <td className="px-3 py-2">{original?.itemName || 'N/A'}</td>
                   <td className="px-3 py-2 text-center font-semibold text-gray-700">{original?.quantity}</td>
                   <td className="px-3 py-2 text-center"><Input type="number" className="h-8 text-sm text-center w-24 mx-auto" value={item.receivedQuantity} onChange={e => setItems(p => p.map((i, x) => x === idx ? { ...i, receivedQuantity: +e.target.value } : i))} /></td>
                 </tr>
@@ -312,19 +306,19 @@ export default function WarehouseStockTransfer() {
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [selected, setSelected] = useState<string[]>([]);
-  const [detail, setDetail] = useState<Transfer | null>(null);
+  const [detail, setDetail] = useState<StockTransfer | null>(null);
   const [showCreate, setShowCreate] = useState(false);
-  const [receiveTransfer, setReceiveTransfer] = useState<Transfer | null>(null);
-  
-  const [transfers, setTransfers] = useState<Transfer[]>([]);
-  const [warehouses, setWarehouses] = useState<any[]>([]);
-  const [staffUsers, setStaffUsers] = useState<any[]>([]);
-  const [prefillData, setPrefillData] = useState<any>(null);
+  const [receiveTransfer, setReceiveTransfer] = useState<StockTransfer | null>(null);
+
+  const [transfers, setTransfers] = useState<StockTransfer[]>([]);
+  const [warehouses, setWarehouses] = useState<Warehouse[]>([]);
+  const [staffUsers, setStaffUsers] = useState<StaffUser[]>([]);
+  const [prefillData, setPrefillData] = useState<TransferPrefillData | null>(null);
 
   useEffect(() => {
     if (prefill && warehouses.length > 0) {
-      const sourceW = warehouses.find((w: any) => w.name === prefill.sourceWarehouse);
-      const targetW = warehouses.find((w: any) => w.name === 'Kho mặc định' || w.name === 'WH-DEFAULT' || w.code === 'WH-DEFAULT' || w.name.includes('WH-DEFAULT') || w.name === 'Kho Chính');
+      const sourceW = warehouses.find((w) => w.name === prefill.sourceWarehouse);
+      const targetW = warehouses.find((w) => w.name === 'Kho mặc định' || w.name === 'WH-DEFAULT' || w.code === 'WH-DEFAULT' || w.name.includes('WH-DEFAULT') || w.name === 'Kho Chính');
       if (sourceW && targetW) {
         setPrefillData({
            sourceWarehouseId: sourceW.id,
@@ -356,7 +350,7 @@ export default function WarehouseStockTransfer() {
     loadData();
   }, []);
 
-  const tabFilters: Record<Tab, (t: Transfer) => boolean> = {
+  const tabFilters: Record<Tab, (t: StockTransfer) => boolean> = {
     create:   () => true, // Tất cả lệnh
     dispatch: t => ['Draft', 'TransportRequested', 'TransportArranged'].includes(t.status), // Cần xuất kho
     receive:  t => ['Dispatched'].includes(t.status), // Cần nhận hàng
@@ -571,7 +565,7 @@ export default function WarehouseStockTransfer() {
                       {detail.items.map(item => (
                         <tr key={item.productId} className="hover:bg-gray-50">
                           <td className="px-3 py-2 font-mono text-gray-500">{item.productId}</td>
-                          <td className="px-3 py-2 text-gray-800">{item.productName || (item as any).itemName || 'N/A'}</td>
+                          <td className="px-3 py-2 text-gray-800">{item.itemName || 'N/A'}</td>
                           <td className="px-3 py-2 text-center font-semibold" style={{ color: PRIMARY }}>{item.quantity}</td>
                           <td className={`px-3 py-2 text-center font-semibold ${item.receivedQuantity !== undefined && item.receivedQuantity < item.quantity ? 'text-red-500' : 'text-green-600'}`}>
                             {item.receivedQuantity ?? '—'}

@@ -6,21 +6,22 @@ import { Button } from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
 import { getWarehouses, getWarehouseInventory } from '../../services/warehouseService';
 import { useNavigate } from 'react-router-dom';
+import type { InventoryItem, PaginatedList, Warehouse } from '../../types/warehouse';
 
 const PRIMARY = '#3b82f6';
 
 export default function WarehouseLowStock() {
   const navigate = useNavigate();
   const [search, setSearch] = useState('');
-  const [items, setItems] = useState<any[]>([]);
+  const [items, setItems] = useState<InventoryItem[]>([]);
   const [loading, setLoading] = useState(false);
-  const [warehouses, setWarehouses] = useState<any[]>([]);
+  const [warehouses, setWarehouses] = useState<Warehouse[]>([]);
   const [warehouseId, setWarehouseId] = useState('');
   const [itemTypeFilter, setItemTypeFilter] = useState('all');
 
   const fetchWarehouses = useCallback(async () => {
     try {
-      const res: any = await getWarehouses();
+      const res: Warehouse[] = await getWarehouses();
       if (res && res.length > 0) {
         setWarehouses(res);
         setWarehouseId(res[0].id);
@@ -37,10 +38,10 @@ export default function WarehouseLowStock() {
   const fetchInventory = useCallback(async () => {
     try {
       setLoading(true);
-      const res: any = await getWarehouseInventory(warehouseId, { pageNumber: 1, pageSize: 1000 });
+      const res: PaginatedList<InventoryItem> = await getWarehouseInventory(warehouseId, { pageNumber: 1, pageSize: 1000 });
       const allItems = res.items || [];
       // Filter pseudo-low-stock based on availableQuantity < 50
-      const lowStock = allItems.filter((item: any) => item.availableQuantity < 50);
+      const lowStock = allItems.filter((item) => item.availableQuantity < 50);
       setItems(lowStock);
     } catch (err: unknown) {
       alert('Lỗi tải dữ liệu tồn kho: ' + getErrorMessage(err));
@@ -58,7 +59,7 @@ export default function WarehouseLowStock() {
   const filteredItems = items.filter(item => {
     const term = search.toLowerCase();
     const nameMatch = (item.productName || item.itemName || '').toLowerCase().includes(term);
-    const skuMatch = (item.productSku || item.itemSku || item.sku || '').toLowerCase().includes(term);
+    const skuMatch = (item.productSku || item.itemSku || '').toLowerCase().includes(term);
     const matchesSearch = nameMatch || skuMatch;
     
     if (!matchesSearch) return false;
@@ -146,8 +147,8 @@ export default function WarehouseLowStock() {
                 const isMaterial = item.itemType === 'Material' || item.materialId;
                 return (
                   <tr key={item.id} className="hover:bg-red-50/30 transition-colors">
-                    <td className="px-4 py-3 font-mono text-gray-500">{item.productSku || item.itemSku || item.sku}</td>
-                    <td className="px-4 py-3 font-medium text-gray-900">{item.productName || item.itemName || item.name}</td>
+                    <td className="px-4 py-3 font-mono text-gray-500">{item.productSku || item.itemSku}</td>
+                    <td className="px-4 py-3 font-medium text-gray-900">{item.productName || item.itemName}</td>
                     <td className="px-4 py-3 text-center">
                       <span className={`inline-flex items-center text-[11px] font-semibold px-2 py-0.5 rounded-full ${
                         !isMaterial ? 'bg-blue-50 text-blue-800' : 'bg-amber-50 text-amber-800'

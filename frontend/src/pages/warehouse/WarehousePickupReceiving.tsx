@@ -28,6 +28,22 @@ type PickupRequest = {
   items: PickupItem[];
 };
 
+// Shape thô từ GET /api/delivery/pickups (thuộc domain Delivery, không thuộc DTOs/Warehouse).
+interface RawPickupDto {
+  requestId: string;
+  requestCode: string;
+  orderId: string;
+  orderCode: string;
+  customerName: string;
+  customerPhone: string;
+  shippingAddress: string;
+  pickupStatus: string;
+  scheduledPickupDate?: string;
+  pickupShift?: string;
+  pickupVehicleId?: number;
+  items?: PickupItem[];
+}
+
 function api(path: string, opts?: RequestInit) {
   const token = localStorage.getItem('accessToken');
   return fetch(path, {
@@ -53,12 +69,12 @@ export default function WarehousePickupReceiving() {
     try {
       const res = await api('/api/delivery/pickups');
       if (!res.ok) throw new Error();
-      const data: any[] = await res.json();
+      const data: RawPickupDto[] = await res.json();
 
       // Chỉ hiển thị các yêu cầu đã lên lịch điều xe (Scheduled) để kho tiếp nhận
-      const scheduledPickups = data
-        .filter((o: any) => o.pickupStatus === 'Scheduled')
-        .map((o: any) => ({
+      const scheduledPickups: PickupRequest[] = data
+        .filter((o) => o.pickupStatus === 'Scheduled')
+        .map((o) => ({
           id: o.requestId,
           requestCode: o.requestCode,
           orderId: o.orderId,

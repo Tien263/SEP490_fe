@@ -4,6 +4,7 @@ import { Button } from '../../components/sales-ui/button';
 import { Input } from '../../components/sales-ui/input';
 import { Search, Eye, Download, RefreshCw, Filter, ClipboardList, Package } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../../components/sales-ui/dialog';
+import type { WarehouseOrderDetail, WarehouseOrderListItem } from '../../types/warehouse';
 
 const PRIMARY = '#1F3B64';
 const SUCCESS = '#16A34A';
@@ -76,8 +77,8 @@ export default function WarehouseFulfillmentOrders() {
     try {
       setLoading(true);
       const { getWarehouseOrders } = await import('../../services/warehouseService.js');
-      const data = await getWarehouseOrders('OnlinePending');
-      const mapped: FulfillmentOrder[] = data.map((d: any) => ({
+      const data: WarehouseOrderListItem[] = await getWarehouseOrders('OnlinePending');
+      const mapped: FulfillmentOrder[] = data.map((d) => ({
         id: d.orderId,
         soNo: d.orderCode,
         customer: 'Khách hàng',
@@ -222,8 +223,8 @@ export default function WarehouseFulfillmentOrders() {
                       <button className="p-1 rounded hover:bg-blue-50 text-gray-400 hover:text-blue-600" onClick={async () => {
                         try {
                           const { getWarehouseOrderDetail } = await import('../../services/warehouseService.js');
-                          const data = await getWarehouseOrderDetail(o.id);
-                          const mappedProducts = data.items.map((i: any) => ({
+                          const data: WarehouseOrderDetail = await getWarehouseOrderDetail(o.id);
+                          const mappedProducts = data.items.map((i) => ({
                             sku: i.sku,
                             name: i.productName,
                             physicalStock: i.physicalStock,

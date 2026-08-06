@@ -4,6 +4,7 @@ import { Button } from '../../components/sales-ui/button';
 import { Input } from '../../components/sales-ui/input';
 import { Search, Eye, Download, RefreshCw, Play, CheckCircle, Upload, Package, Save } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../../components/sales-ui/dialog';
+import type { PickTask as ApiPickTask, WarehouseOrderDetail } from '../../types/warehouse';
 
 const PRIMARY = '#1F3B64';
 const SUCCESS = '#16A34A';
@@ -74,10 +75,10 @@ export default function WarehousePickPacking() {
     try {
       setLoading(true);
       const { getPickTasks } = await import('../../services/warehouseService.js');
-      const data = await getPickTasks('All');
-      const mapped: PickTask[] = data.map((d: any) => {
-        const tRequested = d.items?.reduce((s:number, i:any) => s + i.requestedQuantity, 0) || 0;
-        const tPacked = d.items?.reduce((s:number, i:any) => s + i.packedQuantity, 0) || 0;
+      const data: ApiPickTask[] = await getPickTasks('All');
+      const mapped: PickTask[] = data.map((d) => {
+        const tRequested = d.items?.reduce((s, i) => s + i.requestedQuantity, 0) || 0;
+        const tPacked = d.items?.reduce((s, i) => s + i.packedQuantity, 0) || 0;
         return {
           id: d.pickTaskId,
           orderCode: d.orderCode || '—',
@@ -95,7 +96,7 @@ export default function WarehousePickPacking() {
           weight: '0 kg',
           packingNotes: '',
           orderProgress: tRequested > 0 ? Math.round(tPacked * 100 / tRequested) : 0,
-          items: d.items?.map((i:any) => ({
+          items: d.items?.map((i) => ({
             sku: i.sku,
             name: i.productName,
             aisle: 'A1', rack: 'R1', shelf: 'S1', bin: 'B1',
@@ -283,8 +284,8 @@ export default function WarehousePickPacking() {
                       <button className="p-1 rounded hover:bg-blue-50 text-gray-400 hover:text-blue-600" onClick={async () => {
                         try {
                           const { getPickTaskById } = await import('../../services/warehouseService.js');
-                          const data = await getPickTaskById(t.id);
-                          const mappedItems = data.items.map((i: any) => ({
+                          const data: WarehouseOrderDetail = await getPickTaskById(t.id);
+                          const mappedItems = data.items.map((i) => ({
                             sku: i.sku,
                             name: i.productName,
                             aisle: 'A', rack: '01', shelf: '1', bin: '01',

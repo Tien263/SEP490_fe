@@ -8,6 +8,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../../componen
 import ConfirmModal from '../../components/ui/ConfirmModal';
 import { getPurchaseOrders, getPurchaseOrderById, createGoodsReceipt, uploadGoodsReceiptProof, postGoodsReceipt } from '../../services/purchaseOrderService.js';
 import { useEffect } from 'react';
+import type { PurchaseOrder as ApiPurchaseOrder, PurchaseOrderListItem } from '../../types/warehouse';
 
 const PRIMARY = '#1F3B64';
 const SUCCESS = '#16A34A';
@@ -25,6 +26,19 @@ const STATUS_CFG: Record<string, { label: string; bg: string }> = {
 };
 
 interface POItem { sku: string; name: string; unit: string; orderedQty: number; receivedQty: number; remainingQty: number; unitPrice: number; notes: string }
+
+interface ReceiptDraftItem {
+  purchaseOrderItemId: string;
+  productName: string;
+  expectedQuantity: number;
+  receivedQuantity: number;
+  acceptedQuantity: number;
+  damagedQuantity: number;
+  excessQuantity: number;
+  shortQuantity: number;
+  wrongItemQuantity: number;
+  note: string;
+}
 interface PurchaseOrder {
   id: string; code: string; supplier: string; supplierCode: string; warehouse: string;
   createdBy: string; issuedDate: string; expectedArrival: string;
@@ -65,8 +79,8 @@ export default function WarehousePurchaseOrders() {
 
   // Receiving Modal State
   const [isReceiveModalOpen, setIsReceiveModalOpen] = useState(false);
-  const [selectedPoForReceive, setSelectedPoForReceive] = useState<any>(null);
-  const [receiptItems, setReceiptItems] = useState<any[]>([]);
+  const [selectedPoForReceive, setSelectedPoForReceive] = useState<ApiPurchaseOrder | null>(null);
+  const [receiptItems, setReceiptItems] = useState<ReceiptDraftItem[]>([]);
   const [proofFile, setProofFile] = useState<File | null>(null);
   
   // Confirm Modal State
@@ -76,17 +90,19 @@ export default function WarehousePurchaseOrders() {
   const loadData = async () => {
     setLoading(true);
     try {
-      const pos = await getPurchaseOrders('');
-      const mapped = pos.map((p: any) => {
+      const pos: PurchaseOrderListItem[] = await getPurchaseOrders('');
+      const mapped: PurchaseOrder[] = pos.map((p) => {
         return {
           id: p.id,
           code: p.code,
           supplier: p.supplierName || 'NCC',
           supplierCode: 'SUP-001',
-          warehouse: 'Kho Hệ thống',
+          warehouse: p.warehouseName || 'Kho Hệ thống',
           createdBy: 'Hệ thống',
-          issuedDate: p.expectedDate || 'N/A',
-          expectedArrival: p.expectedDate || 'N/A',
+          // PurchaseOrderListDto (list view) không có ngày phát hành/dự kiến nhận — chỉ có ở
+          // chi tiết PO (PurchaseOrderDto.ExpectedDeliveryDate), xem getPurchaseOrderById.
+          issuedDate: 'N/A',
+          expectedArrival: 'N/A',
           itemCount: p.totalExpectedQuantity,
           expectedQty: p.totalExpectedQuantity,
           receivingProgress: p.totalExpectedQuantity > 0 ? Math.round((p.totalReceivedQuantity / p.totalExpectedQuantity) * 100) : 0,
@@ -110,11 +126,11 @@ export default function WarehousePurchaseOrders() {
 
   const openReceiveModal = async (poId: string) => {
     try {
-      const data = await getPurchaseOrderById(poId);
+      const data: ApiPurchaseOrder = await getPurchaseOrderById(poId);
       setSelectedPoForReceive(data);
-      setReceiptItems(data.items.map((i: any) => ({
+      setReceiptItems(data.items.map((i) => ({
         purchaseOrderItemId: i.id,
-        productName: i.productName,
+        productName: i.itemName,
         expectedQuantity: i.expectedQuantity,
         receivedQuantity: i.receivedQuantity,
         acceptedQuantity: Math.max(0, i.expectedQuantity - i.receivedQuantity),
@@ -132,6 +148,7 @@ export default function WarehousePurchaseOrders() {
   };
 
   const handleReceive = async () => {
+    if (!selectedPoForReceive) return;
     try {
       const payload = {
         note: "Nhận hàng tại kho",

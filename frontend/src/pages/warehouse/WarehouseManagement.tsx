@@ -5,16 +5,17 @@ import { Settings, Plus, Edit, Trash, Building, AlertCircle, Check } from 'lucid
 import { Button } from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
 import { getWarehouses, createWarehouse, updateWarehouse, deleteWarehouse } from '../../services/warehouseService';
+import type { Warehouse } from '../../types/warehouse';
 
 const PRIMARY = '#3b82f6';
 
 export default function WarehouseManagement() {
-  const [warehouses, setWarehouses] = useState<any[]>([]);
+  const [warehouses, setWarehouses] = useState<Warehouse[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [editingWarehouse, setEditingWarehouse] = useState<any>(null);
+  const [editingWarehouse, setEditingWarehouse] = useState<Warehouse | null>(null);
 
   const [formData, setFormData] = useState({ name: '', code: '', locationNames: '' });
   const [submitting, setSubmitting] = useState(false);
@@ -26,7 +27,7 @@ export default function WarehouseManagement() {
     try {
       setLoading(true);
       setError('');
-      const res: any = await getWarehouses();
+      const res: Warehouse[] = await getWarehouses();
       setWarehouses(res || []);
     } catch (err: unknown) {
       setError('Lỗi khi tải danh sách kho: ' + getErrorMessage(err));
@@ -39,13 +40,13 @@ export default function WarehouseManagement() {
     fetchWarehouses();
   }, []);
 
-  const handleOpenModal = (warehouse: any = null) => {
+  const handleOpenModal = (warehouse: Warehouse | null = null) => {
     if (warehouse) {
       setEditingWarehouse(warehouse);
       setFormData({
         name: warehouse.name,
         code: warehouse.code,
-        locationNames: warehouse.locations?.map((l: any) => l.name).join(', ') || ''
+        locationNames: warehouse.locations?.map((l) => l.name).join(', ') || ''
       });
     } else {
       setEditingWarehouse(null);
@@ -171,7 +172,7 @@ export default function WarehouseManagement() {
                     <td className="px-4 py-3">
                       <div className="flex flex-wrap gap-1">
                         {wh.locations && wh.locations.length > 0 ? (
-                          wh.locations.map((loc: any) => (
+                          wh.locations.map((loc) => (
                             <span key={loc.id} className="bg-gray-100 text-gray-600 text-xs px-2 py-0.5 rounded-full border border-gray-200">
                               {loc.name}
                             </span>

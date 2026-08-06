@@ -7,13 +7,15 @@ import { Input } from '../../components/ui/Input';
 import { getWarehouseInventory, adjustInventory, getWarehouses, addInventory } from '../../services/warehouseService';
 import { getProducts, getCategories, createProduct } from '../../services/productService';
 import { getMaterials } from '../../services/materialService';
+import type { InventoryItem, PaginatedList, Warehouse } from '../../types/warehouse';
+import type { Category, Material, Product } from '../../types/catalog';
 
 const PRIMARY = '#3b82f6';
 
 export default function WarehouseInventoryCount() {
-  const [warehouses, setWarehouses] = useState<any[]>([]);
+  const [warehouses, setWarehouses] = useState<Warehouse[]>([]);
   const [warehouseId, setWarehouseId] = useState('');
-  const [items, setItems] = useState<any[]>([]);
+  const [items, setItems] = useState<InventoryItem[]>([]);
   const [loading, setLoading] = useState(false);
   
   // Filters
@@ -30,7 +32,7 @@ export default function WarehouseInventoryCount() {
   const [totalCount, setTotalCount] = useState(0);
 
   // Edit State
-  const [editingItem, setEditingItem] = useState<any>(null);
+  const [editingItem, setEditingItem] = useState<InventoryItem | null>(null);
   const [newQuantity, setNewQuantity] = useState('');
   const [adjustNote, setAdjustNote] = useState('');
   const [submitting, setSubmitting] = useState(false);
@@ -39,9 +41,9 @@ export default function WarehouseInventoryCount() {
   const [showAddModal, setShowAddModal] = useState(false);
   const [targetType, setTargetType] = useState<'Product' | 'Material'>('Product');
   const [isNewProduct, setIsNewProduct] = useState(false);
-  const [productsList, setProductsList] = useState<any[]>([]);
-  const [materialsList, setMaterialsList] = useState<any[]>([]);
-  const [categoriesList, setCategoriesList] = useState<any[]>([]);
+  const [productsList, setProductsList] = useState<Product[]>([]);
+  const [materialsList, setMaterialsList] = useState<Material[]>([]);
+  const [categoriesList, setCategoriesList] = useState<Category[]>([]);
   const [selectedProductId, setSelectedProductId] = useState('');
   const [selectedMaterialId, setSelectedMaterialId] = useState('');
   const [selectedLocationId, setSelectedLocationId] = useState('');
@@ -59,7 +61,7 @@ export default function WarehouseInventoryCount() {
 
   const fetchWarehousesList = useCallback(async () => {
     try {
-      const res: any = await getWarehouses();
+      const res: Warehouse[] = await getWarehouses();
       if (res && res.length > 0) {
         setWarehouses(res);
         setWarehouseId(res[0].id);
@@ -79,7 +81,7 @@ export default function WarehouseInventoryCount() {
       const currentPage = isSearch ? 1 : page;
       if (isSearch && page !== 1) setPage(1);
 
-      const params: any = {
+      const params: Record<string, string | number> = {
         pageNumber: currentPage,
         pageSize: 10,
         search,
@@ -89,7 +91,7 @@ export default function WarehouseInventoryCount() {
       if (fromDate) params.fromDate = fromDate;
       if (toDate) params.toDate = toDate;
 
-      const res: any = await getWarehouseInventory(warehouseId, params);
+      const res: PaginatedList<InventoryItem> = await getWarehouseInventory(warehouseId, params);
       setItems(res.items || []);
       setTotalPages(res.totalPages || 1);
       setTotalCount(res.totalCount || 0);
@@ -113,14 +115,15 @@ export default function WarehouseInventoryCount() {
     fetchInventory(true);
   };
 
-  const openAdjustDialog = (item: any) => {
+  const openAdjustDialog = (item: InventoryItem) => {
     setEditingItem(item);
     setNewQuantity(item.onHandQuantity.toString());
     setAdjustNote('');
   };
 
   const handleAdjustSubmit = async () => {
-    if (!newQuantity || isNaN(newQuantity as any) || parseInt(newQuantity) < 0) {
+    if (!editingItem) return;
+    if (!newQuantity || isNaN(Number(newQuantity)) || parseInt(newQuantity) < 0) {
       alert('Số lượng mới không hợp lệ!');
       return;
     }
@@ -143,21 +146,21 @@ export default function WarehouseInventoryCount() {
   const openAddProductModal = async () => {
     try {
       setLoading(true);
-      const [resProd, resMat, cats]: any = await Promise.all([
-        getProducts({ page: 1, pageSize: 200 }).catch(() => ({ items: [] })),
+      const [resProd, resMat, cats] = await Promise.all([
+        getProducts({ page: 1, pageSize: 200 }).catch(() => ({ items: [], totalCount: 0, pageNumber: 1, pageSize: 200, totalPages: 0 })),
         getMaterials().catch(() => []),
         getCategories().catch(() => [])
-      ]);
-      const loadedProds = resProd?.items || resProd || [];
-      const loadedMats = Array.isArray(resMat) ? resMat : (resMat?.items || []);
+      ]) as [PaginatedList<Product>, Material[], Category[]];
+      const loadedProds = resProd.items;
+      const loadedMats = resMat;
 
       setProductsList(loadedProds);
       setMaterialsList(loadedMats);
-      setCategoriesList(cats || []);
+      setCategoriesList(cats);
 
       if (loadedProds.length > 0) setSelectedProductId(loadedProds[0].id);
       if (loadedMats.length > 0) setSelectedMaterialId(loadedMats[0].id);
-      if (cats && cats.length > 0) setNewProductCategoryId(cats[0].id);
+      if (cats.length > 0) setNewProductCategoryId(cats[0].id);
       
       const currWh = warehouses.find(w => w.id === warehouseId);
       if (currWh && currWh.locations && currWh.locations.length > 0) {
@@ -190,7 +193,7 @@ export default function WarehouseInventoryCount() {
     if (targetType === 'Product') {
       if (isNewProduct) {
         if (!newProductName || !newProductSku || !newProductCategoryId || !newProductUnit) return alert("Vui lòng điền đủ Tên, Mã SKU, Đơn vị tính và Danh mục cho sản phẩm mới.");
-        if (isNaN(newProductPrice as any)) return alert("Giá sản phẩm không hợp lệ.");
+        if (isNaN(Number(newProductPrice))) return alert("Giá sản phẩm không hợp lệ.");
       } else {
         if (!selectedProductId) return alert("Vui lòng chọn sản phẩm.");
       }
@@ -199,7 +202,7 @@ export default function WarehouseInventoryCount() {
     }
 
     if (!selectedLocationId) return alert("Vui lòng chọn vị trí lưu trữ trong kho.");
-    if (!initialQuantity || isNaN(initialQuantity as any) || parseInt(initialQuantity) < 0) return alert("Số lượng không hợp lệ.");
+    if (!initialQuantity || isNaN(Number(initialQuantity)) || parseInt(initialQuantity) < 0) return alert("Số lượng không hợp lệ.");
 
     try {
       setSubmitting(true);
@@ -215,7 +218,7 @@ export default function WarehouseInventoryCount() {
         if (newProductSpecs) formData.append('Specifications', newProductSpecs);
         if (newProductImageFile) formData.append('ImageFile', newProductImageFile);
 
-        const createdProd: any = await createProduct(formData);
+        const createdProd = await createProduct(formData) as Product;
         finalProductId = createdProd.id;
       }
 
@@ -349,12 +352,12 @@ export default function WarehouseInventoryCount() {
                   </td>
                 </tr>
               ) : (
-                filteredItems.map((item: any) => {
+                filteredItems.map((item: InventoryItem) => {
                   const isMaterial = item.itemType === 'Material' || item.materialId != null;
                   return (
                     <tr key={item.id} className="hover:bg-blue-50/30 transition-colors">
-                      <td className="px-4 py-3 font-mono text-gray-500">{item.productSku || item.itemSku || item.sku || '-'}</td>
-                      <td className="px-4 py-3 font-medium text-gray-900">{item.productName || item.itemName || item.name || 'N/A'}</td>
+                      <td className="px-4 py-3 font-mono text-gray-500">{item.productSku || item.itemSku || '-'}</td>
+                      <td className="px-4 py-3 font-medium text-gray-900">{item.productName || item.itemName || 'N/A'}</td>
                       <td className="px-4 py-3 text-center">
                         <span className={`inline-flex items-center gap-1 text-[11px] font-semibold px-2 py-0.5 rounded-full ${
                           isMaterial ? 'bg-amber-50 text-amber-800 border border-amber-200' : 'bg-blue-50 text-blue-800 border border-blue-200'
@@ -543,7 +546,7 @@ export default function WarehouseInventoryCount() {
                   >
                     <option value="">-- Chọn nguyên vật liệu --</option>
                     {materialsList.map(m => (
-                      <option key={m.id} value={m.id}>{m.name} ({m.sku || m.unit || 'Vật tư'})</option>
+                      <option key={m.id} value={m.id}>{m.name} ({m.unit || 'Vật tư'})</option>
                     ))}
                   </select>
                 </div>
@@ -558,8 +561,8 @@ export default function WarehouseInventoryCount() {
                     onChange={(e: ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => setSelectedLocationId(e.target.value)}
                   >
                     <option value="">-- Chọn vị trí --</option>
-                    {warehouses.find(w => w.id === warehouseId)?.locations?.map((loc: any) => (
-                      <option key={loc.id} value={loc.id}>{loc.locationCode || loc.name || 'Vị trí mặc định'}</option>
+                    {warehouses.find(w => w.id === warehouseId)?.locations?.map((loc) => (
+                      <option key={loc.id} value={loc.id}>{loc.name || 'Vị trí mặc định'}</option>
                     ))}
                   </select>
                 </div>

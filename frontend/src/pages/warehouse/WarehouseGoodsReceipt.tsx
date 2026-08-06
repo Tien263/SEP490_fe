@@ -6,6 +6,7 @@ import { Search, Eye, RefreshCw, Download, Printer, CheckCircle, Save } from 'lu
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../../components/sales-ui/dialog';
 import { getAllGoodsReceipts } from '../../services/purchaseOrderService.js';
 import { useEffect } from 'react';
+import type { GoodsReceipt as ApiGoodsReceipt } from '../../types/warehouse';
 
 const PRIMARY = '#1F3B64';
 const SUCCESS = '#16A34A';
@@ -60,17 +61,17 @@ export default function WarehouseGoodsReceipt() {
   const loadData = async () => {
     setLoading(true);
     try {
-      const receipts = await getAllGoodsReceipts('');
-      const mapped = receipts.map((r: any) => ({
+      const receipts: ApiGoodsReceipt[] = await getAllGoodsReceipts('');
+      const mapped: GoodsReceipt[] = receipts.map((r) => ({
         id: r.id,
         code: r.code,
         poNo: r.purchaseOrderId, // Would be better to have po code, but backend doesn't return it directly in DTO
         supplier: 'NCC (Từ PO)', // We don't have supplier in GR Dto currently
         warehouse: 'Kho Hệ Thống',
         receivingDate: r.receivedDate,
-        receiver: r.receivedByUserName || r.receivedByUserId,
+        receiver: r.receivedByUserName,
         status: r.status,
-        items: (r.items || []).map((i: any) => ({
+        items: (r.items || []).map((i) => ({
           sku: i.itemSku,
           name: i.itemName,
           orderedQty: 0,

@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import * as signalR from '@microsoft/signalr';
 import { getWarehouseOrders } from '../../services/warehouseService';
 import { PackageSearch, Clock, ChevronRight } from 'lucide-react';
+import type { WarehouseOrderListItem } from '../../types/warehouse';
 
 const TABS = [
   { id: 'OnlinePending', label: 'Đơn hàng trực tuyến' },
@@ -13,7 +14,7 @@ const TABS = [
 
 export default function WarehouseOrdersPage() {
   const [activeTab, setActiveTab] = useState('OnlinePending');
-  const [orders, setOrders] = useState<any[]>([]);
+  const [orders, setOrders] = useState<WarehouseOrderListItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const navigate = useNavigate();

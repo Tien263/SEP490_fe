@@ -7,6 +7,26 @@ import { Search, Eye, RefreshCw, Upload, Send, CheckCircle, Camera, FileText, Pl
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../../components/sales-ui/dialog';
 import { getGoodsIssues, postGoodsIssue, uploadGoodsIssueProof, updateGoodsIssueHandover, createGoodsIssueReversal } from '../../services/warehouseService';
 import WarehouseProductionIssueFormModal from './WarehouseProductionIssueFormModal';
+import type { GoodsIssue } from '../../types/warehouse';
+
+interface ProductionIssueLine {
+  sku: string;
+  materialName: string;
+  unit: string;
+  issuedQty: number;
+  note?: string;
+}
+
+interface ProductionIssueRow extends GoodsIssue {
+  realId: string;
+  warehouse: string;
+  factory: string;
+  receiver: string;
+  paperDoc: string;
+  receivedAtFormatted: string;
+  hasProof: boolean;
+  lines: ProductionIssueLine[];
+}
 
 const PRIMARY = '#1F3B64';
 const SUCCESS = '#16A34A';
@@ -35,8 +55,8 @@ export default function WarehouseProductionIssue() {
   const [statusFilter, setStatusFilter] = useState('all');
   const [warehouseFilter] = useState('all');
   const [selected, setSelected] = useState<string[]>([]);
-  const [detail, setDetail] = useState<any | null>(null);
-  const [items, setItems] = useState<any[]>([]);
+  const [detail, setDetail] = useState<ProductionIssueRow | null>(null);
+  const [items, setItems] = useState<ProductionIssueRow[]>([]);
   const [showUpload, setShowUpload] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [fileToUpload, setFileToUpload] = useState<File | null>(null);
@@ -57,8 +77,8 @@ export default function WarehouseProductionIssue() {
 
   const loadData = () => {
     getGoodsIssues('ProductionMaterial')
-      .then(res => {
-        const mapped = res.map((r: any) => ({
+      .then((res: GoodsIssue[]) => {
+        const mapped: ProductionIssueRow[] = res.map((r) => ({
           ...r,
           realId: r.id,
           id: r.code || r.id,
@@ -69,7 +89,7 @@ export default function WarehouseProductionIssue() {
           receivedAtFormatted: r.receivedAt ? new Date(r.receivedAt).toLocaleString('vi-VN') : 'Chưa ghi nhận',
           issueDate: r.issueDate ? new Date(r.issueDate).toLocaleString('vi-VN') : new Date(r.createdAt).toLocaleString('vi-VN'),
           hasProof: !!r.imageProofUrl,
-          lines: (r.items || []).map((i: any) => ({
+          lines: (r.items || []).map((i) => ({
             sku: i.itemSku || '-',
             materialName: i.itemName || 'N/A',
             unit: i.unit || 'Cái',
@@ -86,7 +106,7 @@ export default function WarehouseProductionIssue() {
     loadData();
   }, []);
 
-  const openDetailModal = (item: any) => {
+  const openDetailModal = (item: ProductionIssueRow) => {
     setDetail(item);
     setHandoverRecipient(item.externalRecipientName || '');
     setHandoverDepartment(item.department || item.factory || '');
@@ -154,6 +174,7 @@ export default function WarehouseProductionIssue() {
   };
 
   const handleCreateReversal = async () => {
+    if (!detail) return;
     if (!reversalReason) return alert('Vui lòng nhập lý do tạo chứng từ Reversal đảo tồn kho!');
     try {
       setSubmittingReversal(true);
@@ -268,7 +289,7 @@ export default function WarehouseProductionIssue() {
           <DialogHeader>
             <DialogTitle className="text-sm font-bold flex items-center justify-between">
               <span>Chi tiết lệnh xuất NVL — {detail?.id}</span>
-              <Badge status={detail?.status} />
+              <Badge status={detail?.status || ''} />
             </DialogTitle>
           </DialogHeader>
 
@@ -360,7 +381,7 @@ export default function WarehouseProductionIssue() {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-100">
-                    {detail.lines.map((line: any, idx: number) => (
+                    {detail.lines.map((line, idx: number) => (
                       <tr key={idx} className="hover:bg-gray-50">
                         <td className="px-3 py-2 font-mono text-gray-500">{line.sku}</td>
                         <td className="px-3 py-2 text-gray-800 font-medium">{line.materialName}</td>
@@ -432,7 +453,7 @@ export default function WarehouseProductionIssue() {
 
             <div className="flex gap-2 justify-end">
               <Button variant="outline" size="sm" onClick={() => setShowUpload(false)}>Hủy</Button>
-              <Button size="sm" className="bg-blue-900 text-white font-bold" onClick={() => uploadProof(detail.realId)} disabled={uploading || !fileToUpload}>
+              <Button size="sm" className="bg-blue-900 text-white font-bold" onClick={() => detail && uploadProof(detail.realId)} disabled={uploading || !fileToUpload}>
                 {uploading ? 'Đang upload...' : 'Upload Chứng Từ'}
               </Button>
             </div>

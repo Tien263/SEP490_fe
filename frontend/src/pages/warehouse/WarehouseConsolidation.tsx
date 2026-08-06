@@ -6,6 +6,7 @@ import { Input } from '../../components/sales-ui/input';
 import { Search, Eye, RefreshCw, Download, ArrowRight, Clock, Package2, CheckCircle, AlertTriangle, Truck } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../../components/sales-ui/dialog';
 import { getWarehouseOrders, consolidateWarehouseOrder } from '../../services/warehouseService';
+import type { WarehouseOrderDetail, WarehouseOrderListItem } from '../../types/warehouse';
 
 const PRIMARY = '#1F3B64';
 const SUCCESS = '#16A34A';
@@ -47,8 +48,8 @@ export default function WarehouseConsolidation() {
   const fetchOrders = async () => {
     setLoading(true);
     try {
-      const result = await getWarehouseOrders('Consolidation');
-      const mapped = result.map((d: any) => ({
+      const result: WarehouseOrderListItem[] = await getWarehouseOrders('Consolidation');
+      const mapped: ConsolidationItem[] = result.map((d) => ({
         id: d.orderId,
         fulfillmentId: d.orderCode,
         warehouse: d.allocatedWarehouse || 'Kho mặc định',
@@ -171,17 +172,17 @@ export default function WarehouseConsolidation() {
                       <button className="p-1 rounded hover:bg-blue-50 text-gray-400 hover:text-blue-600" title="Xem chi tiết" onClick={async () => {
                         try {
                           const { getWarehouseOrderDetail } = await import('../../services/warehouseService.js');
-                          const data = await getWarehouseOrderDetail(d.id);
+                          const data: WarehouseOrderDetail = await getWarehouseOrderDetail(d.id);
                           setDetail({
                             ...d,
-                            products: data.items.map((i: any) => ({
+                            products: data.items.map((i) => ({
                               sku: i.sku, name: i.productName, quantity: i.requestedQuantity, requiredTransferQuantity: i.requiredTransferQuantity, transferStatus: '—'
                             })),
-                            pickTasks: data.pickTasks?.map((pt: any) => ({
+                            pickTasks: data.pickTasks?.map((pt) => ({
                               id: pt.pickTaskId,
                               warehouse: pt.warehouseName,
                               status: pt.status,
-                              items: pt.items.map((i: any) => ({
+                              items: pt.items.map((i) => ({
                                 name: i.productName, requestedQty: i.requestedQuantity, packedQty: i.packedQuantity
                               }))
                             })) || []
@@ -194,8 +195,8 @@ export default function WarehouseConsolidation() {
                         <button className="p-1 rounded hover:bg-purple-50 text-gray-400 hover:text-purple-600" title="Điều chuyển nội bộ" onClick={async () => {
                           try {
                             const { getWarehouseOrderDetail } = await import('../../services/warehouseService.js');
-                            const data = await getWarehouseOrderDetail(d.id);
-                            const products = data.items.filter((i: any) => i.requiredTransferQuantity > 0).map((i: any) => ({
+                            const data: WarehouseOrderDetail = await getWarehouseOrderDetail(d.id);
+                            const products = data.items.filter((i) => i.requiredTransferQuantity > 0).map((i) => ({
                               sku: i.sku, name: i.productName, quantity: i.requiredTransferQuantity, transferStatus: '—'
                             }));
                             navigate('/warehouse/transfer/stock-transfer', { state: { prefill: { sourceWarehouse: d.warehouse, orderId: d.id, items: products } } });
@@ -301,13 +302,13 @@ export default function WarehouseConsolidation() {
                 </div>
               )}
               <div className="flex gap-2 pt-2 border-t border-gray-100">
-                {(!detail.products || detail.products.every((p: any) => p.requiredTransferQuantity === undefined || p.requiredTransferQuantity === 0)) ? (
+                {(!detail.products || detail.products.every((p) => p.requiredTransferQuantity === undefined || p.requiredTransferQuantity === 0)) ? (
                   <Button size="sm" className="h-7 text-xs gap-1.5" style={{ backgroundColor: PRIMARY }} onClick={() => handleConsolidate(detail.id)}>
                     <ArrowRight className="w-3.5 h-3.5" /> Hoàn tất tập kết
                   </Button>
                 ) : (
                   <Button size="sm" className="h-7 text-xs gap-1.5" style={{ backgroundColor: '#7C3AED' }} onClick={() => {
-                    const productsToTransfer = (detail.products || []).filter((p: any) => p.requiredTransferQuantity > 0).map((p: any) => ({
+                    const productsToTransfer = (detail.products || []).filter((p) => (p.requiredTransferQuantity || 0) > 0).map((p) => ({
                       sku: p.sku, name: p.name, quantity: p.requiredTransferQuantity, transferStatus: '—'
                     }));
                     navigate('/warehouse/transfer/stock-transfer', { state: { prefill: { sourceWarehouse: detail.warehouse, orderId: detail.id, items: productsToTransfer } } });

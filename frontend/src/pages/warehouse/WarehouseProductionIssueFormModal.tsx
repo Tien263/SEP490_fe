@@ -4,13 +4,24 @@ import { X } from 'lucide-react';
 import { getMaterials } from '../../services/materialService';
 import { createGoodsIssue, getWarehouses } from '../../services/warehouseService';
 import { getProducts } from '../../services/productService';
+import type { Warehouse } from '../../types/warehouse';
+import type { Material, Product } from '../../types/catalog';
+
+interface DraftIssueItem {
+  id: string;
+  itemType: 'Material' | 'Product';
+  materialId: string | null;
+  productId: string | null;
+  quantity: number | string;
+  note: string;
+}
 
 export default function WarehouseProductionIssueFormModal({ onClose, onSuccess }: { onClose: () => void, onSuccess: () => void }) {
-  const [items, setItems] = useState<any[]>([]);
-  const [materials, setMaterials] = useState<any[]>([]);
-  const [products, setProducts] = useState<any[]>([]);
+  const [items, setItems] = useState<DraftIssueItem[]>([]);
+  const [materials, setMaterials] = useState<Material[]>([]);
+  const [products, setProducts] = useState<Product[]>([]);
   const [warehouseId, setWarehouseId] = useState('');
-  const [warehouses, setWarehouses] = useState<any[]>([]);
+  const [warehouses, setWarehouses] = useState<Warehouse[]>([]);
   
   // Fields mở rộng WF-17
   const [department, setDepartment] = useState('Xưởng May A');
@@ -54,7 +65,7 @@ export default function WarehouseProductionIssueFormModal({ onClose, onSuccess }
     setItems(items.filter(i => i.id !== id));
   };
 
-  const handleItemChange = (id: string, field: string, value: any) => {
+  const handleItemChange = (id: string, field: keyof DraftIssueItem, value: string) => {
     setItems(items.map(i => {
       if (i.id === id) {
         const updated = { ...i, [field]: value };
@@ -90,7 +101,7 @@ export default function WarehouseProductionIssueFormModal({ onClose, onSuccess }
         items: items.map(i => ({
           productId: i.itemType === 'Product' ? i.productId : null,
           materialId: i.itemType === 'Material' ? i.materialId : null,
-          quantity: parseInt(i.quantity, 10),
+          quantity: parseInt(String(i.quantity), 10),
           note: i.note
         }))
       };

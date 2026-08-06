@@ -3,16 +3,17 @@ import { useCallback, useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { getWarehouseOrderDetail, acceptWarehouseOrder, reportShortage } from '../../services/warehouseService';
 import { ArrowLeft, CheckCircle, AlertTriangle, Package } from 'lucide-react';
+import type { WarehouseOrderDetail, WarehouseOrderItem } from '../../types/warehouse';
 
 export default function WarehouseOrderDetailPage() {
   const { id } = useParams();
   const navigate = useNavigate();
-  const [order, setOrder] = useState<any>(null);
+  const [order, setOrder] = useState<WarehouseOrderDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
   const [showModal, setShowModal] = useState(false);
-  const [selectedProduct, setSelectedProduct] = useState<any>(null);
+  const [selectedProduct, setSelectedProduct] = useState<WarehouseOrderItem | null>(null);
   const [missingQty, setMissingQty] = useState('');
   const [note, setNote] = useState('');
   const [actionLoading, setActionLoading] = useState(false);
@@ -114,7 +115,7 @@ export default function WarehouseOrderDetailPage() {
             </tr>
           </thead>
           <tbody className="bg-white divide-y divide-gray-200">
-            {order.items?.map((item: any) => (
+            {order.items?.map((item) => (
               <tr key={item.productId}>
                 <td className="px-6 py-4 whitespace-nowrap">
                   <div className="flex items-center">

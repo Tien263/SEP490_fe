@@ -4,6 +4,7 @@ import { Button } from '../../components/sales-ui/button';
 import { Input } from '../../components/sales-ui/input';
 import { Save, CheckCircle, AlertCircle } from 'lucide-react';
 import { getWarehouses, getWarehouseShifts, getWarehouseInventory, submitShiftInventoryCount } from '../../services/warehouseService';
+import type { PaginatedList, InventoryItem, ShiftInventoryCountResult, Warehouse, WarehouseShift } from '../../types/warehouse';
 
 const PRIMARY = '#1F3B64';
 const SUCCESS = '#16A34A';
@@ -20,9 +21,9 @@ interface InventoryRow {
 }
 
 export default function WarehouseShiftInventory() {
-  const [warehouses, setWarehouses] = useState<any[]>([]);
+  const [warehouses, setWarehouses] = useState<Warehouse[]>([]);
   const [warehouseId, setWarehouseId] = useState('');
-  const [shifts, setShifts] = useState<any[]>([]);
+  const [shifts, setShifts] = useState<WarehouseShift[]>([]);
   const [shiftId, setShiftId] = useState('');
   const [items, setItems] = useState<InventoryRow[]>([]);
   const [loading, setLoading] = useState(false);
@@ -33,12 +34,12 @@ export default function WarehouseShiftInventory() {
   const [resultMsg, setResultMsg] = useState('');
 
   useEffect(() => {
-    getWarehouses().then((res: any) => {
+    getWarehouses().then((res: Warehouse[]) => {
       setWarehouses(res || []);
       if (res && res.length > 0) setWarehouseId(res[0].id);
     }).catch(() => setWarehouses([]));
 
-    getWarehouseShifts().then((res: any) => {
+    getWarehouseShifts().then((res: WarehouseShift[]) => {
       setShifts(res || []);
       if (res && res.length > 0) setShiftId(res[0].id);
     }).catch(() => setShifts([]));
@@ -49,8 +50,8 @@ export default function WarehouseShiftInventory() {
     try {
       setLoading(true);
       setError('');
-      const res: any = await getWarehouseInventory(warehouseId, { pageNumber: 1, pageSize: 1000 });
-      const rows: InventoryRow[] = (res.items || []).map((i: any) => ({
+      const res: PaginatedList<InventoryItem> = await getWarehouseInventory(warehouseId, { pageNumber: 1, pageSize: 1000 });
+      const rows: InventoryRow[] = (res.items || []).map((i) => ({
         inventoryId: i.id,
         sku: i.itemSku || i.productSku || '',
         name: i.itemName || i.productName || 'N/A',
@@ -121,7 +122,7 @@ export default function WarehouseShiftInventory() {
           note: i.note || undefined,
         })),
       };
-      const res: any = await submitShiftInventoryCount(payload);
+      const res: ShiftInventoryCountResult = await submitShiftInventoryCount(payload);
       setConfirmed(true);
       setResultMsg(
         res.adjustedCount > 0

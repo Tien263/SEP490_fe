@@ -5,6 +5,7 @@ import { Input } from '../../components/sales-ui/input';
 import { Search, Eye, RefreshCw, Download, ArrowUpFromLine, CheckCircle, Package2 } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../../components/sales-ui/dialog';
 import { getWarehouseOrders, postGoodsIssueWarehouseOrder } from '../../services/warehouseService';
+import type { WarehouseOrderListItem } from '../../types/warehouse';
 
 const PRIMARY = '#1F3B64';
 const SUCCESS = '#16A34A';
@@ -51,8 +52,8 @@ export default function WarehouseGoodsIssue() {
   const fetchOrders = async () => {
     setLoading(true);
     try {
-      const result = await getWarehouseOrders('GoodsIssue');
-      const mapped = result.map((d: any) => ({
+      const result: WarehouseOrderListItem[] = await getWarehouseOrders('GoodsIssue');
+      const mapped: GoodsIssue[] = result.map((d) => ({
         id: 'GI-' + d.orderCode,
         fulfillmentId: d.orderCode,
         orderId: d.orderId,
