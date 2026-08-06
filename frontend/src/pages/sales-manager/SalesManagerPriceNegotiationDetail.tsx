@@ -1,3 +1,4 @@
+import { getErrorMessage } from '../../lib/errors';
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { getQuotationById, managerReview, getMessages } from '../../services/quotationService.js';
@@ -64,8 +65,8 @@ export default function SalesManagerPriceNegotiationDetail() {
       await managerReview(quotation.id, { isApproved: isApprove, managerNote });
       alert(isApprove ? 'Đã duyệt báo giá thành công!' : 'Đã từ chối báo giá!');
       navigate('/sales-manager/manager-negotiation');
-    } catch (error: any) {
-      alert(error.message || 'Lỗi khi xử lý');
+    } catch (error: unknown) {
+      alert(getErrorMessage(error, 'Lỗi khi xử lý'));
     }
   };
 

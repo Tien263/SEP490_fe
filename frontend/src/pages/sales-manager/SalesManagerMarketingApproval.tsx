@@ -1,3 +1,4 @@
+import { getErrorMessage } from '../../lib/errors';
 import React, { useState, useEffect } from 'react';
 import {
   CheckCircle2, XCircle, AlertCircle, Clock,
@@ -98,8 +99,8 @@ export default function SalesManagerMarketingApproval() {
       );
       setSelectedPost(null);
       fetchPosts();
-    } catch (err: any) {
-      alert('Lỗi: ' + (err.response?.data?.message || err.message));
+    } catch (err: unknown) {
+      alert('Lỗi: ' + (getErrorMessage(err)));
     } finally { setSubmittingDecision(false); }
   };
 

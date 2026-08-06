@@ -1,3 +1,4 @@
+import { getErrorMessage } from '../../lib/errors';
 import { useState, useEffect, useCallback } from 'react';
 import { Button } from '../../components/sales-ui/button';
 import { Input } from '../../components/sales-ui/input';
@@ -59,8 +60,8 @@ export default function WarehouseShiftInventory() {
         note: '',
       }));
       setItems(rows);
-    } catch (err: any) {
-      setError(err.message || 'Không thể tải danh sách tồn kho.');
+    } catch (err: unknown) {
+      setError(getErrorMessage(err, 'Không thể tải danh sách tồn kho.'));
       setItems([]);
     } finally {
       setLoading(false);
@@ -127,8 +128,8 @@ export default function WarehouseShiftInventory() {
           ? `Đã ghi nhận ${res.totalCounted} mặt hàng, điều chỉnh tồn kho cho ${res.adjustedCount} mặt hàng có chênh lệch.`
           : `Đã ghi nhận ${res.totalCounted} mặt hàng, không có chênh lệch so với hệ thống.`
       );
-    } catch (err: any) {
-      setError(err.message || 'Không thể xác nhận kiểm kê ca.');
+    } catch (err: unknown) {
+      setError(getErrorMessage(err, 'Không thể xác nhận kiểm kê ca.'));
     } finally {
       setSubmitting(false);
     }

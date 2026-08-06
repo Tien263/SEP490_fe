@@ -117,7 +117,7 @@ function NavItemRow({
 
 export default function SalesManagerPortal() {
   const [pendingCount, setPendingCount] = useState(0);
-  const { user, logout } = useAuth() as any;
+  const { user, logout } = useAuth();
   const navigate = useNavigate();
   const role: string = user?.role || '';
 

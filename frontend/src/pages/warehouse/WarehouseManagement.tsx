@@ -1,3 +1,5 @@
+import type { ChangeEvent } from 'react';
+import { getErrorMessage } from '../../lib/errors';
 import React, { useState, useEffect } from 'react';
 import { Settings, Plus, Edit, Trash, Building, AlertCircle, Check } from 'lucide-react';
 import { Button } from '../../components/ui/Button';
@@ -26,8 +28,8 @@ export default function WarehouseManagement() {
       setError('');
       const res: any = await getWarehouses();
       setWarehouses(res || []);
-    } catch (err: any) {
-      setError('Lỗi khi tải danh sách kho: ' + err.message);
+    } catch (err: unknown) {
+      setError('Lỗi khi tải danh sách kho: ' + getErrorMessage(err));
     } finally {
       setLoading(false);
     }
@@ -81,8 +83,8 @@ export default function WarehouseManagement() {
       }
       handleCloseModal();
       fetchWarehouses();
-    } catch (err: any) {
-      alert('Lỗi: ' + err.message);
+    } catch (err: unknown) {
+      alert('Lỗi: ' + getErrorMessage(err));
     } finally {
       setSubmitting(false);
     }
@@ -98,8 +100,8 @@ export default function WarehouseManagement() {
       await deleteWarehouse(id);
       alert('Xóa kho thành công!');
       fetchWarehouses();
-    } catch (err: any) {
-      alert('Lỗi khi xóa kho: ' + err.message);
+    } catch (err: unknown) {
+      alert('Lỗi khi xóa kho: ' + getErrorMessage(err));
     } finally {
       setDeletingId(null);
     }
@@ -232,7 +234,7 @@ export default function WarehouseManagement() {
                 <Input
                   placeholder="Nhập mã kho..."
                   value={formData.code}
-                  onChange={(e: any) => setFormData({ ...formData, code: e.target.value })}
+                  onChange={(e: ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => setFormData({ ...formData, code: e.target.value })}
                   className="font-mono text-sm uppercase"
                   autoFocus
                 />
@@ -243,7 +245,7 @@ export default function WarehouseManagement() {
                 <Input
                   placeholder="Nhập tên kho..."
                   value={formData.name}
-                  onChange={(e: any) => setFormData({ ...formData, name: e.target.value })}
+                  onChange={(e: ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => setFormData({ ...formData, name: e.target.value })}
                   className="text-sm"
                 />
               </div>
@@ -253,7 +255,7 @@ export default function WarehouseManagement() {
                 <textarea
                   placeholder="Nhập tên các vị trí, cách nhau bởi dấu phẩy (VD: Kệ A, Kệ B, Khu 1)..."
                   value={formData.locationNames}
-                  onChange={(e: any) => setFormData({ ...formData, locationNames: e.target.value })}
+                  onChange={(e: ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => setFormData({ ...formData, locationNames: e.target.value })}
                   className="w-full text-sm min-h-[80px] p-2 border border-gray-300 rounded focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
                 />
                 <p className="text-[10px] text-gray-500">

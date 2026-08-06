@@ -1,3 +1,4 @@
+import { getErrorMessage } from '../../lib/errors';
 import { useState, useEffect } from 'react';
 import { RefreshCw, Package, AlertTriangle, Boxes } from 'lucide-react';
 import { getCeoDashboard } from '../../services/dashboardService.js';
@@ -52,8 +53,8 @@ export default function CEODashboard({ setActiveTab }: { setActiveTab: (tab: str
     setError('');
     try {
       setData(await getCeoDashboard(rangeForPeriod(p)));
-    } catch (err: any) {
-      setError(err.message || 'Không thể tải dữ liệu dashboard.');
+    } catch (err: unknown) {
+      setError(getErrorMessage(err, 'Không thể tải dữ liệu dashboard.'));
     } finally {
       setLoading(false);
     }

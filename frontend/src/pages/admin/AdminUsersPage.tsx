@@ -1,3 +1,4 @@
+import { getErrorMessage } from '../../lib/errors';
 import { useCallback, useEffect, useState } from 'react';
 import { Plus, Search, ShieldCheck, Lock, Unlock } from 'lucide-react';
 import { useToast } from '../../context/ToastContext';
@@ -42,8 +43,8 @@ function CreateUserModal({ onClose, onCreated }: { onClose: () => void; onCreate
       toast.success('Tạo tài khoản thành công!');
       onCreated();
       onClose();
-    } catch (err: any) {
-      toast.error(err.message);
+    } catch (err: unknown) {
+      toast.error(getErrorMessage(err));
     } finally {
       setSaving(false);
     }
@@ -108,8 +109,8 @@ function ReasonActionModal({ title, children, confirmLabel, onConfirm, onClose }
     try {
       await onConfirm(reason.trim());
       onClose();
-    } catch (err: any) {
-      toast.error(err.message);
+    } catch (err: unknown) {
+      toast.error(getErrorMessage(err));
     } finally {
       setSaving(false);
     }
@@ -165,8 +166,8 @@ export default function AdminUsersPage() {
       setUsers(result.items || []);
       setTotalPages(result.totalPages || 1);
       setTotalCount(result.totalCount || 0);
-    } catch (err: any) {
-      toast.error(err.message);
+    } catch (err: unknown) {
+      toast.error(getErrorMessage(err));
     } finally {
       setLoading(false);
     }

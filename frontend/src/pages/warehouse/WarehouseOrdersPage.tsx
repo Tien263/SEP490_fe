@@ -1,3 +1,4 @@
+import { getErrorMessage } from '../../lib/errors';
 import { useCallback, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import * as signalR from '@microsoft/signalr';
@@ -23,8 +24,8 @@ export default function WarehouseOrdersPage() {
       setError('');
       const data = await getWarehouseOrders(activeTab, 1, 50);
       setOrders(data || []);
-    } catch (err: any) {
-      setError(err.message || 'Lỗi tải danh sách đơn hàng');
+    } catch (err: unknown) {
+      setError(getErrorMessage(err, 'Lỗi tải danh sách đơn hàng'));
     } finally {
       setLoading(false);
     }

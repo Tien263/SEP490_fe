@@ -1,3 +1,5 @@
+import type { ChangeEvent, KeyboardEvent } from 'react';
+import { getErrorMessage } from '../../lib/errors';
 import React, { useState, useEffect, useCallback } from 'react';
 import { Search, Filter, AlertCircle, PackageSearch, ArrowLeftRight, Clock, User, Check } from 'lucide-react';
 import { Button } from '../../components/ui/Button';
@@ -62,7 +64,7 @@ export default function WarehouseInventoryCount() {
         setWarehouses(res);
         setWarehouseId(res[0].id);
       }
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Error fetching warehouses:', err);
     }
   }, []);
@@ -91,8 +93,8 @@ export default function WarehouseInventoryCount() {
       setItems(res.items || []);
       setTotalPages(res.totalPages || 1);
       setTotalCount(res.totalCount || 0);
-    } catch (err: any) {
-      alert('Lỗi khi tải danh sách tồn kho: ' + err.message);
+    } catch (err: unknown) {
+      alert('Lỗi khi tải danh sách tồn kho: ' + getErrorMessage(err));
     } finally {
       setLoading(false);
     }
@@ -100,11 +102,11 @@ export default function WarehouseInventoryCount() {
 
   // Chỉ tự động tải lại khi đổi kho hoặc đổi trang; các ô lọc khác (search, minQty,...)
   // chỉ áp dụng khi bấm nút tìm kiếm, không tự fetch khi gõ.
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
     if (warehouseId) {
       fetchInventory();
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [warehouseId, page]);
 
   const handleSearch = () => {
@@ -131,8 +133,8 @@ export default function WarehouseInventoryCount() {
       alert('Cập nhật tồn kho thành công!');
       setEditingItem(null);
       fetchInventory(); // Reload current page
-    } catch (err: any) {
-      alert('Lỗi khi cập nhật tồn kho: ' + err.message);
+    } catch (err: unknown) {
+      alert('Lỗi khi cập nhật tồn kho: ' + getErrorMessage(err));
     } finally {
       setSubmitting(false);
     }
@@ -175,8 +177,8 @@ export default function WarehouseInventoryCount() {
       setIsNewProduct(false);
       setTargetType('Product');
       setShowAddModal(true);
-    } catch (err: any) {
-      alert("Lỗi tải dữ liệu sản phẩm / nguyên liệu: " + err.message);
+    } catch (err: unknown) {
+      alert("Lỗi tải dữ liệu sản phẩm / nguyên liệu: " + getErrorMessage(err));
     } finally {
       setLoading(false);
     }
@@ -226,8 +228,8 @@ export default function WarehouseInventoryCount() {
       alert(`Thêm ${targetType === 'Product' ? 'sản phẩm' : 'nguyên vật liệu'} vào kho thành công!`);
       setShowAddModal(false);
       fetchInventory();
-    } catch (err: any) {
-      alert('Lỗi: ' + err.message);
+    } catch (err: unknown) {
+      alert('Lỗi: ' + getErrorMessage(err));
     } finally {
       setSubmitting(false);
     }
@@ -283,8 +285,8 @@ export default function WarehouseInventoryCount() {
               placeholder="Nhập mã SKU hoặc tên mặt hàng..." 
               className="pl-9 h-9 text-sm w-full"
               value={search}
-              onChange={(e: any) => setSearch(e.target.value)}
-              onKeyDown={(e: any) => e.key === 'Enter' && handleSearch()}
+              onChange={(e: ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => setSearch(e.target.value)}
+              onKeyDown={(e: KeyboardEvent<HTMLInputElement | HTMLTextAreaElement>) => e.key === 'Enter' && handleSearch()}
             />
           </div>
         </div>
@@ -304,11 +306,11 @@ export default function WarehouseInventoryCount() {
         
         <div className="w-full md:w-28 space-y-1.5">
           <label className="text-xs font-medium text-gray-600">Tồn kho Min</label>
-          <Input type="number" placeholder="0" className="h-9 text-sm" value={minQty} onChange={(e: any) => setMinQty(e.target.value)} onKeyDown={(e: any) => e.key === 'Enter' && handleSearch()} />
+          <Input type="number" placeholder="0" className="h-9 text-sm" value={minQty} onChange={(e: ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => setMinQty(e.target.value)} onKeyDown={(e: KeyboardEvent<HTMLInputElement | HTMLTextAreaElement>) => e.key === 'Enter' && handleSearch()} />
         </div>
         <div className="w-full md:w-28 space-y-1.5">
           <label className="text-xs font-medium text-gray-600">Tồn kho Max</label>
-          <Input type="number" placeholder="1000" className="h-9 text-sm" value={maxQty} onChange={(e: any) => setMaxQty(e.target.value)} onKeyDown={(e: any) => e.key === 'Enter' && handleSearch()} />
+          <Input type="number" placeholder="1000" className="h-9 text-sm" value={maxQty} onChange={(e: ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => setMaxQty(e.target.value)} onKeyDown={(e: KeyboardEvent<HTMLInputElement | HTMLTextAreaElement>) => e.key === 'Enter' && handleSearch()} />
         </div>
 
         <Button onClick={handleSearch} className="h-9 gap-2 w-full md:w-auto" style={{ backgroundColor: PRIMARY }}>
@@ -416,7 +418,7 @@ export default function WarehouseInventoryCount() {
                 <Input 
                   type="number" 
                   value={newQuantity} 
-                  onChange={(e: any) => setNewQuantity(e.target.value)} 
+                  onChange={(e: ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => setNewQuantity(e.target.value)} 
                   className="font-mono text-lg font-bold text-blue-600"
                   autoFocus
                 />
@@ -427,7 +429,7 @@ export default function WarehouseInventoryCount() {
                 <Input 
                   placeholder="Ví dụ: Kiểm kê định kỳ, sai lệch do hàng hỏng..." 
                   value={adjustNote} 
-                  onChange={(e: any) => setAdjustNote(e.target.value)} 
+                  onChange={(e: ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => setAdjustNote(e.target.value)} 
                   className="text-sm"
                 />
               </div>
@@ -486,7 +488,7 @@ export default function WarehouseInventoryCount() {
                       <select 
                         className="w-full text-sm h-9 border border-gray-300 rounded px-2"
                         value={selectedProductId}
-                        onChange={(e: any) => setSelectedProductId(e.target.value)}
+                        onChange={(e: ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => setSelectedProductId(e.target.value)}
                       >
                         <option value="">-- Chọn sản phẩm --</option>
                         {productsList.map(p => (
@@ -498,19 +500,19 @@ export default function WarehouseInventoryCount() {
                     <div className="space-y-3 bg-blue-50/50 p-3 rounded-lg border border-blue-100">
                       <div className="space-y-1.5">
                         <label className="text-xs font-semibold text-gray-700">Tên sản phẩm *</label>
-                        <Input placeholder="Nhập tên sản phẩm mới" value={newProductName} onChange={(e: any) => setNewProductName(e.target.value)} className="h-8 text-sm" />
+                        <Input placeholder="Nhập tên sản phẩm mới" value={newProductName} onChange={(e: ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => setNewProductName(e.target.value)} className="h-8 text-sm" />
                       </div>
                       <div className="grid grid-cols-2 gap-3">
                         <div className="space-y-1.5">
                           <label className="text-xs font-semibold text-gray-700">Mã SKU *</label>
-                          <Input placeholder="Nhập mã SKU" value={newProductSku} onChange={(e: any) => setNewProductSku(e.target.value)} className="h-8 text-sm uppercase" />
+                          <Input placeholder="Nhập mã SKU" value={newProductSku} onChange={(e: ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => setNewProductSku(e.target.value)} className="h-8 text-sm uppercase" />
                         </div>
                         <div className="space-y-1.5">
                           <label className="text-xs font-semibold text-gray-700">Danh mục *</label>
                           <select 
                             className="w-full text-sm h-8 border border-gray-300 rounded px-2"
                             value={newProductCategoryId}
-                            onChange={(e: any) => setNewProductCategoryId(e.target.value)}
+                            onChange={(e: ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => setNewProductCategoryId(e.target.value)}
                           >
                             {categoriesList.map(c => (
                               <option key={c.id} value={c.id}>{c.name}</option>
@@ -521,11 +523,11 @@ export default function WarehouseInventoryCount() {
                       <div className="grid grid-cols-2 gap-3">
                         <div className="space-y-1.5">
                           <label className="text-xs font-semibold text-gray-700">Giá niêm yết (VNĐ)</label>
-                          <Input type="number" placeholder="0" value={newProductPrice} onChange={(e: any) => setNewProductPrice(e.target.value)} className="h-8 text-sm" />
+                          <Input type="number" placeholder="0" value={newProductPrice} onChange={(e: ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => setNewProductPrice(e.target.value)} className="h-8 text-sm" />
                         </div>
                         <div className="space-y-1.5">
                           <label className="text-xs font-semibold text-gray-700">Đơn vị tính *</label>
-                          <Input placeholder="Cái, Hộp, Kg..." value={newProductUnit} onChange={(e: any) => setNewProductUnit(e.target.value)} className="h-8 text-sm" />
+                          <Input placeholder="Cái, Hộp, Kg..." value={newProductUnit} onChange={(e: ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => setNewProductUnit(e.target.value)} className="h-8 text-sm" />
                         </div>
                       </div>
                     </div>
@@ -537,7 +539,7 @@ export default function WarehouseInventoryCount() {
                   <select 
                     className="w-full text-sm h-9 border border-gray-300 rounded px-2"
                     value={selectedMaterialId}
-                    onChange={(e: any) => setSelectedMaterialId(e.target.value)}
+                    onChange={(e: ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => setSelectedMaterialId(e.target.value)}
                   >
                     <option value="">-- Chọn nguyên vật liệu --</option>
                     {materialsList.map(m => (
@@ -553,7 +555,7 @@ export default function WarehouseInventoryCount() {
                   <select 
                     className="w-full text-sm h-9 border border-gray-300 rounded px-2"
                     value={selectedLocationId}
-                    onChange={(e: any) => setSelectedLocationId(e.target.value)}
+                    onChange={(e: ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => setSelectedLocationId(e.target.value)}
                   >
                     <option value="">-- Chọn vị trí --</option>
                     {warehouses.find(w => w.id === warehouseId)?.locations?.map((loc: any) => (
@@ -567,7 +569,7 @@ export default function WarehouseInventoryCount() {
                   <Input 
                     type="number" 
                     value={initialQuantity} 
-                    onChange={(e: any) => setInitialQuantity(e.target.value)} 
+                    onChange={(e: ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => setInitialQuantity(e.target.value)} 
                     className="h-9 text-sm font-bold text-blue-600"
                   />
                 </div>

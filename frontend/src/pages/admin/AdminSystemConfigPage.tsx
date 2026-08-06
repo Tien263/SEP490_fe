@@ -1,3 +1,4 @@
+import { getErrorMessage } from '../../lib/errors';
 import { useCallback, useEffect, useState } from 'react';
 import { History as HistoryIcon, Pencil } from 'lucide-react';
 import { useToast } from '../../context/ToastContext';
@@ -30,8 +31,8 @@ function EditConfigModal({ config, onClose, onSaved }: { config: any; onClose: (
       toast.success('Cập nhật cấu hình thành công!');
       onSaved();
       onClose();
-    } catch (err: any) {
-      toast.error(err.message);
+    } catch (err: unknown) {
+      toast.error(getErrorMessage(err));
     } finally {
       setSaving(false);
     }
@@ -95,7 +96,7 @@ function HistoryModal({ configKey, onClose }: { configKey: string; onClose: () =
   useEffect(() => {
     getConfigHistory(configKey)
       .then(setVersions)
-      .catch((err: any) => toast.error(err.message))
+      .catch((err: any) => toast.error(getErrorMessage(err)))
       .finally(() => setLoading(false));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [configKey]);
@@ -146,8 +147,8 @@ export default function AdminSystemConfigPage() {
     try {
       const data = await getAllConfigs();
       setConfigs(data || []);
-    } catch (err: any) {
-      toast.error(err.message);
+    } catch (err: unknown) {
+      toast.error(getErrorMessage(err));
     } finally {
       setLoading(false);
     }

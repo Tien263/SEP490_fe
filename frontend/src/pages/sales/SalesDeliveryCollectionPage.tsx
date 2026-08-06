@@ -1,3 +1,4 @@
+import { getErrorMessage } from '../../lib/errors';
 import { AlertCircle, Camera, CheckCircle, DollarSign, MapPin, Pen, Phone, RefreshCw, Truck, X, XCircle } from 'lucide-react';
 import { useCallback, useEffect, useRef, useState } from 'react';
 
@@ -193,8 +194,8 @@ export default function SalesDeliveryCollectionPage() {
       showToast(data.message || 'Ghi nhận thành công!');
       setModal(null);
       await fetchOrders();
-    } catch (err: any) {
-      showToast(err.message || 'Có lỗi xảy ra.', 'error');
+    } catch (err: unknown) {
+      showToast(getErrorMessage(err, 'Có lỗi xảy ra.'), 'error');
     } finally {
       setSubmitting(false);
     }

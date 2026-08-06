@@ -1,3 +1,4 @@
+import { getErrorMessage } from '../../lib/errors';
 import { useState, useEffect, useRef } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { Button } from '../../components/sales-ui/button';
@@ -131,7 +132,7 @@ function CreateForm({ onClose, onCreated, warehouses, staffUsers, initialData }:
       alert('Tạo lệnh chuyển kho thành công!');
       onCreated();
       onClose();
-    } catch (err: any) { alert(err.message); }
+    } catch (err: unknown) { alert(getErrorMessage(err)); }
   };
 
   return (
@@ -249,8 +250,8 @@ function ReceiveForm({ transfer, onClose, onReceived }: { transfer: Transfer, on
       alert('Nhận hàng thành công!');
       onReceived();
       onClose();
-    } catch (err: any) { 
-      alert(err.message); 
+    } catch (err: unknown) { 
+      alert(getErrorMessage(err)); 
     } finally {
       setLoading(false);
     }
@@ -376,7 +377,7 @@ export default function WarehouseStockTransfer() {
       alert('Xuất kho thành công! Hàng đang trên đường tới kho đích.');
       loadData();
       setDetail(null);
-    } catch (err: any) { alert(err.message); }
+    } catch (err: unknown) { alert(getErrorMessage(err)); }
   };
 
   const cancel = async (id: string) => {
@@ -387,7 +388,7 @@ export default function WarehouseStockTransfer() {
       alert('Hủy lệnh thành công!');
       loadData();
       setDetail(null);
-    } catch (err: any) { alert(err.message); }
+    } catch (err: unknown) { alert(getErrorMessage(err)); }
   }
 
   const requestTransport = async (id: string) => {
@@ -398,7 +399,7 @@ export default function WarehouseStockTransfer() {
       alert('Đã gửi yêu cầu xếp xe thành công! Bộ phận Sale sẽ xếp xe vận chuyển.');
       loadData();
       setDetail(null);
-    } catch (err: any) { alert(err.message); }
+    } catch (err: unknown) { alert(getErrorMessage(err)); }
   };
 
   const toggleSelect = (id: string) => setSelected(p => p.includes(id) ? p.filter(x => x !== id) : [...p, id]);

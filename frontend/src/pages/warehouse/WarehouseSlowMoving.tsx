@@ -1,3 +1,4 @@
+import { getErrorMessage } from '../../lib/errors';
 import { useState, useEffect, useCallback } from 'react';
 import { Button } from '../../components/sales-ui/button';
 import { Input } from '../../components/sales-ui/input';
@@ -63,8 +64,8 @@ export default function WarehouseSlowMoving() {
       setError('');
       const res: any = await getSlowMovingItems({ warehouseId, days });
       setItems(res || []);
-    } catch (err: any) {
-      setError(err.message || 'Không thể tải danh sách hàng chậm luân chuyển.');
+    } catch (err: unknown) {
+      setError(getErrorMessage(err, 'Không thể tải danh sách hàng chậm luân chuyển.'));
       setItems([]);
     } finally {
       setLoading(false);

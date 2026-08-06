@@ -1,3 +1,4 @@
+import { getErrorMessage } from '../../lib/errors';
 import { useState, useEffect, useRef } from 'react';
 import { getSuppliers } from '../../services/supplierService.js';
 import { getProducts } from '../../services/productService.js';
@@ -120,8 +121,8 @@ export default function CEOPurchaseOrderCreateModal({ onClose, onSuccess }: any)
       await createPurchaseOrder(payload);
       alert('Tạo Purchase Order (PO Draft) thành công!');
       onSuccess();
-    } catch (err: any) {
-      alert(err.message || "Đã xảy ra lỗi khi tạo PO (400 Bad Request)");
+    } catch (err: unknown) {
+      alert(getErrorMessage(err, "Đã xảy ra lỗi khi tạo PO (400 Bad Request)"));
     }
   };
 
@@ -133,8 +134,8 @@ export default function CEOPurchaseOrderCreateModal({ onClose, onSuccess }: any)
       await importPOFromExcel(file);
       alert('Import PO từ Excel thành công!');
       onSuccess();
-    } catch (err: any) {
-      alert(err.message || 'Lỗi khi import Excel');
+    } catch (err: unknown) {
+      alert(getErrorMessage(err, 'Lỗi khi import Excel'));
     } finally {
       setImporting(false);
       if (fileInputRef.current) fileInputRef.current.value = '';
@@ -149,8 +150,8 @@ export default function CEOPurchaseOrderCreateModal({ onClose, onSuccess }: any)
       await importPOFromImage(file);
       alert('Import PO từ hình ảnh thành công!');
       onSuccess();
-    } catch (err: any) {
-      alert(err.message || 'Lỗi khi import hình ảnh');
+    } catch (err: unknown) {
+      alert(getErrorMessage(err, 'Lỗi khi import hình ảnh'));
     } finally {
       setImporting(false);
       if (imageInputRef.current) imageInputRef.current.value = '';

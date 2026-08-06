@@ -1,3 +1,5 @@
+import type { ChangeEvent } from 'react';
+import { getErrorMessage } from '../../lib/errors';
 import React, { useState, useEffect } from 'react';
 import { Button } from '../../components/sales-ui/button';
 import { Input } from '../../components/sales-ui/input';
@@ -117,8 +119,8 @@ export default function WarehouseProductionIssue() {
       alert('Cập nhật thông tin bàn giao thành công!');
       loadData();
       setDetail(null);
-    } catch (err: any) {
-      alert('Lỗi: ' + err.message);
+    } catch (err: unknown) {
+      alert('Lỗi: ' + getErrorMessage(err));
     } finally {
       setSavingHandover(false);
     }
@@ -130,8 +132,8 @@ export default function WarehouseProductionIssue() {
       alert('Đăng sổ xuất kho thành công! Tồn kho đã được trừ.');
       loadData();
       setDetail(null);
-    } catch (err: any) {
-      alert(err.message);
+    } catch (err: unknown) {
+      alert(getErrorMessage(err));
     }
   };
 
@@ -144,8 +146,8 @@ export default function WarehouseProductionIssue() {
       setShowUpload(false);
       setFileToUpload(null);
       loadData();
-    } catch (err: any) { 
-      alert(err.message); 
+    } catch (err: unknown) { 
+      alert(getErrorMessage(err)); 
     } finally {
       setUploading(false);
     }
@@ -161,8 +163,8 @@ export default function WarehouseProductionIssue() {
       setReversalReason('');
       setDetail(null);
       loadData();
-    } catch (err: any) {
-      alert('Lỗi Reversal: ' + err.message);
+    } catch (err: unknown) {
+      alert('Lỗi Reversal: ' + getErrorMessage(err));
     } finally {
       setSubmittingReversal(false);
     }
@@ -284,7 +286,7 @@ export default function WarehouseProductionIssue() {
                     <label className="block text-[11px] font-semibold text-gray-700 mb-1">Tên người nhận (Ngoài hệ thống) *</label>
                     <Input 
                       value={handoverRecipient} 
-                      onChange={(e: any) => setHandoverRecipient(e.target.value)} 
+                      onChange={(e: ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => setHandoverRecipient(e.target.value)} 
                       placeholder="Nhập họ tên đại diện xưởng sản xuất..."
                       className="h-8 text-xs"
                       disabled={detail.status?.toLowerCase() === 'posted' || detail.status?.toLowerCase() === 'reversed'}
@@ -295,7 +297,7 @@ export default function WarehouseProductionIssue() {
                     <label className="block text-[11px] font-semibold text-gray-700 mb-1">Bộ phận sản xuất nhận *</label>
                     <Input 
                       value={handoverDepartment} 
-                      onChange={(e: any) => setHandoverDepartment(e.target.value)} 
+                      onChange={(e: ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => setHandoverDepartment(e.target.value)} 
                       placeholder="Xưởng may A, Tổ PE..."
                       className="h-8 text-xs"
                       disabled={detail.status?.toLowerCase() === 'posted' || detail.status?.toLowerCase() === 'reversed'}
@@ -306,7 +308,7 @@ export default function WarehouseProductionIssue() {
                     <label className="block text-[11px] font-semibold text-gray-700 mb-1">Số biên bản giấy (Duy nhất) *</label>
                     <Input 
                       value={handoverPaperDoc} 
-                      onChange={(e: any) => setHandoverPaperDoc(e.target.value)} 
+                      onChange={(e: ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => setHandoverPaperDoc(e.target.value)} 
                       placeholder="BBBG-2026-XXXX..."
                       className="h-8 text-xs font-mono uppercase font-bold text-blue-900"
                       disabled={detail.status?.toLowerCase() === 'posted' || detail.status?.toLowerCase() === 'reversed'}
@@ -318,7 +320,7 @@ export default function WarehouseProductionIssue() {
                     <Input 
                       type="datetime-local" 
                       value={handoverReceivedAt} 
-                      onChange={(e: any) => setHandoverReceivedAt(e.target.value)} 
+                      onChange={(e: ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => setHandoverReceivedAt(e.target.value)} 
                       className="h-8 text-xs"
                       disabled={detail.status?.toLowerCase() === 'posted' || detail.status?.toLowerCase() === 'reversed'}
                     />
@@ -328,7 +330,7 @@ export default function WarehouseProductionIssue() {
                     <label className="block text-[11px] font-semibold text-gray-700 mb-1">Mục đích sử dụng *</label>
                     <Input 
                       value={handoverPurpose} 
-                      onChange={(e: any) => setHandoverPurpose(e.target.value)} 
+                      onChange={(e: ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => setHandoverPurpose(e.target.value)} 
                       placeholder="Nhập mục đích xuất..."
                       className="h-8 text-xs"
                       disabled={detail.status?.toLowerCase() === 'posted' || detail.status?.toLowerCase() === 'reversed'}

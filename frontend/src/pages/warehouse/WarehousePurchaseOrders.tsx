@@ -1,3 +1,4 @@
+import { getErrorMessage } from '../../lib/errors';
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '../../components/sales-ui/button';
@@ -96,8 +97,8 @@ export default function WarehousePurchaseOrders() {
         };
       });
       setDATA(mapped);
-    } catch (err: any) {
-      alert(err.message || 'Lỗi khi tải PO');
+    } catch (err: unknown) {
+      alert(getErrorMessage(err, 'Lỗi khi tải PO'));
     } finally {
       setLoading(false);
     }
@@ -125,8 +126,8 @@ export default function WarehousePurchaseOrders() {
       })));
       setProofFile(null);
       setIsReceiveModalOpen(true);
-    } catch (err: any) {
-      alert(err.message);
+    } catch (err: unknown) {
+      alert(getErrorMessage(err));
     }
   };
 
@@ -161,8 +162,8 @@ export default function WarehousePurchaseOrders() {
       setIsReceiveModalOpen(false);
       setProofFile(null);
       loadData();
-    } catch (err: any) {
-      alert(err.message || "Đã có lỗi xảy ra");
+    } catch (err: unknown) {
+      alert(getErrorMessage(err, "Đã có lỗi xảy ra"));
     } finally {
       setShowConfirmModal(false);
     }

@@ -1,3 +1,4 @@
+import { getErrorMessage } from '../../lib/errors';
 import React, { useState, useEffect } from 'react';
 import {
   Sparkles, Send, Save, RefreshCw, Image as ImageIcon,
@@ -114,8 +115,8 @@ export default function SalesAiContentStudio() {
         setEditedImageUrl(res.data.imageUrl);
         alert('Đã sinh ảnh AI thành công qua Gemini Imagen 3!');
       }
-    } catch (err: any) {
-      alert('Sinh ảnh AI thất bại: ' + (err.response?.data?.message || err.message));
+    } catch (err: unknown) {
+      alert('Sinh ảnh AI thất bại: ' + (getErrorMessage(err)));
     } finally {
       setGeneratingSingleImage(false);
     }
@@ -131,8 +132,8 @@ export default function SalesAiContentStudio() {
       const options = res.data?.options || [];
       setAiOptions(options);
       if (options.length > 0) selectOption(options[0]);
-    } catch (err: any) {
-      alert('Tạo nội dung AI thất bại: ' + (err.response?.data?.message || err.message));
+    } catch (err: unknown) {
+      alert('Tạo nội dung AI thất bại: ' + (getErrorMessage(err)));
     } finally { setGenerating(false); }
   };
 
@@ -170,7 +171,7 @@ export default function SalesAiContentStudio() {
         alert(submitImmediately ? 'Đã tạo và gửi duyệt bài viết!' : 'Đã lưu bài viết nháp!');
       }
       fetchMyPosts();
-    } catch (err: any) { alert('Lỗi: ' + (err.response?.data?.message || err.message)); }
+    } catch (err: unknown) { alert('Lỗi: ' + (getErrorMessage(err))); }
     finally { setSaving(false); setSubmitting(false); }
   };
 

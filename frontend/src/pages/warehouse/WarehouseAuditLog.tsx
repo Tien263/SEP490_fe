@@ -1,3 +1,5 @@
+import type { ChangeEvent, KeyboardEvent } from 'react';
+import { getErrorMessage } from '../../lib/errors';
 import React, { useState, useEffect, useCallback } from 'react';
 import { History, Search, Filter, Clock } from 'lucide-react';
 import { Button } from '../../components/ui/Button';
@@ -25,11 +27,11 @@ export default function WarehouseAuditLog() {
       });
       setLogs(res.items || []);
       setTotalPages(res.totalPages || 1);
-    } catch (err: any) {
-      if (err.message.includes('403')) {
+    } catch (err: unknown) {
+      if (getErrorMessage(err).includes('403')) {
         alert('Bạn không có quyền xem nhật ký thao tác.');
       } else {
-        alert('Lỗi: ' + err.message);
+        alert('Lỗi: ' + getErrorMessage(err));
       }
     } finally {
       setLoading(false);
@@ -38,9 +40,9 @@ export default function WarehouseAuditLog() {
 
   // Chỉ tự động tải lại khi đổi trang hoặc bộ lọc hành động; gõ ô tìm kiếm không tự
   // fetch — người dùng phải bấm nút "Tìm kiếm" (xem handleSearch bên dưới).
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
     fetchLogs();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [page, actionFilter]);
 
   const handleSearch = () => {
@@ -71,8 +73,8 @@ export default function WarehouseAuditLog() {
               placeholder="Người dùng, thao tác, đối tượng..." 
               className="pl-9 h-9 text-sm"
               value={search}
-              onChange={(e: any) => setSearch(e.target.value)}
-              onKeyDown={(e: any) => e.key === 'Enter' && handleSearch()}
+              onChange={(e: ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => setSearch(e.target.value)}
+              onKeyDown={(e: KeyboardEvent<HTMLInputElement | HTMLTextAreaElement>) => e.key === 'Enter' && handleSearch()}
             />
           </div>
         </div>
@@ -81,7 +83,7 @@ export default function WarehouseAuditLog() {
           <select 
             className="h-9 text-sm border border-gray-200 rounded-md px-2.5 bg-white w-full"
             value={actionFilter}
-            onChange={(e: any) => {
+            onChange={(e: ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
               setActionFilter(e.target.value);
               setPage(1);
             }}

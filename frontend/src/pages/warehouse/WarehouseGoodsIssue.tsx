@@ -1,3 +1,4 @@
+import { getErrorMessage } from '../../lib/errors';
 import React, { useState, useEffect } from 'react';
 import { Button } from '../../components/sales-ui/button';
 import { Input } from '../../components/sales-ui/input';
@@ -67,8 +68,8 @@ export default function WarehouseGoodsIssue() {
         notes: ''
       }));
       setData(mapped);
-    } catch (e: any) {
-      alert('Không lấy được danh sách Phiếu Xuất: ' + e.message);
+    } catch (e: unknown) {
+      alert('Không lấy được danh sách Phiếu Xuất: ' + getErrorMessage(e));
     } finally {
       setLoading(false);
     }
@@ -85,8 +86,8 @@ export default function WarehouseGoodsIssue() {
       alert('Phát hành phiếu xuất và trừ tồn kho thành công!');
       setDetail(null);
       fetchOrders();
-    } catch (e: any) {
-      alert('Lỗi: ' + e.message);
+    } catch (e: unknown) {
+      alert('Lỗi: ' + getErrorMessage(e));
     }
   };
 

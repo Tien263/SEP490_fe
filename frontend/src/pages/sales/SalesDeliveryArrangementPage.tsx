@@ -1,3 +1,4 @@
+import { getErrorMessage } from '../../lib/errors';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { AlertCircle, CheckCircle, Lock, MapPin, Package, RefreshCw, Truck, User, X } from 'lucide-react';
 import { useToast } from '../../context/ToastContext';
@@ -289,7 +290,7 @@ export default function SalesDeliveryArrangementPage() {
           }).then(async (res) => {
             if (!res.ok) {
               const err = await res.json();
-              throw new Error(err.message);
+              throw new Error(getErrorMessage(err));
             }
           })
         );
@@ -308,7 +309,7 @@ export default function SalesDeliveryArrangementPage() {
           }).then(async (res) => {
             if (!res.ok) {
               const err = await res.json();
-              throw new Error(err.message);
+              throw new Error(getErrorMessage(err));
             }
           })
         );
@@ -320,8 +321,8 @@ export default function SalesDeliveryArrangementPage() {
       const fmtDate = new Date(selectedDate).toLocaleDateString('vi-VN');
       toast.success(`Lập lịch thành công cho các đơn giao/thu hồi ca ${shiftKey} ngày ${fmtDate}!`);
       await fetchOrders();
-    } catch (err: any) {
-      toast.error(err.message || 'Có lỗi xảy ra khi lập lịch.');
+    } catch (err: unknown) {
+      toast.error(getErrorMessage(err, 'Có lỗi xảy ra khi lập lịch.'));
     } finally {
       setSaving(false);
     }

@@ -50,7 +50,7 @@ export default function WarehouseMaterialHistory() {
       });
 
       setHistoryItems(mapped);
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Lỗi khi tải lịch sử xuất nhập NVL:', err);
     } {
       setLoading(false);

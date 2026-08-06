@@ -1,3 +1,4 @@
+import { getErrorMessage } from '../../lib/errors';
 import React, { useState, useEffect } from 'react';
 import { X } from 'lucide-react';
 import { getMaterials } from '../../services/materialService';
@@ -97,8 +98,8 @@ export default function WarehouseProductionIssueFormModal({ onClose, onSuccess }
       await createGoodsIssue(payload);
       alert('Tạo lệnh xuất kho sản xuất thành công! Trạng thái: Chờ biên bản bàn giao & bằng chứng.');
       onSuccess();
-    } catch (err: any) {
-      alert(err.message);
+    } catch (err: unknown) {
+      alert(getErrorMessage(err));
     } finally {
       setLoading(false);
     }

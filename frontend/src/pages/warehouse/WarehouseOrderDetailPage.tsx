@@ -1,3 +1,4 @@
+import { getErrorMessage } from '../../lib/errors';
 import { useCallback, useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { getWarehouseOrderDetail, acceptWarehouseOrder, reportShortage } from '../../services/warehouseService';
@@ -21,8 +22,8 @@ export default function WarehouseOrderDetailPage() {
       setLoading(true);
       const data = await getWarehouseOrderDetail(id);
       setOrder(data);
-    } catch (err: any) {
-      setError(err.message || 'Lỗi tải chi tiết đơn hàng');
+    } catch (err: unknown) {
+      setError(getErrorMessage(err, 'Lỗi tải chi tiết đơn hàng'));
     } finally {
       setLoading(false);
     }
@@ -38,8 +39,8 @@ export default function WarehouseOrderDetailPage() {
       await acceptWarehouseOrder(id);
       alert('Nhận đơn thành công!');
       fetchDetail();
-    } catch (err: any) {
-      alert(err.message || 'Lỗi khi nhận đơn');
+    } catch (err: unknown) {
+      alert(getErrorMessage(err, 'Lỗi khi nhận đơn'));
     } finally {
       setActionLoading(false);
     }
@@ -57,8 +58,8 @@ export default function WarehouseOrderDetailPage() {
       alert('Báo cáo thiếu hàng thành công!');
       setShowModal(false);
       fetchDetail();
-    } catch (err: any) {
-      alert(err.message || 'Lỗi khi báo cáo');
+    } catch (err: unknown) {
+      alert(getErrorMessage(err, 'Lỗi khi báo cáo'));
     } finally {
       setActionLoading(false);
     }

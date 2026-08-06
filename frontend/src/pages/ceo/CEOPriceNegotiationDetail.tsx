@@ -1,3 +1,4 @@
+import { getErrorMessage } from '../../lib/errors';
 import { useEffect, useState } from 'react';
 import { getQuotationById, ceoReview } from '../../services/quotationService.js';
 import { Input } from '../../components/sales-ui/input';
@@ -59,8 +60,8 @@ export default function CEOPriceNegotiationDetail({ negotiationId, onBack }: Pro
       await ceoReview(quotation.id, { isApproved: isApprove, ceoNote });
       alert(isApprove ? 'Đã duyệt báo giá thành công!' : 'Đã từ chối báo giá!');
       onBack();
-    } catch (error: any) {
-      alert(error.message || 'Lỗi khi xử lý');
+    } catch (error: unknown) {
+      alert(getErrorMessage(error, 'Lỗi khi xử lý'));
     }
   };
 

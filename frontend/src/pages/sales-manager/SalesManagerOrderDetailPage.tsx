@@ -1,3 +1,4 @@
+import { getErrorMessage } from '../../lib/errors';
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import ConfirmModal from '../../components/ui/ConfirmModal';
@@ -157,7 +158,7 @@ function getTimelineSteps(order: SalesOrderDetail) {
 export default function SalesManagerOrderDetailPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { user } = useAuth() as any;
+  const { user } = useAuth();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [order, setOrder] = useState<SalesOrderDetail | null>(null);
@@ -196,8 +197,8 @@ export default function SalesManagerOrderDetailPage() {
           const now = new Date().getTime();
           setTimeLeft(Math.max(0, Math.floor((limitTime - now) / 1000)));
         }
-      } catch (err: any) {
-        setError(err.message || 'Có lỗi xảy ra.');
+      } catch (err: unknown) {
+        setError(getErrorMessage(err, 'Có lỗi xảy ra.'));
       } finally {
         setLoading(false);
       }
@@ -223,7 +224,7 @@ export default function SalesManagerOrderDetailPage() {
 
       if (!response.ok) {
         const err = await response.json();
-        throw new Error(err.message || 'Lỗi khi xác nhận đơn hàng.');
+        throw new Error(getErrorMessage(err, 'Lỗi khi xác nhận đơn hàng.'));
       }
 
       alert('Xác nhận thành công!');
@@ -233,8 +234,8 @@ export default function SalesManagerOrderDetailPage() {
       const data = await res.json();
       setOrder(data);
       setTimeLeft(null);
-    } catch (err: any) {
-      alert(err.message || 'Lỗi không xác định.');
+    } catch (err: unknown) {
+      alert(getErrorMessage(err, 'Lỗi không xác định.'));
     } finally {
       setIsConfirming(false);
     }
@@ -254,7 +255,7 @@ export default function SalesManagerOrderDetailPage() {
 
       if (!response.ok) {
         const err = await response.json();
-        throw new Error(err.message || 'Lỗi khi xử lý yêu cầu hủy.');
+        throw new Error(getErrorMessage(err, 'Lỗi khi xử lý yêu cầu hủy.'));
       }
 
       alert('Đã xử lý yêu cầu hủy đơn thành công!');
@@ -264,8 +265,8 @@ export default function SalesManagerOrderDetailPage() {
       });
       const data = await res.json();
       setOrder(data);
-    } catch (err: any) {
-      alert(err.message || 'Lỗi không xác định.');
+    } catch (err: unknown) {
+      alert(getErrorMessage(err, 'Lỗi không xác định.'));
     }
   };
 
@@ -282,7 +283,7 @@ export default function SalesManagerOrderDetailPage() {
 
       if (!response.ok) {
         const err = await response.json();
-        throw new Error(err.message || 'Lỗi khi xử lý yêu cầu đổi/trả.');
+        throw new Error(getErrorMessage(err, 'Lỗi khi xử lý yêu cầu đổi/trả.'));
       }
 
       alert('Đã xử lý yêu cầu đổi/trả thành công!');
@@ -292,8 +293,8 @@ export default function SalesManagerOrderDetailPage() {
       });
       const data = await res.json();
       setOrder(data);
-    } catch (err: any) {
-      alert(err.message || 'Lỗi không xác định.');
+    } catch (err: unknown) {
+      alert(getErrorMessage(err, 'Lỗi không xác định.'));
     }
   };
 

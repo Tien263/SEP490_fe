@@ -1,3 +1,4 @@
+import { getErrorMessage } from '../../lib/errors';
 import { useState, useEffect } from 'react';
 import { Button } from '../../components/sales-ui/button';
 import { Input } from '../../components/sales-ui/input';
@@ -97,8 +98,8 @@ export default function WarehouseFulfillmentOrders() {
         timeline: []
       }));
       setOrders(mapped);
-    } catch (e: any) {
-      alert('Không lấy được lệnh xuất kho: ' + e.message);
+    } catch (e: unknown) {
+      alert('Không lấy được lệnh xuất kho: ' + getErrorMessage(e));
     } finally {
       setLoading(false);
     }
@@ -233,8 +234,8 @@ export default function WarehouseFulfillmentOrders() {
                             allocatedWarehouse: data.allocatedWarehouse || o.allocatedWarehouse,
                             orderProgress: data.orderProgress || 0,
                             products: mappedProducts });
-                        } catch (e: any) {
-                          alert('Lỗi lấy chi tiết: ' + e.message);
+                        } catch (e: unknown) {
+                          alert('Lỗi lấy chi tiết: ' + getErrorMessage(e));
                         }
                       }} title="Xem chi tiết"><Eye className="w-3.5 h-3.5" /></button>
                       {o.status === 'waiting' && (
@@ -244,8 +245,8 @@ export default function WarehouseFulfillmentOrders() {
                             await acceptWarehouseOrder(o.id);
                             alert('Nhận đơn thành công! Lệnh đã được chuyển sang Pick Task.');
                             fetchOrders();
-                          } catch (e: any) {
-                            alert('Lỗi nhận đơn: ' + e.message);
+                          } catch (e: unknown) {
+                            alert('Lỗi nhận đơn: ' + getErrorMessage(e));
                           }
                         }}><ClipboardList className="w-3.5 h-3.5" /></button>
                       )}
@@ -352,8 +353,8 @@ export default function WarehouseFulfillmentOrders() {
                       alert(detail.status === 'waiting' ? 'Nhận đơn thành công! Lệnh đã được chuyển sang Pick Task.' : 'Tạo Pick Tasks thành công.');
                       setDetail(null);
                       fetchOrders();
-                    } catch (e: any) {
-                      alert('Lỗi: ' + e.message);
+                    } catch (e: unknown) {
+                      alert('Lỗi: ' + getErrorMessage(e));
                     }
                   }}>
                     <ClipboardList className="w-3.5 h-3.5" /> {detail.status === 'waiting' ? 'Nhận đơn & Tạo Pick Task' : 'Tạo lại Pick Tasks'}

@@ -1,3 +1,4 @@
+import { getErrorMessage } from '../../lib/errors';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { AlertCircle, CheckCircle, MapPin, Package, RefreshCw, Truck, User, X } from 'lucide-react';
 
@@ -191,7 +192,7 @@ export default function SalesPickupArrangementPage() {
           }).then(async (res) => {
             if (!res.ok) {
               const err = await res.json();
-              throw new Error(err.message);
+              throw new Error(getErrorMessage(err));
             }
           })
         );
@@ -203,8 +204,8 @@ export default function SalesPickupArrangementPage() {
       const fmtDate = new Date(selectedDate).toLocaleDateString('vi-VN');
       showToast(`Lập lịch thành công cho các đơn thu hồi ca ${shiftKey} ngày ${fmtDate}!`);
       await fetchPickups();
-    } catch (err: any) {
-      showToast(err.message || 'Có lỗi xảy ra khi lập lịch thu hồi.', 'error');
+    } catch (err: unknown) {
+      showToast(getErrorMessage(err, 'Có lỗi xảy ra khi lập lịch thu hồi.'), 'error');
     } finally {
       setSaving(false);
     }

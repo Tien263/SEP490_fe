@@ -1,3 +1,4 @@
+import { getErrorMessage } from '../../lib/errors';
 import { useCallback, useEffect, useState } from 'react';
 import { Search, Download, Eye } from 'lucide-react';
 import { useToast } from '../../context/ToastContext';
@@ -77,8 +78,8 @@ export default function AdminAuditLogPage() {
       setLogs(result.items || []);
       setTotalPages(result.totalPages || 1);
       setTotalCount(result.totalCount || 0);
-    } catch (err: any) {
-      toast.error(err.message);
+    } catch (err: unknown) {
+      toast.error(getErrorMessage(err));
     } finally {
       setLoading(false);
     }
@@ -96,8 +97,8 @@ export default function AdminAuditLogPage() {
     setExporting(true);
     try {
       await exportAuditLogsCsv(currentQuery());
-    } catch (err: any) {
-      toast.error(err.message);
+    } catch (err: unknown) {
+      toast.error(getErrorMessage(err));
     } finally {
       setExporting(false);
     }

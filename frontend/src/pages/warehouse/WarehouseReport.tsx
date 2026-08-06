@@ -1,3 +1,4 @@
+import { getErrorMessage } from '../../lib/errors';
 import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { FileBarChart, Download, AlertTriangle, Boxes, Warehouse as WarehouseIcon, Wallet } from 'lucide-react';
@@ -100,8 +101,8 @@ export default function WarehouseReport() {
 
       const res: any = await getInventoryReport(params);
       setData(res);
-    } catch (err: any) {
-      setError(err.message || 'Không thể tải báo cáo tồn kho.');
+    } catch (err: unknown) {
+      setError(getErrorMessage(err, 'Không thể tải báo cáo tồn kho.'));
       setData(null);
     } finally {
       setLoading(false);

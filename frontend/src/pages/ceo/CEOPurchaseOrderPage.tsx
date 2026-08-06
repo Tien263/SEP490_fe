@@ -1,3 +1,4 @@
+import { getErrorMessage } from '../../lib/errors';
 import { useState, useEffect, useCallback } from 'react';
 import { getPurchaseOrders } from '../../services/purchaseOrderService.js';
 import { Plus, Search, Eye } from 'lucide-react';
@@ -16,8 +17,8 @@ export default function CEOPurchaseOrderPage({ setActiveTab, setSelectPOId }: an
     try {
       const data = await getPurchaseOrders(statusFilter);
       setPos(data || []);
-    } catch (err: any) {
-      toast.error(err.message);
+    } catch (err: unknown) {
+      toast.error(getErrorMessage(err));
     } finally {
       setLoading(false);
     }

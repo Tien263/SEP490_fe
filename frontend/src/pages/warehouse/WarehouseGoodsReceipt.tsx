@@ -1,3 +1,4 @@
+import { getErrorMessage } from '../../lib/errors';
 import { useState } from 'react';
 import { Button } from '../../components/sales-ui/button';
 import { Input } from '../../components/sales-ui/input';
@@ -85,8 +86,8 @@ export default function WarehouseGoodsReceipt() {
         }))
       }));
       setDATA(mapped);
-    } catch (err: any) {
-      alert(err.message);
+    } catch (err: unknown) {
+      alert(getErrorMessage(err));
     } finally {
       setLoading(false);
     }

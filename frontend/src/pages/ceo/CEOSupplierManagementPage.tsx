@@ -1,3 +1,4 @@
+import { getErrorMessage } from '../../lib/errors';
 import { useState, useEffect } from 'react';
 import { getSuppliers, createSupplier, updateSupplier } from '../../services/supplierService.js';
 import { Plus, Edit, Search, Loader2 } from 'lucide-react';
@@ -18,8 +19,8 @@ export default function CEOSupplierManagementPage() {
     try {
       const data = await getSuppliers();
       setSuppliers(data || []);
-    } catch (err: any) {
-      alert(err.message);
+    } catch (err: unknown) {
+      alert(getErrorMessage(err));
     } finally {
       setLoading(false);
     }
@@ -95,8 +96,8 @@ export default function CEOSupplierManagementPage() {
       }
       setIsModalOpen(false);
       loadSuppliers();
-    } catch (err: any) {
-      alert(err.message);
+    } catch (err: unknown) {
+      alert(getErrorMessage(err));
     }
   };
 

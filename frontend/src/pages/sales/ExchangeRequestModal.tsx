@@ -1,3 +1,4 @@
+import { getErrorMessage } from '../../lib/errors';
 import React, { useState } from 'react';
 import { X, Search, Plus, Minus, Trash2, Upload, Loader2, Sparkles, RefreshCw, Calculator, ArrowRight, CheckCircle2, AlertCircle } from 'lucide-react';
 import { getProducts } from '../../services/productService';
@@ -20,7 +21,7 @@ async function uploadEvidenceFile(file: File): Promise<string> {
   });
   if (!res.ok) {
     const err = await res.json().catch(() => ({}));
-    throw new Error(err.message || 'Upload thất bại');
+    throw new Error(getErrorMessage(err, 'Upload thất bại'));
   }
   const data = await res.json();
   return data.url;
@@ -105,8 +106,8 @@ export default function ExchangeRequestModal({ order, onClose, onSubmit }: Excha
       const uploadPromises = Array.from(files).map(file => uploadEvidenceFile(file));
       const urls = await Promise.all(uploadPromises);
       setEvidenceUrls(prev => [...prev, ...urls]);
-    } catch (err: any) {
-      alert(err.message || 'Lỗi khi tải ảnh lên');
+    } catch (err: unknown) {
+      alert(getErrorMessage(err, 'Lỗi khi tải ảnh lên'));
     } finally {
       setUploading(false);
       e.target.value = '';

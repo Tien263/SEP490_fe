@@ -1,3 +1,4 @@
+import { getErrorMessage } from '../../lib/errors';
 import React, { useState } from 'react';
 import { Button } from '../../components/sales-ui/button';
 import { Input } from '../../components/sales-ui/input';
@@ -107,9 +108,9 @@ export default function WarehousePickPacking() {
         };
       });
       setTasks(mapped);
-    } catch (e: any) {
+    } catch (e: unknown) {
       console.error(e);
-      alert('Không thể tải danh sách Pick Task: ' + e.message);
+      alert('Không thể tải danh sách Pick Task: ' + getErrorMessage(e));
     } finally {
       setLoading(false);
     }
@@ -149,8 +150,8 @@ export default function WarehousePickPacking() {
         ...detail,
         items: detail.items.map(i => i.productId === uploadingTask ? { ...i, evidenceUrl: 'uploaded' } : i)
       });
-    } catch (err: any) {
-      alert(err.message || 'Lỗi khi tải ảnh');
+    } catch (err: unknown) {
+      alert(getErrorMessage(err, 'Lỗi khi tải ảnh'));
     } finally {
       setUploadingTask(null);
       if (fileInputRef.current) fileInputRef.current.value = '';
@@ -166,8 +167,8 @@ export default function WarehousePickPacking() {
       }
       alert('Lưu tiến độ thành công!');
       fetchTasks();
-    } catch (err: any) {
-      alert(err.message || 'Lỗi khi lưu tiến độ');
+    } catch (err: unknown) {
+      alert(getErrorMessage(err, 'Lỗi khi lưu tiến độ'));
     }
   };
 
@@ -183,8 +184,8 @@ export default function WarehousePickPacking() {
       await completePickTask(detail.id);
       alert('Hoàn tất Pick Task thành công!');
       updateStatus(detail.id, 'picked');
-    } catch (err: any) {
-      alert(err.message || 'Lỗi khi hoàn tất Pick Task');
+    } catch (err: unknown) {
+      alert(getErrorMessage(err, 'Lỗi khi hoàn tất Pick Task'));
     }
   };
 
@@ -299,8 +300,8 @@ export default function WarehousePickPacking() {
                             startedTime: data.pickingStartedAt ? new Date(data.pickingStartedAt).toLocaleDateString('vi-VN') : t.startedTime,
                             completedTime: data.pickingCompletedAt ? new Date(data.pickingCompletedAt).toLocaleDateString('vi-VN') : '—'
                           });
-                        } catch (e: any) {
-                          alert('Lỗi lấy chi tiết task: ' + e.message);
+                        } catch (e: unknown) {
+                          alert('Lỗi lấy chi tiết task: ' + getErrorMessage(e));
                         }
                       }}><Eye className="w-3.5 h-3.5" /></button>
                       {t.status === 'waiting' && <button className="p-1 rounded hover:bg-green-50 text-gray-400 hover:text-green-600" onClick={async () => {
@@ -309,7 +310,7 @@ export default function WarehousePickPacking() {
                           await acceptPickTask(t.id);
                           alert('Nhận Pick Task thành công!');
                           fetchTasks();
-                        } catch(e:any) { alert(e.message); }
+                        } catch (e: unknown) { alert(getErrorMessage(e)); }
                       }}><Play className="w-3.5 h-3.5" /></button>}
                       {t.status === 'picking' && <button className="p-1 rounded hover:bg-blue-50 text-gray-400 hover:text-blue-600" onClick={() => updateStatus(t.id, 'picked')}><CheckCircle className="w-3.5 h-3.5" /></button>}
                     </div>
@@ -427,8 +428,8 @@ export default function WarehousePickPacking() {
                       await acceptPickTask(detail.id);
                       updateStatus(detail.id, 'picking');
                       alert('Bắt đầu Picking thành công!');
-                    } catch (e: any) {
-                      alert('Lỗi: ' + e.message);
+                    } catch (e: unknown) {
+                      alert('Lỗi: ' + getErrorMessage(e));
                     }
                   }}>
                     <Play className="w-3.5 h-3.5" /> Bắt đầu Picking

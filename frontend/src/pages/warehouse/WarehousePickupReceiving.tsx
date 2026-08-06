@@ -1,3 +1,4 @@
+import { getErrorMessage } from '../../lib/errors';
 import { useCallback, useEffect, useState } from 'react';
 import { Archive, CheckCircle, Package, RefreshCw, Truck, User, AlertCircle } from 'lucide-react';
 import { Button } from '../../components/sales-ui/button';
@@ -101,7 +102,7 @@ export default function WarehousePickupReceiving() {
         }).then(async res => {
             if(!res.ok) {
                 const err = await res.json();
-                throw new Error(err.message || 'Lỗi khi nhập kho cách ly');
+                throw new Error(getErrorMessage(err, 'Lỗi khi nhập kho cách ly'));
             }
         })
       );
@@ -114,13 +115,13 @@ export default function WarehousePickupReceiving() {
       });
       if (!confirmRes.ok) {
         const err = await confirmRes.json();
-        throw new Error(err.message || 'Lỗi khi xác nhận hoàn tất thu hồi');
+        throw new Error(getErrorMessage(err, 'Lỗi khi xác nhận hoàn tất thu hồi'));
       }
 
       showToast(`Đã hạch toán nhập kho cách ly thành công cho ${req.requestCode}!`);
       await fetchPickups();
-    } catch (err: any) {
-      showToast(err.message, 'error');
+    } catch (err: unknown) {
+      showToast(getErrorMessage(err), 'error');
     } finally {
       setProcessingId(null);
     }

@@ -179,7 +179,7 @@ function NavItemRow({ item, level = 0, onNavigate }: { item: NavItem; level?: nu
 
 export default function WarehousePortal() {
   const navigate = useNavigate();
-  const { user, logout } = useAuth() as any;
+  const { user, logout } = useAuth();
   const navItems = buildNavItems();
   const userName = user?.fullName || user?.email || 'Nhan vien kho';
   const initials =

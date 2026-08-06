@@ -1,3 +1,4 @@
+import { getErrorMessage } from '../../lib/errors';
 import { useCallback, useEffect, useState } from 'react';
 import { Plus, Percent } from 'lucide-react';
 import { useToast } from '../../context/ToastContext';
@@ -41,8 +42,8 @@ function DiscountTierModal({ tier, onClose, onSaved }: { tier: any | null; onClo
       }
       onSaved();
       onClose();
-    } catch (err: any) {
-      toast.error(err.message);
+    } catch (err: unknown) {
+      toast.error(getErrorMessage(err));
     } finally {
       setSaving(false);
     }
@@ -110,8 +111,8 @@ export default function AdminDiscountTiersPage() {
       const items = Array.isArray(result) ? result : result.items || [];
       items.sort((a: any, b: any) => a.minAmount - b.minAmount);
       setTiers(items);
-    } catch (err: any) {
-      toast.error(err.message);
+    } catch (err: unknown) {
+      toast.error(getErrorMessage(err));
     } finally {
       setLoading(false);
     }

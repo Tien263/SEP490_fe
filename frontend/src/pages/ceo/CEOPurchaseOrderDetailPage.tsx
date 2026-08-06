@@ -1,3 +1,4 @@
+import { getErrorMessage } from '../../lib/errors';
 import { useState, useEffect, useCallback } from 'react';
 import { 
   getPurchaseOrderById, 
@@ -30,8 +31,8 @@ export default function CEOPurchaseOrderDetailPage({ poId, onBack }: any) {
         const rc = await getGoodsReceipts(poId);
         setReceipts(rc);
       }
-    } catch (err: any) {
-      alert(err.message);
+    } catch (err: unknown) {
+      alert(getErrorMessage(err));
     } finally {
       setLoading(false);
     }
@@ -53,8 +54,8 @@ export default function CEOPurchaseOrderDetailPage({ poId, onBack }: any) {
     try {
       await actionFn(poId);
       loadData();
-    } catch (err: any) {
-      alert(err.message);
+    } catch (err: unknown) {
+      alert(getErrorMessage(err));
     }
   };
 
@@ -74,8 +75,8 @@ export default function CEOPurchaseOrderDetailPage({ poId, onBack }: any) {
       await resolveDiscrepancy(poId, payload);
       setShowDiscrepancyModal(false);
       loadData();
-    } catch (err: any) {
-      alert(err.message);
+    } catch (err: unknown) {
+      alert(getErrorMessage(err));
     }
   };
 

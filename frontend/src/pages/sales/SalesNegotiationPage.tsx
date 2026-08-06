@@ -1,3 +1,4 @@
+import { getErrorMessage } from '../../lib/errors';
 import { useState, useRef, useEffect } from 'react';
 import { Button } from '../../components/sales-ui/button';
 import { Input } from '../../components/sales-ui/input';
@@ -22,7 +23,7 @@ const STATUS_CONFIG: Record<string, { label: string; bg: string }> = {
 };
 
 export default function SalesNegotiationPage() {
-  const { user } = useAuth() as any;
+  const { user } = useAuth();
   const [quotationsList, setQuotationsList] = useState<any[]>([]);
   const [active, setActive] = useState<any>(null);
   const [loadingDetail, setLoadingDetail] = useState(false);
@@ -87,8 +88,8 @@ export default function SalesNegotiationPage() {
       // Reload full detail sau khi pickup
       handleSelectQuotation(active);
       loadData();
-    } catch (err: any) {
-      alert(err.message || 'Có lỗi xảy ra');
+    } catch (err: unknown) {
+      alert(getErrorMessage(err, 'Có lỗi xảy ra'));
     }
   };
 
@@ -119,8 +120,8 @@ export default function SalesNegotiationPage() {
       alert('Đã tạo phiên bản báo giá gửi Manager duyệt!');
       handleSelectQuotation(active);
       loadData();
-    } catch (err: any) {
-      alert(err.message || 'Có lỗi xảy ra');
+    } catch (err: unknown) {
+      alert(getErrorMessage(err, 'Có lỗi xảy ra'));
     }
   };
 

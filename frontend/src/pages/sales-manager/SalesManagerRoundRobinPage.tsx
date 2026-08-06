@@ -1,3 +1,4 @@
+import { getErrorMessage } from '../../lib/errors';
 import { useCallback, useEffect, useState } from 'react';
 import {
   Shuffle,
@@ -119,8 +120,8 @@ export default function SalesRoundRobinPage() {
       setError('');
       const data = await getRoundRobinState();
       setState(data);
-    } catch (err: any) {
-      setError(err.message || 'Không tải được trạng thái phân bổ khách hàng.');
+    } catch (err: unknown) {
+      setError(getErrorMessage(err, 'Không tải được trạng thái phân bổ khách hàng.'));
     } finally {
       setLoading(false);
     }
@@ -135,8 +136,8 @@ export default function SalesRoundRobinPage() {
       setUpdating(true);
       const data = await updateRoundRobin(payload);
       setState(data);
-    } catch (err: any) {
-      alert(err.message || 'Cập nhật thất bại.');
+    } catch (err: unknown) {
+      alert(getErrorMessage(err, 'Cập nhật thất bại.'));
     } finally {
       setUpdating(false);
     }
@@ -164,8 +165,8 @@ export default function SalesRoundRobinPage() {
       const result = await runRoundRobinAssign();
       setAssignResult(result);
       await fetchState();
-    } catch (err: any) {
-      alert(err.message || 'Gán khách thất bại.');
+    } catch (err: unknown) {
+      alert(getErrorMessage(err, 'Gán khách thất bại.'));
     } finally {
       setAssigning(false);
     }

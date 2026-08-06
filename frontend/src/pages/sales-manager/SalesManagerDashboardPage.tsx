@@ -1,3 +1,4 @@
+import { getErrorMessage } from '../../lib/errors';
 import { useEffect, useState } from 'react';
 import { RefreshCw, TrendingUp, Truck, Clock, Users2, AlertTriangle } from 'lucide-react';
 import { getSalesManagerDashboard } from '../../services/dashboardService.js';
@@ -42,8 +43,8 @@ export default function SalesManagerDashboardPage() {
     setError('');
     try {
       setData(await getSalesManagerDashboard());
-    } catch (err: any) {
-      setError(err.message || 'Không thể tải dữ liệu dashboard.');
+    } catch (err: unknown) {
+      setError(getErrorMessage(err, 'Không thể tải dữ liệu dashboard.'));
     } finally {
       setLoading(false);
     }

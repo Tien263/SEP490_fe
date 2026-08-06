@@ -1,3 +1,4 @@
+import { getErrorMessage } from '../../lib/errors';
 import { useCallback, useEffect, useState } from 'react';
 import { RefreshCw, Eye } from 'lucide-react';
 import { useToast } from '../../context/ToastContext';
@@ -69,8 +70,8 @@ function JobRunsPanel() {
     setLoadingSummary(true);
     try {
       setSummary(await getJobRunsSummary());
-    } catch (err: any) {
-      toast.error(err.message);
+    } catch (err: unknown) {
+      toast.error(getErrorMessage(err));
     } finally {
       setLoadingSummary(false);
     }
@@ -87,8 +88,8 @@ function JobRunsPanel() {
       setRuns(result.items || []);
       setTotalPages(result.totalPages || 1);
       setTotalCount(result.totalCount || 0);
-    } catch (err: any) {
-      toast.error(err.message);
+    } catch (err: unknown) {
+      toast.error(getErrorMessage(err));
     } finally {
       setLoadingRuns(false);
     }
@@ -103,8 +104,8 @@ function JobRunsPanel() {
       await retryJob(jobName);
       toast.success(`Đã chạy lại job "${jobName}".`);
       await Promise.all([loadSummary(), loadRuns()]);
-    } catch (err: any) {
-      toast.error(err.message);
+    } catch (err: unknown) {
+      toast.error(getErrorMessage(err));
     } finally {
       setRetryingJob(null);
     }
@@ -260,8 +261,8 @@ function WebhookLogsPanel() {
       setLogs(result.items || []);
       setTotalPages(result.totalPages || 1);
       setTotalCount(result.totalCount || 0);
-    } catch (err: any) {
-      toast.error(err.message);
+    } catch (err: unknown) {
+      toast.error(getErrorMessage(err));
     } finally {
       setLoading(false);
     }
@@ -275,8 +276,8 @@ function WebhookLogsPanel() {
       await retryWebhookLog(id);
       toast.success('Đã thử lại webhook.');
       await load();
-    } catch (err: any) {
-      toast.error(err.message);
+    } catch (err: unknown) {
+      toast.error(getErrorMessage(err));
     } finally {
       setRetryingId(null);
     }

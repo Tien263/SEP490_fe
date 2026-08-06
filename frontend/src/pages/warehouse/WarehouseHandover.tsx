@@ -1,3 +1,4 @@
+import { getErrorMessage } from '../../lib/errors';
 import React, { useState, useEffect, useRef } from 'react';
 import { Button } from '../../components/sales-ui/button';
 import { Input } from '../../components/sales-ui/input';
@@ -152,8 +153,8 @@ export default function WarehouseHandover() {
         };
       });
       setData(mapped);
-    } catch (e: any) {
-      alert('Không lấy được danh sách bàn giao: ' + e.message);
+    } catch (e: unknown) {
+      alert('Không lấy được danh sách bàn giao: ' + getErrorMessage(e));
     } finally {
       setLoading(false);
     }
@@ -176,8 +177,8 @@ export default function WarehouseHandover() {
       setDetail(null);
       setWarehouseSig('');
       fetchOrders();
-    } catch (e: any) {
-      alert('Lỗi: ' + e.message);
+    } catch (e: unknown) {
+      alert('Lỗi: ' + getErrorMessage(e));
     }
   };
 

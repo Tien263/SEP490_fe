@@ -1,3 +1,4 @@
+import { getErrorMessage } from '../../lib/errors';
 import { useState } from 'react';
 import { Button } from '../../components/sales-ui/button';
 import { CheckCircle, XCircle, AlertTriangle, Search, Eye, TrendingUp } from 'lucide-react';
@@ -52,8 +53,8 @@ export default function WarehouseReceivingComparison() {
     try {
       const pos = await getPurchaseOrders('DiscrepancyReview');
       setPoList(pos);
-    } catch (err: any) {
-      alert('Lỗi lấy danh sách PO: ' + err.message);
+    } catch (err: unknown) {
+      alert('Lỗi lấy danh sách PO: ' + getErrorMessage(err));
     }
   };
 
@@ -91,8 +92,8 @@ export default function WarehouseReceivingComparison() {
         };
       });
       setItems(mapped.filter((i: any) => i.difference !== 0 || i.damageQty > 0)); // Only show items with discrepancy
-    } catch (err: any) {
-      alert('Lỗi lấy chi tiết PO: ' + err.message);
+    } catch (err: unknown) {
+      alert('Lỗi lấy chi tiết PO: ' + getErrorMessage(err));
     } finally {
       setLoading(false);
     }
@@ -122,8 +123,8 @@ export default function WarehouseReceivingComparison() {
       setSelectedPoId('');
       setItems([]);
       loadPOs();
-    } catch (err: any) {
-      alert('Lỗi xử lý: ' + err.message);
+    } catch (err: unknown) {
+      alert('Lỗi xử lý: ' + getErrorMessage(err));
     }
   };
 

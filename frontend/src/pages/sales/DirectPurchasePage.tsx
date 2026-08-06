@@ -1,3 +1,4 @@
+import { getErrorMessage } from '../../lib/errors';
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Search, Trash2, Printer, FileText, Check, Loader2, ArrowLeft } from 'lucide-react';
@@ -567,8 +568,8 @@ export default function DirectPurchasePage() {
       setAddress('Thái Bình');
       setDiscountPercent(0);
       setHasVat(false);
-    } catch (err: any) {
-      setErrorMsg(err.message || 'Lỗi hệ thống khi lưu đơn hàng.');
+    } catch (err: unknown) {
+      setErrorMsg(getErrorMessage(err, 'Lỗi hệ thống khi lưu đơn hàng.'));
     } finally {
       setSubmitting(false);
     }

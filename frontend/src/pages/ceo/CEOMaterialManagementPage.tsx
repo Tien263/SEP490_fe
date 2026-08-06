@@ -1,3 +1,4 @@
+import { getErrorMessage } from '../../lib/errors';
 import { useState, useEffect, useCallback } from 'react';
 import { getMaterials, createMaterial, updateMaterial, deleteMaterial } from '../../services/materialService.js';
 import { Search, Plus } from 'lucide-react';
@@ -21,8 +22,8 @@ export default function CEOMaterialManagementPage() {
       setLoading(true);
       const data = await getMaterials({ search });
       setMaterials(Array.isArray(data) ? data : data.items || []);
-    } catch (err: any) {
-      alert("Lỗi khi tải danh sách nguyên liệu: " + err.message);
+    } catch (err: unknown) {
+      alert("Lỗi khi tải danh sách nguyên liệu: " + getErrorMessage(err));
     } finally {
       setLoading(false);
     }
@@ -62,8 +63,8 @@ export default function CEOMaterialManagementPage() {
       }
       setIsModalOpen(false);
       loadMaterials();
-    } catch (err: any) {
-      alert(err.message || "Đã xảy ra lỗi");
+    } catch (err: unknown) {
+      alert(getErrorMessage(err, "Đã xảy ra lỗi"));
     }
   };
 
@@ -73,8 +74,8 @@ export default function CEOMaterialManagementPage() {
         await deleteMaterial(id);
         alert("Xoá thành công!");
         loadMaterials();
-      } catch (err: any) {
-        alert(err.message || "Không thể xoá nguyên liệu này");
+      } catch (err: unknown) {
+        alert(getErrorMessage(err, "Không thể xoá nguyên liệu này"));
       }
     }
   };

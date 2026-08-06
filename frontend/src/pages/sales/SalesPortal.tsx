@@ -248,7 +248,7 @@ const TOAST_SOURCE_LABELS: Record<string, string> = {
 
 export default function SalesPortal() {
   const navigate = useNavigate();
-  const { user, logout } = useAuth() as any;
+  const { user, logout } = useAuth();
   const role: string = user?.role || '';
   const visibleNavItems = NAV_ITEMS.filter((item) => !item.roles || item.roles.includes(role));
   const [toasts, setToasts] = useState<AssignmentToast[]>([]);

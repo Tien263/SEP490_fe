@@ -1,3 +1,4 @@
+import { getErrorMessage } from '../../lib/errors';
 import { useCallback, useEffect, useState } from 'react';
 import { Button } from '../../components/sales-ui/button';
 import { Input } from '../../components/sales-ui/input';
@@ -97,8 +98,8 @@ export default function WarehouseQuarantine() {
       showToast(data.message || 'Xét duyệt thành công!');
       setDetail(null);
       await fetchItems();
-    } catch (err: any) {
-      showToast(err.message || 'Có lỗi xảy ra.', 'error');
+    } catch (err: unknown) {
+      showToast(getErrorMessage(err, 'Có lỗi xảy ra.'), 'error');
     } finally {
       setDispatchLoading(null);
     }

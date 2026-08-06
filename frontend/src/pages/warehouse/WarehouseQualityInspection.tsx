@@ -1,3 +1,4 @@
+import { getErrorMessage } from '../../lib/errors';
 import { useState, useEffect, useCallback } from 'react';
 import { Button } from '../../components/sales-ui/button';
 import { Input } from '../../components/sales-ui/input';
@@ -71,8 +72,8 @@ export default function WarehouseQualityInspection() {
         notes: d.notes || ''
       }));
       setItems(mapped);
-    } catch (err: any) {
-      showToast('Lỗi lấy danh sách cách ly: ' + err.message, 'error');
+    } catch (err: unknown) {
+      showToast('Lỗi lấy danh sách cách ly: ' + getErrorMessage(err), 'error');
     } finally {
       setLoading(false);
     }
@@ -124,8 +125,8 @@ export default function WarehouseQualityInspection() {
       );
       setDetail(null);
       await loadData();
-    } catch (err: any) {
-      showToast('Lỗi xử lý: ' + err.message, 'error');
+    } catch (err: unknown) {
+      showToast('Lỗi xử lý: ' + getErrorMessage(err), 'error');
     } finally {
       setLoading(false);
     }

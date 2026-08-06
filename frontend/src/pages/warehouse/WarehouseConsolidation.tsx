@@ -1,3 +1,4 @@
+import { getErrorMessage } from '../../lib/errors';
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '../../components/sales-ui/button';
@@ -57,8 +58,8 @@ export default function WarehouseConsolidation() {
         requiresTransfer: d.requiresTransfer,
       }));
       setData(mapped);
-    } catch (e: any) {
-      alert('Không lấy được danh sách tập kết: ' + e.message);
+    } catch (e: unknown) {
+      alert('Không lấy được danh sách tập kết: ' + getErrorMessage(e));
     } finally {
       setLoading(false);
     }
@@ -74,8 +75,8 @@ export default function WarehouseConsolidation() {
       alert('Tập kết đơn hàng thành công!');
       setDetail(null);
       fetchOrders();
-    } catch (e: any) {
-      alert('Lỗi: ' + e.message);
+    } catch (e: unknown) {
+      alert('Lỗi: ' + getErrorMessage(e));
     }
   };
 
@@ -185,7 +186,7 @@ export default function WarehouseConsolidation() {
                               }))
                             })) || []
                           });
-                        } catch(e: any) { alert(e.message); }
+                        } catch (e: unknown) { alert(getErrorMessage(e)); }
                       }}><Eye className="w-3.5 h-3.5" /></button>
                       {(!d.requiresTransfer) ? (
                         <button className="p-1 rounded hover:bg-green-50 text-gray-400 hover:text-green-600" title="Hoàn tất tập kết" onClick={() => handleConsolidate(d.id)}><ArrowRight className="w-3.5 h-3.5" /></button>
@@ -198,7 +199,7 @@ export default function WarehouseConsolidation() {
                               sku: i.sku, name: i.productName, quantity: i.requiredTransferQuantity, transferStatus: '—'
                             }));
                             navigate('/warehouse/transfer/stock-transfer', { state: { prefill: { sourceWarehouse: d.warehouse, orderId: d.id, items: products } } });
-                          } catch(e: any) { alert(e.message); }
+                          } catch (e: unknown) { alert(getErrorMessage(e)); }
                         }}><Truck className="w-3.5 h-3.5" /></button>
                       )}
                     </div>

@@ -1,3 +1,4 @@
+import { getErrorMessage } from '../../lib/errors';
 import { useState, useEffect } from 'react';
 import { Button } from '../../components/sales-ui/button';
 import { Input } from '../../components/sales-ui/input';
@@ -42,8 +43,8 @@ export default function WarehouseMaterials() {
         status: (m.currentStock || 0) < (m.safetyThreshold || 0) ? 'critical' : 'ok'
       }));
       setItems(mapped);
-    } catch (err: any) {
-      alert('Lỗi lấy danh sách nguyên liệu: ' + err.message);
+    } catch (err: unknown) {
+      alert('Lỗi lấy danh sách nguyên liệu: ' + getErrorMessage(err));
     } finally {
       setLoading(false);
     }

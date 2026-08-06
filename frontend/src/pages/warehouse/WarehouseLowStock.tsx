@@ -1,3 +1,5 @@
+import type { ChangeEvent } from 'react';
+import { getErrorMessage } from '../../lib/errors';
 import React, { useState, useEffect, useCallback } from 'react';
 import { AlertCircle, Search, ArrowRight, Package } from 'lucide-react';
 import { Button } from '../../components/ui/Button';
@@ -40,8 +42,8 @@ export default function WarehouseLowStock() {
       // Filter pseudo-low-stock based on availableQuantity < 50
       const lowStock = allItems.filter((item: any) => item.availableQuantity < 50);
       setItems(lowStock);
-    } catch (err: any) {
-      alert('Lỗi tải dữ liệu tồn kho: ' + err.message);
+    } catch (err: unknown) {
+      alert('Lỗi tải dữ liệu tồn kho: ' + getErrorMessage(err));
     } finally {
       setLoading(false);
     }
@@ -103,7 +105,7 @@ export default function WarehouseLowStock() {
               placeholder="Nhập mã SKU hoặc tên..." 
               className="pl-9 h-9 text-sm"
               value={search}
-              onChange={(e: any) => setSearch(e.target.value)}
+              onChange={(e: ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => setSearch(e.target.value)}
             />
           </div>
         </div>
@@ -112,7 +114,7 @@ export default function WarehouseLowStock() {
           <select 
             className="h-9 text-sm border border-gray-200 rounded-md px-2.5 bg-white w-full"
             value={itemTypeFilter}
-            onChange={(e: any) => setItemTypeFilter(e.target.value)}
+            onChange={(e: ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => setItemTypeFilter(e.target.value)}
           >
             <option value="all">Tất cả</option>
             <option value="Product">Sản phẩm</option>
