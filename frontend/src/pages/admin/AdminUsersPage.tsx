@@ -5,6 +5,7 @@ import { useToast } from '../../context/ToastContext';
 import {
   searchUsers, createUser, changeUserRole, setUserStatus, ASSIGNABLE_ROLES,
 } from '../../services/adminUserService.js';
+import type { AdminUser } from '../../types/admin';
 
 const ROLE_LABELS: Record<string, string> = {
   SalesStaff: 'Nhân viên Sale',
@@ -140,7 +141,7 @@ function ReasonActionModal({ title, children, confirmLabel, onConfirm, onClose }
 
 export default function AdminUsersPage() {
   const { toast } = useToast();
-  const [users, setUsers] = useState<any[]>([]);
+  const [users, setUsers] = useState<AdminUser[]>([]);
   const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
@@ -152,8 +153,8 @@ export default function AdminUsersPage() {
   const [activeFilter, setActiveFilter] = useState('');
 
   const [isCreateOpen, setIsCreateOpen] = useState(false);
-  const [roleTarget, setRoleTarget] = useState<any>(null);
-  const [statusTarget, setStatusTarget] = useState<any>(null);
+  const [roleTarget, setRoleTarget] = useState<AdminUser | null>(null);
+  const [statusTarget, setStatusTarget] = useState<AdminUser | null>(null);
   const [newRole, setNewRole] = useState('');
 
   const load = useCallback(async () => {
@@ -181,7 +182,7 @@ export default function AdminUsersPage() {
     setSearchQuery(searchInput.trim());
   };
 
-  const openRoleModal = (u: any) => {
+  const openRoleModal = (u: AdminUser) => {
     setNewRole(u.role);
     setRoleTarget(u);
   };

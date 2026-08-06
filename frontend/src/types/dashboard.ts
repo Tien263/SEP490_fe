@@ -54,3 +54,41 @@ export interface SalesManagerDashboard {
   overdueDebts: CustomerDebt[];
   codSlaBreachCountToday: number;
 }
+
+// GET /api/dashboards/ceo
+export interface InventorySummary {
+  totalSkus: number;
+  lowStockCount: number;
+  estimatedInventoryValue: number;
+}
+
+export interface PurchaseOrderSummaryItem {
+  id: string;
+  code: string;
+  status: string;
+  supplierName: string;
+  createdAt: string;
+  expectedDeliveryDate?: string;
+}
+
+export interface PurchaseOrderDashboardSummary {
+  countsByStatus: Record<string, number>;
+  recentOpenPurchaseOrders: PurchaseOrderSummaryItem[];
+}
+
+export interface DiscrepancySummary {
+  periodFrom: string;
+  periodTo: string;
+  goodsReceiptCount: number;
+  totalShortQuantity: number;
+  totalExcessQuantity: number;
+  totalDamagedQuantity: number;
+  totalWrongItemQuantity: number;
+}
+
+export interface CeoDashboard {
+  orgKpi: KpiSnapshot;
+  inventory: InventorySummary;
+  purchaseOrders: PurchaseOrderDashboardSummary;
+  discrepancy: DiscrepancySummary;
+}

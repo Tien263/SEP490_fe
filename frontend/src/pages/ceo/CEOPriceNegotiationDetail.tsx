@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react';
 import { getQuotationById, ceoReview } from '../../services/quotationService.js';
 import { Input } from '../../components/sales-ui/input';
 import { ArrowLeft, CheckCircle, XCircle } from 'lucide-react';
+import type { Quotation } from '../../types/quotation';
 
 interface Props {
   negotiationId: string | null;
@@ -10,7 +11,7 @@ interface Props {
 }
 
 export default function CEOPriceNegotiationDetail({ negotiationId, onBack }: Props) {
-  const [quotation, setQuotation] = useState<any>(null);
+  const [quotation, setQuotation] = useState<Quotation | null>(null);
   const [loading, setLoading] = useState(true);
   const [ceoNote, setCeoNote] = useState('');
   const [actionType, setActionType] = useState<'approve' | 'reject' | null>(null);
@@ -137,7 +138,7 @@ export default function CEOPriceNegotiationDetail({ negotiationId, onBack }: Pro
                 </tr>
               </thead>
               <tbody>
-                {latestVersion.items?.map((item: any) => (
+                {latestVersion.items?.map((item) => (
                   <tr key={item.id} className="border-b border-[#f5f7fa] last:border-0 hover:bg-[#f8fafc]">
                     <td className="px-[16px] py-[10px] text-[12px] text-gray-800">{item.productName}</td>
                     <td className="px-[16px] py-[10px] text-[12px] text-gray-800 text-right">{item.quantity}</td>

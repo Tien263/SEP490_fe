@@ -3,11 +3,12 @@ import { useCallback, useEffect, useState } from 'react';
 import { Plus, Percent } from 'lucide-react';
 import { useToast } from '../../context/ToastContext';
 import { getDiscountTiers, createDiscountTier, updateDiscountTier } from '../../services/discountTierService.js';
+import type { DiscountTier } from '../../types/admin';
 
 const formatVnd = (n: number) => new Intl.NumberFormat('vi-VN').format(n || 0) + '₫';
 
 // ─── Modal: Tạo / Sửa khung chiết khấu ───────────────────────────────────────
-function DiscountTierModal({ tier, onClose, onSaved }: { tier: any | null; onClose: () => void; onSaved: () => void }) {
+function DiscountTierModal({ tier, onClose, onSaved }: { tier: DiscountTier | null; onClose: () => void; onSaved: () => void }) {
   const { toast } = useToast();
   const isEdit = !!tier;
   const [form, setForm] = useState({
@@ -99,17 +100,17 @@ function DiscountTierModal({ tier, onClose, onSaved }: { tier: any | null; onClo
 
 export default function AdminDiscountTiersPage() {
   const { toast } = useToast();
-  const [tiers, setTiers] = useState<any[]>([]);
+  const [tiers, setTiers] = useState<DiscountTier[]>([]);
   const [loading, setLoading] = useState(true);
   const [isCreateOpen, setIsCreateOpen] = useState(false);
-  const [editTarget, setEditTarget] = useState<any>(null);
+  const [editTarget, setEditTarget] = useState<DiscountTier | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
     try {
       const result = await getDiscountTiers();
-      const items = Array.isArray(result) ? result : result.items || [];
-      items.sort((a: any, b: any) => a.minAmount - b.minAmount);
+      const items: DiscountTier[] = Array.isArray(result) ? result : result.items || [];
+      items.sort((a, b) => a.minAmount - b.minAmount);
       setTiers(items);
     } catch (err: unknown) {
       toast.error(getErrorMessage(err));

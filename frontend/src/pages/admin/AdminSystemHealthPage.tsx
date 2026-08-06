@@ -5,6 +5,7 @@ import { useToast } from '../../context/ToastContext';
 import {
   getJobRunsSummary, searchJobRuns, retryJob, searchWebhookLogs, retryWebhookLog,
 } from '../../services/adminSystemHealthService.js';
+import type { JobHealthSummary, JobRun, WebhookLog } from '../../types/admin';
 
 function formatDate(iso: string | null | undefined) {
   if (!iso) return '-';
@@ -54,11 +55,11 @@ function PaginationBar({ page, totalPages, totalCount, unit, onChange }: {
 // ─── Panel: Job Runs ─────────────────────────────────────────────────────────
 function JobRunsPanel() {
   const { toast } = useToast();
-  const [summary, setSummary] = useState<any[]>([]);
+  const [summary, setSummary] = useState<JobHealthSummary[]>([]);
   const [loadingSummary, setLoadingSummary] = useState(true);
   const [retryingJob, setRetryingJob] = useState<string | null>(null);
 
-  const [runs, setRuns] = useState<any[]>([]);
+  const [runs, setRuns] = useState<JobRun[]>([]);
   const [loadingRuns, setLoadingRuns] = useState(true);
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
@@ -210,7 +211,7 @@ function JobRunsPanel() {
 }
 
 // ─── Modal: chi tiết webhook ─────────────────────────────────────────────────
-function WebhookDetailModal({ log, onClose }: { log: any; onClose: () => void }) {
+function WebhookDetailModal({ log, onClose }: { log: WebhookLog; onClose: () => void }) {
   function prettyJson(raw: string | null) {
     if (!raw) return '(không có)';
     try { return JSON.stringify(JSON.parse(raw), null, 2); } catch { return raw; }
@@ -245,13 +246,13 @@ function WebhookDetailModal({ log, onClose }: { log: any; onClose: () => void })
 // ─── Panel: Webhook Logs ─────────────────────────────────────────────────────
 function WebhookLogsPanel() {
   const { toast } = useToast();
-  const [logs, setLogs] = useState<any[]>([]);
+  const [logs, setLogs] = useState<WebhookLog[]>([]);
   const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [totalCount, setTotalCount] = useState(0);
   const [statusFilter, setStatusFilter] = useState('');
-  const [detailLog, setDetailLog] = useState<any>(null);
+  const [detailLog, setDetailLog] = useState<WebhookLog | null>(null);
   const [retryingId, setRetryingId] = useState<string | null>(null);
 
   const load = useCallback(async () => {

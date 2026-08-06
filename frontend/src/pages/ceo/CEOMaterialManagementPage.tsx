@@ -2,14 +2,15 @@ import { getErrorMessage } from '../../lib/errors';
 import { useState, useEffect, useCallback } from 'react';
 import { getMaterials, createMaterial, updateMaterial, deleteMaterial } from '../../services/materialService.js';
 import { Search, Plus } from 'lucide-react';
+import type { Material } from '../../types/catalog';
 
 export default function CEOMaterialManagementPage() {
-  const [materials, setMaterials] = useState<any[]>([]);
+  const [materials, setMaterials] = useState<Material[]>([]);
   const [loading, setLoading] = useState(false);
   const [search, setSearch] = useState('');
-  
+
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [editingMaterial, setEditingMaterial] = useState<any>(null);
+  const [editingMaterial, setEditingMaterial] = useState<Material | null>(null);
   
   const [formData, setFormData] = useState({
     name: '',
@@ -36,7 +37,7 @@ export default function CEOMaterialManagementPage() {
     return () => clearTimeout(delayDebounceFn);
   }, [loadMaterials]);
 
-  const handleOpenModal = (material: any = null) => {
+  const handleOpenModal = (material: Material | null = null) => {
     if (material) {
       setEditingMaterial(material);
       setFormData({

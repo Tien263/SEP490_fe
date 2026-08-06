@@ -4,10 +4,16 @@ import { getPurchaseOrders } from '../../services/purchaseOrderService.js';
 import { Plus, Search, Eye } from 'lucide-react';
 import CEOPurchaseOrderCreateModal from './CEOPurchaseOrderCreateModal';
 import { useToast } from '../../context/ToastContext';
+import type { PurchaseOrderListItem } from '../../types/warehouse';
 
-export default function CEOPurchaseOrderPage({ setActiveTab, setSelectPOId }: any) {
+interface CEOPurchaseOrderPageProps {
+  setActiveTab: (tab: string) => void;
+  setSelectPOId: (id: string) => void;
+}
+
+export default function CEOPurchaseOrderPage({ setActiveTab, setSelectPOId }: CEOPurchaseOrderPageProps) {
   const { toast } = useToast();
-  const [pos, setPos] = useState<any[]>([]);
+  const [pos, setPos] = useState<PurchaseOrderListItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [statusFilter, setStatusFilter] = useState('');

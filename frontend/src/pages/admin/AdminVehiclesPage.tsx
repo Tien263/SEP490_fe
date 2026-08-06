@@ -3,6 +3,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { Plus, Truck } from 'lucide-react';
 import { useToast } from '../../context/ToastContext';
 import { getVehicles, createVehicle, updateVehicle } from '../../services/vehicleService.js';
+import type { Vehicle } from '../../types/admin';
 
 function formatCapacity(c: number | null | undefined) {
   if (c === null || c === undefined) return '-';
@@ -10,7 +11,7 @@ function formatCapacity(c: number | null | undefined) {
 }
 
 // ─── Modal: Tạo / Sửa xe ─────────────────────────────────────────────────────
-function VehicleModal({ vehicle, onClose, onSaved }: { vehicle: any | null; onClose: () => void; onSaved: () => void }) {
+function VehicleModal({ vehicle, onClose, onSaved }: { vehicle: Vehicle | null; onClose: () => void; onSaved: () => void }) {
   const { toast } = useToast();
   const isEdit = !!vehicle;
   const [form, setForm] = useState({
@@ -106,10 +107,10 @@ function VehicleModal({ vehicle, onClose, onSaved }: { vehicle: any | null; onCl
 
 export default function AdminVehiclesPage() {
   const { toast } = useToast();
-  const [vehicles, setVehicles] = useState<any[]>([]);
+  const [vehicles, setVehicles] = useState<Vehicle[]>([]);
   const [loading, setLoading] = useState(true);
   const [isCreateOpen, setIsCreateOpen] = useState(false);
-  const [editTarget, setEditTarget] = useState<any>(null);
+  const [editTarget, setEditTarget] = useState<Vehicle | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true);

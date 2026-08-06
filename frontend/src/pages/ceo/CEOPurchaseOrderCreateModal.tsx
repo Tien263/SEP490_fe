@@ -5,12 +5,29 @@ import { getProducts } from '../../services/productService.js';
 import { getMaterials } from '../../services/materialService.js';
 import { createPurchaseOrder, getWarehouses, importPOFromExcel, importPOFromImage } from '../../services/purchaseOrderService.js';
 import { X, Plus, Trash2, FileSpreadsheet, Image as ImageIcon } from 'lucide-react';
+import type { Supplier } from '../../types/supplier';
+import type { WarehouseOption, CreatePurchaseOrderRequest } from '../../types/warehouse';
+import type { Product, Material } from '../../types/catalog';
 
-export default function CEOPurchaseOrderCreateModal({ onClose, onSuccess }: any) {
-  const [suppliers, setSuppliers] = useState<any[]>([]);
-  const [warehouses, setWarehouses] = useState<any[]>([]);
-  const [products, setProducts] = useState<any[]>([]);
-  const [materials, setMaterials] = useState<any[]>([]);
+interface POItemDraft {
+  itemId: string;
+  itemName: string;
+  expectedQuantity: number | string;
+  unitPrice: number | string;
+  unit: string;
+  note: string;
+}
+
+interface CEOPurchaseOrderCreateModalProps {
+  onClose: () => void;
+  onSuccess: () => void;
+}
+
+export default function CEOPurchaseOrderCreateModal({ onClose, onSuccess }: CEOPurchaseOrderCreateModalProps) {
+  const [suppliers, setSuppliers] = useState<Supplier[]>([]);
+  const [warehouses, setWarehouses] = useState<WarehouseOption[]>([]);
+  const [products, setProducts] = useState<Product[]>([]);
+  const [materials, setMaterials] = useState<Material[]>([]);
   const [loading, setLoading] = useState(true);
   const [importing, setImporting] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -26,7 +43,7 @@ export default function CEOPurchaseOrderCreateModal({ onClose, onSuccess }: any)
     deliveryTerms: '',
   });
 
-  const [items, setItems] = useState<any[]>([
+  const [items, setItems] = useState<POItemDraft[]>([
     { itemId: '', itemName: '', expectedQuantity: 1, unitPrice: 0, unit: 'Cái', note: '' }
   ]);
 
@@ -41,7 +58,7 @@ export default function CEOPurchaseOrderCreateModal({ onClose, onSuccess }: any)
           getMaterials().catch(() => [])
         ]);
 
-        const loadedSuppliers = supData || [];
+        const loadedSuppliers: Supplier[] = supData || [];
         const loadedWarehouses = whData || [];
         const loadedProducts = prodData?.items || prodData || [];
         // Xử lý list materials, có thể trả về array hoặc { items: [] } tuỳ api
@@ -54,7 +71,7 @@ export default function CEOPurchaseOrderCreateModal({ onClose, onSuccess }: any)
 
         setFormData(prev => ({
           ...prev,
-          supplierId: loadedSuppliers.find((s: any) => s.isActive)?.id || loadedSuppliers[0]?.id || '',
+          supplierId: loadedSuppliers.find((s) => s.isActive)?.id || loadedSuppliers[0]?.id || '',
           warehouseId: loadedWarehouses[0]?.id || ''
         }));
       } catch (err) {
@@ -72,16 +89,16 @@ export default function CEOPurchaseOrderCreateModal({ onClose, onSuccess }: any)
   }, [poType]);
 
   const handleItemChange = (index: number, itemId: string) => {
-    const selectedItem = poType === 'Product' 
-      ? products.find((p: any) => p.id === itemId)
-      : materials.find((m: any) => m.id === itemId);
-      
+    const selectedItem: Product | Material | undefined = poType === 'Product'
+      ? products.find((p) => p.id === itemId)
+      : materials.find((m) => m.id === itemId);
+
     const newItems = [...items];
     newItems[index].itemId = itemId;
     if (selectedItem) {
       newItems[index].itemName = selectedItem.name;
-      newItems[index].unitPrice = selectedItem.standardListedPrice || selectedItem.price || 0;
-      if (selectedItem.unit) {
+      newItems[index].unitPrice = 'standardListedPrice' in selectedItem ? selectedItem.standardListedPrice : 0;
+      if ('unit' in selectedItem && selectedItem.unit) {
         newItems[index].unit = selectedItem.unit;
       }
     }
@@ -97,24 +114,24 @@ export default function CEOPurchaseOrderCreateModal({ onClose, onSuccess }: any)
         return alert("Vui lòng chọn Kho nhận hàng.");
       }
       
-      const validItems = items.filter(i => i.itemId && i.expectedQuantity > 0);
+      const validItems = items.filter(i => i.itemId && Number(i.expectedQuantity) > 0);
       if (validItems.length === 0) {
         return alert(`Vui lòng chọn ít nhất 1 ${poType === 'Product' ? 'sản phẩm' : 'nguyên liệu'} với số lượng > 0.`);
       }
 
-      const payload = {
+      const payload: CreatePurchaseOrderRequest = {
         supplierId: formData.supplierId,
         warehouseId: formData.warehouseId,
-        expectedDeliveryDate: formData.expectedDeliveryDate ? formData.expectedDeliveryDate : null,
-        note: formData.note || null,
-        deliveryTerms: formData.deliveryTerms || null,
+        expectedDeliveryDate: formData.expectedDeliveryDate || undefined,
+        note: formData.note || undefined,
+        deliveryTerms: formData.deliveryTerms || undefined,
         items: validItems.map(i => ({
-          productId: poType === 'Product' ? i.itemId : null,
-          materialId: poType === 'Material' ? i.itemId : null,
-          expectedQuantity: parseInt(i.expectedQuantity) || 1,
-          unitPrice: parseFloat(i.unitPrice) || 0,
+          productId: poType === 'Product' ? i.itemId : undefined,
+          materialId: poType === 'Material' ? i.itemId : undefined,
+          expectedQuantity: Number(i.expectedQuantity) || 1,
+          unitPrice: Number(i.unitPrice) || 0,
           unit: i.unit || (poType === 'Product' ? 'Cái' : 'Kg'),
-          note: i.note || null
+          note: i.note || undefined
         }))
       };
       

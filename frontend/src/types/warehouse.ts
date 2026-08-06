@@ -314,6 +314,38 @@ export interface GoodsReceipt {
   items: GoodsReceiptItem[];
 }
 
+// POST /api/purchase-orders (CEO)
+export interface CreatePurchaseOrderItemRequest {
+  productId?: string;
+  materialId?: string;
+  expectedQuantity: number;
+  unitPrice: number;
+  unit: string;
+  note?: string;
+}
+
+export interface CreatePurchaseOrderRequest {
+  supplierId: string;
+  warehouseId: string;
+  expectedDeliveryDate?: string;
+  note?: string;
+  deliveryTerms?: string;
+  items: CreatePurchaseOrderItemRequest[];
+}
+
+// POST /api/purchase-orders/{id}/resolve-discrepancy
+export interface DiscrepancyResolutionRequest {
+  resolutionType: 'AcceptExcess' | 'ReturnExcess' | 'RequestSupplemental' | 'CloseShort';
+  reason: string;
+}
+
+// GET /api/purchase-orders/warehouses — anonymous projection, không phải Warehouse đầy đủ (không có locations).
+export interface WarehouseOption {
+  id: string;
+  name: string;
+  code: string;
+}
+
 export interface QuarantineListItem {
   id: string;
   quarantineCode: string;
