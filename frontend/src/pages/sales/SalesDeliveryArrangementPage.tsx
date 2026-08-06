@@ -2,6 +2,7 @@ import { getErrorMessage } from '../../lib/errors';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { AlertCircle, CheckCircle, Lock, MapPin, Package, RefreshCw, Truck, User, X } from 'lucide-react';
 import { useToast } from '../../context/ToastContext';
+import type { DeliveryOrderListItem, PendingPickup } from '../../types/delivery';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -135,7 +136,7 @@ export default function SalesDeliveryArrangementPage() {
       const newVehicles: Vehicle[] = VEHICLES_META();
 
       if (resOrders.ok) {
-        const data: any[] = await resOrders.json();
+        const data: DeliveryOrderListItem[] = await resOrders.json();
         data.forEach((o) => {
           const isTransfer = o.paymentMethod === 'Transfer';
           const mapped: DeliveryOrder = {
@@ -144,7 +145,7 @@ export default function SalesDeliveryArrangementPage() {
             customer: o.customerName,
             address: o.shippingAddress,
             amount: o.finalPayment,
-            payment: isTransfer ? 'Transfer' : (o.paymentMethod as any),
+            payment: isTransfer ? 'Transfer' : (o.paymentMethod as 'COD' | 'SePay' | 'Cash'),
             deliveryStatus: o.deliveryStatus,
             itemCount: o.itemCount,
             isBlocked: o.isBlocked,
@@ -170,7 +171,7 @@ export default function SalesDeliveryArrangementPage() {
       }
 
       if (resPickups.ok) {
-        const pickupData: any[] = await resPickups.json();
+        const pickupData: PendingPickup[] = await resPickups.json();
         pickupData.forEach((p) => {
           const mapped: DeliveryOrder = {
             id: p.requestId,

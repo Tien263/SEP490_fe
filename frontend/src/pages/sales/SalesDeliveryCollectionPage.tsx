@@ -1,6 +1,7 @@
 import { getErrorMessage } from '../../lib/errors';
 import { AlertCircle, Camera, CheckCircle, DollarSign, MapPin, Pen, Phone, RefreshCw, Truck, X, XCircle } from 'lucide-react';
 import { useCallback, useEffect, useRef, useState } from 'react';
+import type { DeliveryOrderListItem } from '../../types/delivery';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -72,10 +73,10 @@ export default function SalesDeliveryCollectionPage() {
     try {
       const res = await api('/api/delivery/orders');
       if (!res.ok) throw new Error();
-      const data: any[] = await res.json();
+      const data: DeliveryOrderListItem[] = await res.json();
       setOrders(
         data
-          .filter((o: any) => o.paymentMethod !== 'Transfer')
+          .filter((o) => o.paymentMethod !== 'Transfer')
           .map((o) => ({
             id: o.id,
             orderCode: o.orderCode,
@@ -84,7 +85,7 @@ export default function SalesDeliveryCollectionPage() {
             address: o.shippingAddress,
             total: o.finalPayment,
             amountPaid: o.amountPaid,
-            payment: o.paymentMethod as any,
+            payment: o.paymentMethod as 'COD' | 'SePay' | 'Cash',
             orderStatus: o.orderStatus,
             deliveryStatus: o.deliveryStatus,
             failedCount: o.failedDeliveryCount,
@@ -361,13 +362,13 @@ export default function SalesDeliveryCollectionPage() {
                 <p className="mb-1.5 text-xs font-semibold text-gray-700">Kết quả giao hàng</p>
                 <div className="grid grid-cols-3 gap-2">
                   {[
-                    { key: 'delivered', label: 'Giao thành công', icon: CheckCircle, color: 'green' },
-                    { key: 'partially_delivered', label: 'Giao 1 phần', icon: AlertCircle, color: 'orange' },
-                    { key: 'failed', label: 'Thất bại', icon: XCircle, color: 'red' },
+                    { key: 'delivered' as const, label: 'Giao thành công', icon: CheckCircle, color: 'green' },
+                    { key: 'partially_delivered' as const, label: 'Giao 1 phần', icon: AlertCircle, color: 'orange' },
+                    { key: 'failed' as const, label: 'Thất bại', icon: XCircle, color: 'red' },
                   ].map(({ key, label, icon: Icon, color }) => (
                     <button
                       key={key}
-                      onClick={() => setModal((m) => m ? { ...m, outcome: key as any } : m)}
+                      onClick={() => setModal((m) => m ? { ...m, outcome: key } : m)}
                       className={`flex flex-col items-center gap-1 rounded-lg border-2 p-2 text-center text-[10px] font-medium transition-all ${
                         modal.outcome === key
                           ? `border-${color}-500 bg-${color}-50 text-${color}-700`

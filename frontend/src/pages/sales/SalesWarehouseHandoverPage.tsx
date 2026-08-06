@@ -5,6 +5,7 @@ import { Input } from '../../components/sales-ui/input';
 import { Search, Eye, RefreshCw, Download, CheckCircle2, ShieldCheck, CheckCircle, Clock, Truck } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../../components/sales-ui/dialog';
 import { getWarehouseOrders, handoverWarehouseOrder } from '../../services/warehouseService';
+import type { WarehouseOrderListItem } from '../../types/warehouse';
 
 const PRIMARY = '#1F3B64';
 const SUCCESS = '#16A34A';
@@ -130,9 +131,9 @@ export default function SalesWarehouseHandoverPage() {
   const fetchOrders = async () => {
     setLoading(true);
     try {
-      const result = await getWarehouseOrders('Handover');
-      const mapped = result.map((d: any) => {
-        let status = 'waiting_warehouse';
+      const result: WarehouseOrderListItem[] = await getWarehouseOrders('Handover');
+      const mapped = result.map((d) => {
+        let status: Handover['status'] = 'waiting_warehouse';
         if (d.status === 'HandedOver') status = 'completed';
         else if (d.warehouseConfirmed && d.salesConfirmed) status = 'completed';
         else if (d.warehouseConfirmed) status = 'waiting_sales';

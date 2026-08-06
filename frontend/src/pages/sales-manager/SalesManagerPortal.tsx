@@ -23,6 +23,7 @@ import SalesManagerMarketingApproval from './SalesManagerMarketingApproval';
 import DirectPurchasePage from '../sales/DirectPurchasePage';
 import { useAuth } from '../../context/AuthContext';
 import { getQuotations } from '../../services/quotationService.js';
+import type { Quotation } from '../../types/quotation';
 import { FileText, Sparkles } from 'lucide-react';
 import NotificationBell from '../../components/NotificationBell';
 import NotificationsPage from '../NotificationsPage';
@@ -124,8 +125,8 @@ export default function SalesManagerPortal() {
   useEffect(() => {
     getQuotations()
       .then((data) => {
-        const list = Array.isArray(data) ? data : [];
-        const count = list.filter((q: any) => q.status === 'PendingManager').length;
+        const list: Quotation[] = Array.isArray(data) ? data : [];
+        const count = list.filter((q) => q.status === 'PendingManager').length;
         setPendingCount(count);
       })
       .catch(console.error);

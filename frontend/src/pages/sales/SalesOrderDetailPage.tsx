@@ -3,7 +3,9 @@ import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import ConfirmModal from '../../components/ui/ConfirmModal';
 import { ReturnExchangeRequestDetailModal, ReturnExchangeRequestsSection } from '../../components/ReturnExchangeRequests';
+import type { ReturnExchangeRequest } from '../../components/ReturnExchangeRequests';
 import { useAuth } from '../../context/AuthContext';
+import type { SalesOrderDetail } from '../../types/order';
 import {
   Package, MapPin, Phone, User, Calendar, CreditCard, ArrowLeft,
   Clock, AlertTriangle, CheckCircle, XCircle, Truck, Building2,
@@ -82,48 +84,6 @@ const formatDateTime = (dateStr: string) => {
   });
 };
 
-type OrderItem = {
-  id?: string;
-  productId?: string;
-  productName: string;
-  productSku?: string;
-  productImageUrl?: string;
-  quantity: number;
-  priceSnapshot: number;
-  lineTotal: number;
-};
-
-type SalesOrderDetail = {
-  id: string;
-  orderCode: string;
-  customerName: string;
-  customerPhone?: string;
-  customerEmail?: string;
-  companyName?: string;
-  shippingAddress?: string;
-  createdAt: string;
-  totalAmount: number;
-  discountAmount: number;
-  vatAmount: number;
-  finalPayment: number;
-  paymentMethod: string;
-  paymentStatus: string;
-  orderStatus: string;
-  fulfillmentStatus?: string;
-  deliveryStatus?: string;
-  invoicePdfUrl?: string;
-  items: OrderItem[];
-  scheduledDeliveryDate?: string;
-  deliveryShift?: string;
-  deliveryVehicleId?: number;
-  failedDeliveryCount?: number;
-  customerSignatureUrl?: string;
-  deliveryPhotoUrl?: string;
-  amountPaid?: number;
-  creditApplied: number;
-  returnExchangeRequests?: any[];
-};
-
 // ─── Timeline Steps ─────────────────────────────────────────────────────
 function getTimelineSteps(order: SalesOrderDetail) {
   const os = order.orderStatus;
@@ -180,7 +140,7 @@ export default function SalesOrderDetailPage() {
   const [directCancelReason, setDirectCancelReason] = useState('');
   const [showDirectConfirmModal, setShowDirectConfirmModal] = useState(false);
 
-  const [selectedReturnRequest, setSelectedReturnRequest] = useState<any | null>(null);
+  const [selectedReturnRequest, setSelectedReturnRequest] = useState<ReturnExchangeRequest | null>(null);
 
   useEffect(() => {
     const fetchDetail = async () => {
@@ -344,7 +304,7 @@ export default function SalesOrderDetailPage() {
             </div>
           </div>
           <div className="flex items-center gap-2">
-            {(order.orderStatus === 'Draft' || order.orderStatus === 'New' || order.orderStatus === 'PendingConfirmation') && (user?.role === 'SalesManager' || user?.role === 'Admin') && (
+            {(order.orderStatus === 'Draft' || order.orderStatus === 'PendingConfirmation') && (user?.role === 'SalesManager' || user?.role === 'Admin') && (
               <>
                 <button
                   onClick={() => setShowDirectConfirmModal(true)}
@@ -380,7 +340,7 @@ export default function SalesOrderDetailPage() {
 
       <div className="max-w-7xl mx-auto px-6 py-6">
         {/* ── Return/Exchange Request Banner ──────────────────────────── */}
-        {(order as any).hasReturnRequest && (
+        {order.hasReturnRequest && (
           <div className="mb-6 rounded-2xl border border-purple-200 bg-purple-50 p-5 flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between shadow-sm">
             <div className="flex items-center gap-3">
               <div className="bg-purple-100 p-2.5 rounded-full flex-shrink-0 text-purple-600">
@@ -390,7 +350,7 @@ export default function SalesOrderDetailPage() {
                 <h3 className="text-purple-900 font-bold flex items-center gap-2">
                   Đơn hàng có yêu cầu Đổi / Trả hàng
                   <span className="text-xs bg-purple-200 text-purple-800 px-2 py-0.5 rounded-full font-semibold">
-                    {(order as any).returnRequestStatus === 'Approved' ? 'Đã duyệt' : (order as any).returnRequestStatus === 'Pending' ? 'Chờ xử lý' : 'Đã từ chối'}
+                    {order.returnRequestStatus === 'Approved' ? 'Đã duyệt' : order.returnRequestStatus === 'Pending' ? 'Chờ xử lý' : 'Đã từ chối'}
                   </span>
                 </h3>
                 <p className="text-sm text-purple-700 mt-0.5">
@@ -726,14 +686,8 @@ export default function SalesOrderDetailPage() {
                     <span className="font-medium text-slate-700 tabular-nums">{formatPrice(order.vatAmount)} ₫</span>
                   </div>
                 )}
-                {order.creditApplied > 0 && (
-                  <div className="flex justify-between text-xs text-blue-600">
-                    <span>Thanh toán bằng Credit</span>
-                    <span className="font-medium tabular-nums">-{formatPrice(order.creditApplied)} ₫</span>
-                  </div>
-                )}
                 <div className="flex justify-between items-center pt-3 border-t border-dashed border-slate-200">
-                  <span className="text-sm font-bold text-slate-900">{order.creditApplied > 0 ? "Khách cần trả thêm" : "Tổng cộng"}</span>
+                  <span className="text-sm font-bold text-slate-900">Tổng cộng</span>
                   <span className="text-xl font-extrabold tabular-nums" style={{ color: PRIMARY }}>
                     {formatPrice(order.finalPayment)} ₫
                   </span>
@@ -771,7 +725,7 @@ export default function SalesOrderDetailPage() {
               {/* Product Cards */}
               <div className="divide-y divide-slate-100">
                 {order.items?.map((item, idx) => (
-                  <div key={item.id || item.productId || idx} className="flex items-center gap-4 px-5 py-4 hover:bg-slate-50/50 transition-colors">
+                  <div key={item.productId || idx} className="flex items-center gap-4 px-5 py-4 hover:bg-slate-50/50 transition-colors">
                     {/* Product Image */}
                     <div className="w-14 h-14 rounded-xl bg-slate-100 border border-slate-200 overflow-hidden flex items-center justify-center shrink-0">
                       {item.productImageUrl ? (

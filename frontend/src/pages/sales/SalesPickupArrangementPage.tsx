@@ -1,6 +1,7 @@
 import { getErrorMessage } from '../../lib/errors';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { AlertCircle, CheckCircle, MapPin, Package, RefreshCw, Truck, User, X } from 'lucide-react';
+import type { PendingPickup } from '../../types/delivery';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -89,7 +90,7 @@ export default function SalesPickupArrangementPage() {
     try {
       const res = await api('/api/delivery/pickups');
       if (!res.ok) throw new Error();
-      const data: any[] = await res.json();
+      const data: PendingPickup[] = await res.json();
 
       const unscheduled: PickupRequest[] = [];
       const newVehicles: Vehicle[] = VEHICLES_META();

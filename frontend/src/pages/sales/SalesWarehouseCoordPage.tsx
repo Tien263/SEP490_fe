@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { CheckCircle, Clock, MessageSquare, Package, RefreshCw, Truck, User } from 'lucide-react';
+import type { SalesOrderListItem } from '../../types/order';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -60,7 +61,7 @@ export default function SalesWarehouseCoordPage() {
       const res = await api('/api/orders/sales?page=1&pageSize=100');
       if (!res.ok) throw new Error();
       const data = await res.json();
-      const items: any[] = data.items || [];
+      const items: SalesOrderListItem[] = data.items || [];
 
       // Ánh xạ trạng thái FulfillmentStatus sang trạng thái đóng gói (waiting / packing / done)
       const mapped: WarehouseOrder[] = items.map((o) => {
