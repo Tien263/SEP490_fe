@@ -1,11 +1,30 @@
 import { render, screen, waitFor } from '@testing-library/react'
 import { http, HttpResponse } from 'msw'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 import { server } from '../../test/msw/server.js'
 import { AuthProvider } from '../../context/AuthContext.jsx'
 import { CartProvider } from '../../context/CartContext.jsx'
 import ProductDetail from '../ProductDetail.jsx'
+
+// Header render NotificationBell, mở WebSocket thật khi có accessToken -> stub để chạy offline.
+vi.mock('@microsoft/signalr', () => {
+  const connection = {
+    start: vi.fn().mockResolvedValue(undefined),
+    stop: vi.fn().mockResolvedValue(undefined),
+    on: vi.fn(),
+    off: vi.fn(),
+    onclose: vi.fn(),
+    invoke: vi.fn().mockResolvedValue(undefined),
+  }
+  class HubConnectionBuilder {
+    withUrl() { return this }
+    withAutomaticReconnect() { return this }
+    configureLogging() { return this }
+    build() { return connection }
+  }
+  return { HubConnectionBuilder, LogLevel: { Information: 1, Error: 4, None: 6 }, HttpTransportType: {} }
+})
 
 const PRODUCT = {
   id: 'P1',
