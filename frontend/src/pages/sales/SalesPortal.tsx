@@ -16,6 +16,7 @@ import {
   LayoutDashboard,
   LogOut,
   MessageSquare,
+  MessageSquareText,
   Package,
   Search,
   Settings,
@@ -39,6 +40,7 @@ import SalesDeliveryArrangementPage from './SalesDeliveryArrangementPage';
 import SalesPickupArrangementPage from './SalesPickupArrangementPage';
 import SalesDeliveryCollectionPage from './SalesDeliveryCollectionPage';
 import SalesMyCustomersPage from './SalesMyCustomersPage';
+import SalesReviewsPage from './SalesReviewsPage';
 import SalesChangeRequestExplainPage from './SalesChangeRequestExplainPage';
 import SalesAiContentStudio from './SalesAiContentStudio';
 import { useAuth } from '../../context/AuthContext';
@@ -74,6 +76,13 @@ const NAV_ITEMS: NavItem[] = [
     label: 'Khách hàng của tôi',
     icon: <Users className="w-4 h-4" />,
     path: '/sales/my-customers',
+    roles: ['SalesStaff', 'Admin'],
+  },
+  {
+    id: 'reviews',
+    label: 'Đánh giá của khách hàng',
+    icon: <MessageSquareText className="w-4 h-4" />,
+    path: '/sales/reviews',
     roles: ['SalesStaff', 'Admin'],
   },
   {
@@ -406,6 +415,7 @@ export default function SalesPortal() {
           <Routes>
             <Route path="dashboard" element={<SalesDashboardPage />} />
             <Route path="my-customers" element={<SalesMyCustomersPage />} />
+            <Route path="reviews" element={<SalesReviewsPage />} />
             <Route path="ai-content-studio" element={<SalesAiContentStudio />} />
             <Route path="change-requests" element={<SalesChangeRequestExplainPage />} />
             <Route path="orders" element={<SalesOrdersPage />} />
